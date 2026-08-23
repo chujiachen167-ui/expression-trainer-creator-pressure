@@ -6,92 +6,107 @@
   <title>V3 自媒体实战房间 · Expression Trainer</title>
   <link rel="stylesheet" href="shared.css">
 </head>
-<body class="trainer-page" data-mode="v3">
+<body class="trainer-page creator-studio-page" data-mode="v3">
   <header class="topbar">
-    <a class="back-link" href="index.html">← 三版总览</a>
-    <span class="brand">Expression Trainer</span>
-    <span class="version-pill">V3 自媒体实战房间</span>
+    <div class="product-identity">
+      <a class="brand-mark" href="index.html" aria-label="返回三版总览">ET</a>
+      <div><span class="brand">Expression Trainer</span><span class="product-subtitle">Creator Pressure Lab</span></div>
+    </div>
+    <span class="version-pill">V3 STUDIO</span>
     <span class="topbar-spacer"></span>
-    <span class="timer" id="timer">00:00</span>
-    <button class="ghost-btn" type="button" data-camera-toggle>开启摄像头</button>
+    <div class="session-clock"><small>本轮时长</small><span class="timer" id="timer">00:00</span></div>
+    <button class="ghost-btn setup-btn" type="button" data-open-brief>训练设置</button>
+    <button class="ghost-btn camera-btn" type="button" data-camera-toggle><span class="control-indicator"></span>开启摄像头</button>
   </header>
 
   <main class="workspace">
     <aside class="side-panel left">
-      <h2 class="panel-heading">自媒体场景</h2>
-      <div class="scenario-list">
-        <button class="scenario-btn active" data-prompt="请用 45 秒完成一段自然的广告植入：先讲用户问题，再引出产品价值。">广告植入</button>
-        <button class="scenario-btn" data-prompt="请用 60 秒表达一个热点观点：先给结论，再给两个理由。">热点观点</button>
-        <button class="scenario-btn" data-prompt="请回应一条质疑评论：先确认对方的问题，再澄清事实。">直播回应</button>
-        <button class="scenario-btn" data-prompt="请把一个专业知识点讲给完全不了解它的观众。">知识口播</button>
-      </div>
+      <section class="rail-section brief-rail">
+        <div class="panel-title-row"><div><span class="section-kicker">BRIEF</span><h2 class="panel-heading">本轮训练</h2></div><span class="panel-step">01</span></div>
+        <div data-brief-anchor></div>
+      </section>
 
-      <h2 class="panel-heading" style="margin-top:24px">实时信号</h2>
-      <div class="metric-list">
-        <div class="metric"><span>填充词</span><strong class="bad" id="fillerMetric">0</strong></div>
-        <div class="metric"><span>模糊词</span><strong class="warn" id="vagueMetric">0</strong></div>
-        <div class="metric"><span>重复表达</span><strong class="warn" id="repeatMetric">0</strong></div>
-        <div class="metric"><span>当前语速</span><strong id="speedMetric">--</strong></div>
-        <div class="metric"><span>表达净度</span><strong class="good" id="densityMetric">--</strong></div>
-        <div class="metric"><span>有效字数</span><strong id="wordMetric">0</strong></div>
-      </div>
+      <section class="rail-section scenario-section">
+        <div class="panel-title-row"><div><span class="section-kicker">FORMAT</span><h2 class="panel-heading">内容场景</h2></div><span class="panel-step">02</span></div>
+        <div class="scenario-list">
+          <button class="scenario-btn active" data-prompt="请用 45 秒完成一段自然的广告植入：先讲用户问题，再引出产品价值。"><span class="scenario-index">AD</span><span><strong data-scenario-name>广告植入</strong><small>问题 → 价值</small></span></button>
+          <button class="scenario-btn" data-prompt="请用 60 秒表达一个热点观点：先给结论，再给两个理由。"><span class="scenario-index">OP</span><span><strong data-scenario-name>热点观点</strong><small>结论 → 理由</small></span></button>
+          <button class="scenario-btn" data-prompt="请回应一条质疑评论：先确认对方的问题，再澄清事实。"><span class="scenario-index">RE</span><span><strong data-scenario-name>直播回应</strong><small>确认 → 澄清</small></span></button>
+          <button class="scenario-btn" data-prompt="请把一个专业知识点讲给完全不了解它的观众。"><span class="scenario-index">KN</span><span><strong data-scenario-name>知识口播</strong><small>概念 → 例子</small></span></button>
+        </div>
+      </section>
+
+      <section class="rail-section signal-section">
+        <div class="panel-title-row"><div><span class="section-kicker">SIGNALS</span><h2 class="panel-heading">实时信号</h2></div><span class="signal-live"><i></i>LIVE</span></div>
+        <div class="metric-list">
+          <div class="metric"><span>填充词</span><strong class="bad" id="fillerMetric">0</strong></div>
+          <div class="metric"><span>模糊词</span><strong class="warn" id="vagueMetric">0</strong></div>
+          <div class="metric"><span>重复表达</span><strong class="warn" id="repeatMetric">0</strong></div>
+          <div class="metric"><span>当前语速</span><strong id="speedMetric">--</strong></div>
+          <div class="metric metric-featured"><span>表达净度</span><strong class="good" id="densityMetric">--</strong></div>
+          <div class="metric"><span>有效字数</span><strong id="wordMetric">0</strong></div>
+        </div>
+      </section>
     </aside>
 
     <section class="stage">
       <div class="stage-head">
-        <div>
-          <h1>自媒体实战房间</h1>
-          <p>多人只是不同观众视角，不是通用会议系统。</p>
-        </div>
+        <div><span class="section-kicker">CAMERA PRACTICE</span><h1>镜头表达实战</h1><p>面对明确受众说话，让压力暴露真正的表达问题。</p></div>
         <div class="stage-status"><span class="status-dot"></span><span id="statusText">等待开始</span></div>
       </div>
 
       <div class="room creator-room">
+        <div class="room-topline"><span><i></i>CREATOR VIEW</span><span>画面仅在本地预览</span></div>
         <div class="video-tile">
           <video id="cameraVideo" autoplay playsinline muted></video>
-          <div class="video-off">开启摄像头，让观众感受到你在和他们说话</div>
+          <div class="video-off"><div class="camera-empty-state"><span class="camera-glyph"></span><strong>建立镜头连接</strong><small>开启摄像头，练习真正看向观众</small></div></div>
+          <div class="camera-grid" aria-hidden="true"></div>
           <div class="camera-target" aria-label="镜头注视位置"></div>
-          <span class="tile-label">你 · 创作者</span>
+          <span class="tile-label"><i></i>你 · 创作者</span>
         </div>
         <div class="audience-stack">
-          <div class="audience-tile">
-            <div><div class="avatar">路</div><div class="audience-name">路人观众</div><div class="audience-role">关注前十秒价值</div><div class="audience-reaction">我还在判断要不要继续看。</div></div>
-          </div>
-          <div class="audience-tile">
-            <div><div class="avatar">粉</div><div class="audience-name">老粉</div><div class="audience-role">关注真诚和一致性</div><div class="audience-reaction">别突然变成广告腔。</div></div>
-          </div>
-          <div class="audience-tile">
-            <div><div class="avatar">疑</div><div class="audience-name">怀疑型观众</div><div class="audience-role">要求证据和例子</div><div class="audience-reaction">我会追问模糊的说法。</div></div>
-          </div>
+          <div class="audience-tile"><div><div class="avatar">路</div><div class="audience-name">路人观众</div><div class="audience-role">关注前十秒价值</div><div class="audience-reaction">我还在判断要不要继续看。</div></div></div>
+          <div class="audience-tile"><div><div class="avatar">粉</div><div class="audience-name">老粉</div><div class="audience-role">关注真诚和一致性</div><div class="audience-reaction">别突然变成广告腔。</div></div></div>
+          <div class="audience-tile"><div><div class="avatar">疑</div><div class="audience-name">怀疑型观众</div><div class="audience-role">要求证据和例子</div><div class="audience-reaction">我会追问模糊的说法。</div></div></div>
         </div>
-        <div class="prompt-banner"><strong>实战任务：</strong> <span id="sessionPrompt"></span></div>
+        <div class="prompt-banner"><span class="prompt-label">本轮任务</span><span id="sessionPrompt"></span></div>
       </div>
 
-      <div>
+      <section class="transcript-shell">
+        <div class="transcript-head"><div><span class="section-kicker">LIVE TRANSCRIPT</span><strong>实时转写</strong></div><span>数字观众反馈不会写入正文</span></div>
         <div class="transcript" id="liveTranscript"></div>
         <div class="loading-row"><span class="spinner"></span><span>正在定位最影响内容效果的片段，并生成同题重练建议…</span></div>
         <div class="controls">
-          <button class="primary-btn" type="button" data-session-toggle>开始实战训练</button>
-          <div class="pressure-group" aria-label="压力等级">
-            <button class="pressure-btn" data-pressure="low">低压</button>
-            <button class="pressure-btn active" data-pressure="medium">中压</button>
-            <button class="pressure-btn" data-pressure="high">高压</button>
-          </div>
+          <div class="pressure-control"><span>压力</span><div class="pressure-group" aria-label="压力等级"><button class="pressure-btn" data-pressure="low">低</button><button class="pressure-btn active" data-pressure="medium">中</button><button class="pressure-btn" data-pressure="high">高</button></div></div>
+          <button class="primary-btn" type="button" data-session-toggle><span class="record-dot"></span>开始实战训练</button>
+          <span class="privacy-inline">画面不上传、不保存</span>
         </div>
-      </div>
+      </section>
     </section>
 
     <aside class="side-panel right">
-      <h2 class="panel-heading">现场反馈流</h2>
-      <div class="event-feed" id="eventFeed">
-        <div class="event-card system"><strong>系统</strong><div>这里只模拟自媒体观众的真实反应，不加入面试官、考官或企业会议角色。</div></div>
-      </div>
-      <div class="goal-card">
-        <small>本轮复盘准则</small>
-        <p>只指出最影响内容效果的一个问题，并允许立即重练同一题。</p>
-      </div>
+      <div class="panel-title-row"><div><span class="section-kicker">AUDIENCE FEED</span><h2 class="panel-heading">观众现场反应</h2></div><span class="panel-step">03</span></div>
+      <p class="feed-intro">这里只保留会影响内容效果的信号，避免反馈淹没表达本身。</p>
+      <div class="event-feed" id="eventFeed"><div class="event-card system"><strong>训练边界</strong><div>只模拟自媒体观众，不加入面试官、考官或企业会议角色。</div></div></div>
+      <div class="goal-card"><div class="goal-icon">1</div><div><small>本轮复盘准则</small><p>只指出最影响内容效果的一个问题，并允许立即重练同一题。</p></div></div>
     </aside>
   </main>
+
+  <section class="report-panel" id="sessionReport" hidden aria-labelledby="reportTitle">
+    <div class="report-backdrop" data-report-close></div>
+    <div class="report-dialog">
+      <div class="report-head"><div><span class="section-kicker">SESSION REVIEW</span><h2 id="reportTitle">本轮表达复盘</h2></div><button type="button" data-report-close aria-label="关闭复盘">×</button></div>
+      <p class="report-lead">先看关键结果，再只修一个动作。</p>
+      <div class="report-metrics">
+        <div><small>表达净度</small><strong id="reportDensity">--</strong><span>减少无效信息</span></div>
+        <div><small>填充词</small><strong id="reportFiller">0</strong><span>本轮出现次数</span></div>
+        <div><small>有效字数</small><strong id="reportWords">0</strong><span>实际内容产出</span></div>
+      </div>
+      <div class="report-focus"><span>下一轮唯一动作</span><strong id="reportFocus">前十秒先说结论</strong><p>不要同时修五个问题。保持同一题、同一受众，只改变开场。</p></div>
+      <div class="report-actions"><button type="button" class="ghost-btn" data-report-close>返回现场</button><button type="button" class="primary-btn" data-report-retry>立即同题重练</button></div>
+    </div>
+  </section>
+
   <script src="control-panel.js"></script>
   <script src="audience-templates.js"></script>
   <script src="avatar-provider.js"></script>

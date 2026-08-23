@@ -14,6 +14,10 @@
 
 这三个训练层不是三个独立产品，而是一条逐步加强的 Creator Pressure 训练路径。
 
+## V3 界面来源
+
+V3 的界面不是凭空生成的视觉稿。它分别参考 LiveKit Meet 的镜头舞台、OpenCut 的创作者工作台、shadcn/ui 的设置侧滑层与分段控制，以及 Umami 的指标复盘结构。详细映射、许可证和明确不采用的部分见 [`UI_REFERENCE.md`](UI_REFERENCE.md)。
+
 ## 第一版受众模拟
 
 V2 和 V3 已加入创作简报与受众模板系统：

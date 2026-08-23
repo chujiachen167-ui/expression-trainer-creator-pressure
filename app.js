@@ -11,6 +11,8 @@
   const promptText = document.querySelector('#sessionPrompt');
   const loadingRow = document.querySelector('.loading-row');
   const eventFeed = document.querySelector('#eventFeed');
+  const openBriefButton = document.querySelector('[data-open-brief]');
+  const reportPanel = document.querySelector('#sessionReport');
 
   const fillerWords = ['嗯', '啊', '然后', '就是', '那个', '其实', '怎么说呢', '对吧', '你知道吧'];
   const vagueWords = ['很多', '比较', '可能', '感觉', '东西', '方面', '有点', '某种'];
@@ -34,6 +36,7 @@
   let currentProfiles = [];
   let avatarProvider = null;
   let audienceSetup = null;
+  let compactBrief = null;
 
   function featureEnabled(name) {
     return window.CreatorQAControls ? window.CreatorQAControls.featureEnabled(name) : true;
@@ -43,12 +46,15 @@
     if (mode === 'v1' || !window.CreatorAudienceEngine || !window.CreatorAvatarProvider) return;
     const leftPanel = document.querySelector('.side-panel.left');
     if (!leftPanel) return;
+    const briefAnchor = document.querySelector('[data-brief-anchor]');
+    const useSheet = mode === 'v3' && briefAnchor;
     const savedTemplate = localStorage.getItem('expression-trainer.audience-template.v1') || 'knowledge-beginner';
     const providerConfig = window.CreatorAvatarProvider.loadConfig();
     const section = document.createElement('section');
-    section.className = 'audience-config';
+    section.className = useSheet ? 'audience-config brief-sheet' : 'audience-config';
+    section.hidden = Boolean(useSheet);
     section.innerHTML = `
-      <h3>本轮创作简报</h3>
+      <div class="brief-sheet-head"><div><span class="section-kicker">TRAINING SETUP</span><h3>本轮创作简报</h3></div>${useSheet ? '<button type="button" data-brief-close aria-label="关闭训练设置">×</button>' : ''}</div>
       <p>先确定内容讲给谁。模板定义受众关注点，不保存固定台词。</p>
       <label class="brief-field"><span>受众模板</span><select data-audience-template>${window.CreatorAudienceEngine.templates.map(template => `<option value="${template.id}">${template.name}</option>`).join('')}</select></label>
       <div class="brief-summary" data-audience-summary></div>
@@ -59,7 +65,22 @@
       </div>
       <div class="audience-config-actions"><button type="button" data-audience-apply>应用模板</button><button type="button" data-audience-preview>试听反应</button></div>
       <div class="provider-status" data-provider-status>等待应用配置</div>`;
-    leftPanel.insertBefore(section, leftPanel.firstChild.nextSibling);
+    if (useSheet) {
+      compactBrief = document.createElement('div');
+      compactBrief.className = 'compact-brief';
+      compactBrief.innerHTML = '<span class="compact-brief-tag">知识科普</span><strong data-compact-title>零基础受众</strong><p data-compact-goal>让陌生概念被听懂并愿意关注</p><div><span data-compact-platform>B站 / 视频号</span><button type="button" data-compact-edit>编辑</button></div>';
+      briefAnchor.appendChild(compactBrief);
+      document.body.appendChild(section);
+      const openSheet = () => { section.hidden = false; document.body.classList.add('brief-sheet-open'); };
+      const closeSheet = () => { section.hidden = true; document.body.classList.remove('brief-sheet-open'); };
+      openBriefButton?.addEventListener('click', openSheet);
+      compactBrief.querySelector('[data-compact-edit]').addEventListener('click', openSheet);
+      section.querySelector('[data-brief-close]').addEventListener('click', closeSheet);
+      section.addEventListener('click', event => { if (event.target === section) closeSheet(); });
+      section._closeSheet = closeSheet;
+    } else {
+      leftPanel.insertBefore(section, leftPanel.firstChild.nextSibling);
+    }
     const templateSelect = section.querySelector('[data-audience-template]');
     const providerSelect = section.querySelector('[data-avatar-provider]');
     templateSelect.value = window.CreatorAudienceEngine.getTemplate(savedTemplate).id;
@@ -73,10 +94,19 @@
       const summary = section.querySelector('[data-audience-summary]');
       summary.innerHTML = `<strong>${template.domain} · ${template.platform}</strong><span>${template.goal}</span>`;
       section.querySelector('[data-provider-fields]').classList.toggle('visible', providerSelect.value === 'live');
+      if (compactBrief) {
+        compactBrief.querySelector('.compact-brief-tag').textContent = template.domain;
+        compactBrief.querySelector('[data-compact-title]').textContent = template.name.split('·').pop().trim();
+        compactBrief.querySelector('[data-compact-goal]').textContent = template.goal;
+        compactBrief.querySelector('[data-compact-platform]').textContent = template.platform;
+      }
     };
     templateSelect.addEventListener('change', updateSummary);
     providerSelect.addEventListener('change', updateSummary);
-    section.querySelector('[data-audience-apply]').addEventListener('click', () => applyAudienceConfiguration(true));
+    section.querySelector('[data-audience-apply]').addEventListener('click', async () => {
+      await applyAudienceConfiguration(true);
+      section._closeSheet?.();
+    });
     section.querySelector('[data-audience-preview]').addEventListener('click', () => fireAudienceReaction(true));
     updateSummary();
   }
@@ -189,7 +219,7 @@
       video.srcObject = null;
       videoTile.classList.remove('camera-on');
       cameraButton.classList.remove('active');
-      cameraButton.textContent = '开启摄像头';
+      cameraButton.innerHTML = '<span class="control-indicator"></span>开启摄像头';
       return;
     }
     try {
@@ -197,7 +227,7 @@
       video.srcObject = stream;
       videoTile.classList.add('camera-on');
       cameraButton.classList.add('active');
-      cameraButton.textContent = '关闭摄像头';
+      cameraButton.innerHTML = '<span class="control-indicator"></span>关闭摄像头';
     } catch (error) {
       addEvent('系统', '摄像头未开启。请检查浏览器权限，或使用 localhost / HTTPS 打开原型。', true);
     }
@@ -210,7 +240,7 @@
     video.srcObject = null;
     videoTile.classList.remove('camera-on');
     cameraButton?.classList.remove('active');
-    if (cameraButton) cameraButton.textContent = '开启摄像头';
+    if (cameraButton) cameraButton.innerHTML = '<span class="control-indicator"></span>开启摄像头';
   }
 
   function setupRecognition() {
@@ -341,7 +371,15 @@
       startButton.classList.remove('running');
       const filler = document.getElementById('fillerMetric')?.textContent || '0';
       const density = document.getElementById('densityMetric')?.textContent || '--';
+      const words = document.getElementById('wordMetric')?.textContent || '0';
       if (featureEnabled('feedback')) addEvent('本轮复盘', `口头禅 ${filler} 次，表达净度 ${density}。下一轮只练一个动作：前十秒先说结论。`, true, currentTemplate ? `受众模板：${currentTemplate.name}` : '镜头基线');
+      if (reportPanel) {
+        reportPanel.querySelector('#reportDensity').textContent = density;
+        reportPanel.querySelector('#reportFiller').textContent = filler;
+        reportPanel.querySelector('#reportWords').textContent = words;
+        reportPanel.hidden = false;
+        document.body.classList.add('report-open');
+      }
     }, 1500);
   }
 
@@ -358,7 +396,7 @@
       document.querySelectorAll('.scenario-btn').forEach(item => item.classList.toggle('active', item === button));
       prompts.v3 = button.dataset.prompt;
       promptText.textContent = prompts.v3;
-      addEvent('场景切换', button.textContent.trim(), true, '目标受众保持不变');
+      addEvent('场景切换', button.querySelector('[data-scenario-name]')?.textContent.trim() || button.textContent.trim(), true, '目标受众保持不变');
     });
   });
 
@@ -374,6 +412,15 @@
 
   cameraButton?.addEventListener('click', toggleCamera);
   startButton?.addEventListener('click', () => sessionRunning ? stopSession() : startSession());
+  reportPanel?.querySelectorAll('[data-report-close]').forEach(button => button.addEventListener('click', () => {
+    reportPanel.hidden = true;
+    document.body.classList.remove('report-open');
+  }));
+  reportPanel?.querySelector('[data-report-retry]')?.addEventListener('click', () => {
+    reportPanel.hidden = true;
+    document.body.classList.remove('report-open');
+    if (!sessionRunning) startSession();
+  });
   promptText.textContent = prompts[mode];
   renderTranscript();
   mountAudienceSetup();
