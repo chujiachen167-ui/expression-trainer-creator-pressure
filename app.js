@@ -30,35 +30,105 @@
   let interim = '';
   let pressure = 'medium';
   let eventIndex = 0;
+  let currentTemplate = null;
+  let currentProfiles = [];
+  let avatarProvider = null;
+  let audienceSetup = null;
 
   function featureEnabled(name) {
     return window.CreatorQAControls ? window.CreatorQAControls.featureEnabled(name) : true;
   }
 
-  const pressureScripts = {
-    low: [
-      '我在听，继续说。',
-      '可以再给一个具体例子吗？'
-    ],
-    medium: [
-      '你的价值点是什么？请直接说结论。',
-      '“很多”具体是多少？',
-      '如果只保留一句话，你会怎么说？'
-    ],
-    high: [
-      '前十秒还没听到重点，我可能会划走。',
-      '停一下。请把刚才那段压缩到二十秒。',
-      '这个说法听起来像广告，为什么观众要相信？',
-      '请不要继续铺垫，直接给证据。'
-    ]
-  };
+  function mountAudienceSetup() {
+    if (mode === 'v1' || !window.CreatorAudienceEngine || !window.CreatorAvatarProvider) return;
+    const leftPanel = document.querySelector('.side-panel.left');
+    if (!leftPanel) return;
+    const savedTemplate = localStorage.getItem('expression-trainer.audience-template.v1') || 'knowledge-beginner';
+    const providerConfig = window.CreatorAvatarProvider.loadConfig();
+    const section = document.createElement('section');
+    section.className = 'audience-config';
+    section.innerHTML = `
+      <h3>本轮创作简报</h3>
+      <p>先确定内容讲给谁。模板定义受众关注点，不保存固定台词。</p>
+      <label class="brief-field"><span>受众模板</span><select data-audience-template>${window.CreatorAudienceEngine.templates.map(template => `<option value="${template.id}">${template.name}</option>`).join('')}</select></label>
+      <div class="brief-summary" data-audience-summary></div>
+      <label class="brief-field"><span>数字形象来源</span><select data-avatar-provider><option value="mock">浏览器演示（无需后端）</option><option value="live">LiveTalking · WebRTC</option></select></label>
+      <div class="provider-fields" data-provider-fields>
+        <label class="brief-field"><span>LiveTalking 地址</span><input data-avatar-server spellcheck="false"></label>
+        <label class="brief-field"><span>Avatar IDs（多个用逗号分隔）</span><input data-avatar-id spellcheck="false" placeholder="avatar_a, avatar_b, avatar_c"></label>
+      </div>
+      <div class="audience-config-actions"><button type="button" data-audience-apply>应用模板</button><button type="button" data-audience-preview>试听反应</button></div>
+      <div class="provider-status" data-provider-status>等待应用配置</div>`;
+    leftPanel.insertBefore(section, leftPanel.firstChild.nextSibling);
+    const templateSelect = section.querySelector('[data-audience-template]');
+    const providerSelect = section.querySelector('[data-avatar-provider]');
+    templateSelect.value = window.CreatorAudienceEngine.getTemplate(savedTemplate).id;
+    providerSelect.value = providerConfig.provider;
+    section.querySelector('[data-avatar-server]').value = providerConfig.serverUrl;
+    section.querySelector('[data-avatar-id]').value = providerConfig.avatarId;
+    audienceSetup = section;
 
-  const creatorEvents = [
-    { who: '路人观众', text: '这和我有什么关系？先讲结果。' },
-    { who: '老粉', text: '这个说法有点官方，能不能讲得像你自己？' },
-    { who: '怀疑型观众', text: '你能给出亲身例子或数据吗？' },
-    { who: '系统', text: '临时要求：把剩余内容压缩为三句话。', system: true }
-  ];
+    const updateSummary = () => {
+      const template = window.CreatorAudienceEngine.getTemplate(templateSelect.value);
+      const summary = section.querySelector('[data-audience-summary]');
+      summary.innerHTML = `<strong>${template.domain} · ${template.platform}</strong><span>${template.goal}</span>`;
+      section.querySelector('[data-provider-fields]').classList.toggle('visible', providerSelect.value === 'live');
+    };
+    templateSelect.addEventListener('change', updateSummary);
+    providerSelect.addEventListener('change', updateSummary);
+    section.querySelector('[data-audience-apply]').addEventListener('click', () => applyAudienceConfiguration(true));
+    section.querySelector('[data-audience-preview]').addEventListener('click', () => fireAudienceReaction(true));
+    updateSummary();
+  }
+
+  function audienceCard(profile) {
+    return `<div class="audience-tile" data-profile-id="${profile.id}"><div class="audience-copy"><div class="avatar">${profile.glyph}</div><div class="audience-name">${profile.name}</div><div class="audience-role">${profile.role}</div><div class="audience-reaction">${profile.motivation}</div><div class="avatar-provider-state">等待连接</div></div></div>`;
+  }
+
+  function renderAudienceProfiles() {
+    if (mode === 'v2') {
+      const oldTile = document.querySelector('.duo-room > .audience-tile');
+      if (oldTile && currentProfiles[0]) oldTile.outerHTML = audienceCard(currentProfiles[0]);
+    } else if (mode === 'v3') {
+      const stack = document.querySelector('.audience-stack');
+      if (stack) stack.innerHTML = currentProfiles.map(audienceCard).join('');
+    }
+  }
+
+  async function applyAudienceConfiguration(connectProvider = true) {
+    if (!audienceSetup) return;
+    const engine = window.CreatorAudienceEngine;
+    const templateId = audienceSetup.querySelector('[data-audience-template]').value;
+    currentTemplate = engine.getTemplate(templateId);
+    currentProfiles = engine.getProfiles(currentTemplate, mode === 'v2' ? 1 : 3);
+    localStorage.setItem('expression-trainer.audience-template.v1', currentTemplate.id);
+    prompts[mode] = currentTemplate.prompt;
+    if (promptText) promptText.textContent = currentTemplate.prompt;
+    document.querySelectorAll('.scenario-btn').forEach(button => button.classList.remove('active'));
+    renderAudienceProfiles();
+
+    const config = {
+      provider: audienceSetup.querySelector('[data-avatar-provider]').value,
+      serverUrl: audienceSetup.querySelector('[data-avatar-server]').value.trim() || window.CreatorAvatarProvider.defaults.serverUrl,
+      avatarId: audienceSetup.querySelector('[data-avatar-id]').value.trim()
+    };
+    window.CreatorAvatarProvider.saveConfig(config);
+    const status = audienceSetup.querySelector('[data-provider-status]');
+    if (!connectProvider) return;
+    status.textContent = config.provider === 'live' ? '正在连接 LiveTalking；失败会自动降级为浏览器演示…' : '正在准备浏览器演示…';
+    if (avatarProvider) await avatarProvider.disconnect();
+    avatarProvider = window.CreatorAvatarProvider.create(config);
+    const tiles = [...document.querySelectorAll('.audience-tile')];
+    try {
+      const result = await avatarProvider.connect(tiles);
+      status.textContent = config.provider === 'live'
+        ? `LiveTalking 已连接 ${result.connected}/${tiles.length} 个窗口；${result.fallback} 个使用浏览器降级。`
+        : `已启用浏览器演示，共 ${tiles.length} 个受众角色。`;
+    } catch (error) {
+      status.textContent = `连接失败：${error.message}。已保留静态受众界面。`;
+    }
+    addEvent('创作简报', `${currentTemplate.name}｜${currentTemplate.goal}`, true, `数字形象：${config.provider === 'live' ? 'LiveTalking' : '浏览器演示'}`);
+  }
 
   function formatTime(ms) {
     const total = Math.floor(ms / 1000);
@@ -171,7 +241,7 @@
     return instance;
   }
 
-  function addEvent(who, text, system = false) {
+  function addEvent(who, text, system = false, meta = '') {
     if (!eventFeed || !featureEnabled('feedback')) return;
     const card = document.createElement('div');
     card.className = `event-card${system ? ' system' : ''}`;
@@ -180,18 +250,39 @@
     const body = document.createElement('div');
     body.textContent = text;
     card.append(title, body);
+    if (meta) {
+      const detail = document.createElement('small');
+      detail.textContent = meta;
+      card.appendChild(detail);
+    }
     eventFeed.prepend(card);
   }
 
-  function reactAudience(text) {
+  function reactAudience(text, profileId) {
     const tiles = [...document.querySelectorAll('.audience-tile')];
     if (!tiles.length) return;
     tiles.forEach(tile => tile.classList.remove('attention'));
-    const tile = tiles[eventIndex % tiles.length];
+    const tile = tiles.find(item => item.dataset.profileId === profileId) || tiles[eventIndex % tiles.length];
     tile.classList.add('attention');
     const reaction = tile.querySelector('.audience-reaction');
     if (reaction) reaction.textContent = text;
     setTimeout(() => tile.classList.remove('attention'), 4500);
+  }
+
+  function fireAudienceReaction(preview = false) {
+    if (!featureEnabled('pressure') || !featureEnabled('audience') || !currentTemplate || !currentProfiles.length) return;
+    const profileIndex = eventIndex % currentProfiles.length;
+    const profile = currentProfiles[profileIndex];
+    const elapsedSeconds = sessionRunning ? Math.floor((Date.now() - startedAt) / 1000) : 12;
+    const observation = window.CreatorAudienceEngine.observe(`${transcript}${interim}`, elapsedSeconds);
+    const reaction = window.CreatorAudienceEngine.nextReaction({
+      template: currentTemplate, profile, observation, pressure, eventIndex
+    });
+    addEvent(reaction.who, reaction.text, false, `${reaction.reason}｜${currentTemplate.name}`);
+    reactAudience(reaction.text, reaction.profileId);
+    avatarProvider?.speak(profileIndex, reaction.text).catch(error => addEvent('数字形象', `播报失败：${error.message}`, true));
+    if (preview && audienceSetup) audienceSetup.querySelector('[data-provider-status]').textContent = `已试听：${reaction.who}根据当前表达信号产生反应。`;
+    eventIndex += 1;
   }
 
   function schedulePressure() {
@@ -200,18 +291,7 @@
     const interval = pressure === 'high' ? 12000 : pressure === 'medium' ? 18000 : 26000;
     pressureHandle = setInterval(() => {
       if (!sessionRunning) return;
-      let item;
-      if (mode === 'v3') {
-        item = creatorEvents[eventIndex % creatorEvents.length];
-        addEvent(item.who, item.text, item.system);
-        reactAudience(item.text);
-      } else {
-        const list = pressureScripts[pressure];
-        const text = list[eventIndex % list.length];
-        addEvent('数字观众', text);
-        reactAudience(text);
-      }
-      eventIndex += 1;
+      fireAudienceReaction(false);
     }, interval);
   }
 
@@ -248,6 +328,7 @@
     if (recognition) {
       try { recognition.stop(); } catch (_) { /* already stopped */ }
     }
+    avatarProvider?.interrupt();
     startButton.disabled = true;
     statusText.textContent = '生成复盘';
     loadingRow?.classList.add('visible');
@@ -260,7 +341,7 @@
       startButton.classList.remove('running');
       const filler = document.getElementById('fillerMetric')?.textContent || '0';
       const density = document.getElementById('densityMetric')?.textContent || '--';
-      if (featureEnabled('feedback')) addEvent('本轮复盘', `口头禅 ${filler} 次，表达净度 ${density}。下一轮只练一个动作：前十秒先说结论。`, true);
+      if (featureEnabled('feedback')) addEvent('本轮复盘', `口头禅 ${filler} 次，表达净度 ${density}。下一轮只练一个动作：前十秒先说结论。`, true, currentTemplate ? `受众模板：${currentTemplate.name}` : '镜头基线');
     }, 1500);
   }
 
@@ -277,7 +358,7 @@
       document.querySelectorAll('.scenario-btn').forEach(item => item.classList.toggle('active', item === button));
       prompts.v3 = button.dataset.prompt;
       promptText.textContent = prompts.v3;
-      addEvent('场景切换', button.textContent.trim(), true);
+      addEvent('场景切换', button.textContent.trim(), true, '目标受众保持不变');
     });
   });
 
@@ -295,4 +376,7 @@
   startButton?.addEventListener('click', () => sessionRunning ? stopSession() : startSession());
   promptText.textContent = prompts[mode];
   renderTranscript();
+  mountAudienceSetup();
+  if (audienceSetup) applyAudienceConfiguration(true);
+  window.addEventListener('beforeunload', () => avatarProvider?.disconnect());
 })();

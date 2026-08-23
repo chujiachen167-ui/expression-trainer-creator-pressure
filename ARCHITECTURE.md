@@ -18,8 +18,9 @@ Electron Renderer
 │   └── Session State / Loading UI
 ├── Training Session Controller
 │   ├── Scenario Engine
-│   ├── Pressure Controller
-│   ├── Audience Orchestrator
+│   ├── Audience Template Resolver
+│   ├── Audience Simulation Engine
+│   ├── Pressure Policy
 │   └── Event Timeline
 ├── Observation Engine
 │   ├── Existing Lexicon Analysis
@@ -30,6 +31,13 @@ Electron Renderer
     ├── Evidence Moments
     ├── One Priority Problem
     └── Same-task Retry
+
+Avatar Gateway
+├── Browser Demo Provider（无后端验收）
+└── LiveTalking Provider
+    ├── WebRTC /offer
+    ├── Text Driver /human
+    └── Interrupt /interrupt_talk
 
 Electron Main Process
 ├── Existing Sherpa-ONNX STT
@@ -61,9 +69,9 @@ V1 只提供真实摄像头预览和镜头位置提示，不在没有视觉模�
 - 不进行颜值、情绪、人格或可信度评分。
 - 报告只评价与内容创作直接相关的可观察行为。
 
-## 数字观众行为模型
+## 受众模板与行为模型
 
-每个数字观众必须包含：角色身份、观看动机、关注点、触发条件、可执行反应和禁止行为。
+模板先定义内容领域、平台、目标和目标受众；每个受众角色再包含身份、观看动机、关注点、触发条件、可执行反应和禁止行为。模板不包含固定台词。
 
 示例：
 
@@ -101,3 +109,5 @@ V1 只提供真实摄像头预览和镜头位置提示，不在没有视觉模�
 当前原型可以验证布局、摄像头授权、浏览器语音转写、压力节奏和三版信息架构。数字观众反应暂时使用确定性脚本，避免把尚未接入的 AI 能力伪装成已实现。
 
 正式接入现有项目时，优先把确定性触发规则保留为安全护栏，再用模型生成角色化措辞。模型只决定“如何说”，场景引擎决定“何时说、为什么说、允许说什么”。
+
+数字形象只负责呈现受众反应。LiveTalking 通过可替换的 Avatar Provider 接入，不能直接访问训练报告、决定受众身份或生成领域外问题。
