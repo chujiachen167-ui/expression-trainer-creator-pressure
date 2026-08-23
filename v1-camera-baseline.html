@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>V1 镜头基线 · Expression Trainer</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body class="trainer-page" data-mode="v1">
+  <header class="topbar">
+    <a class="back-link" href="index.html">← 三版总览</a>
+    <span class="brand">Expression Trainer</span>
+    <span class="version-pill">V1 镜头基线</span>
+    <span class="topbar-spacer"></span>
+    <span class="timer" id="timer">00:00</span>
+    <button class="ghost-btn" type="button" data-camera-toggle>开启摄像头</button>
+  </header>
+
+  <main class="workspace">
+    <aside class="side-panel left">
+      <h2 class="panel-heading">表达基线</h2>
+      <div class="metric-list">
+        <div class="metric"><span>填充词</span><strong class="bad" id="fillerMetric">0</strong></div>
+        <div class="metric"><span>模糊词</span><strong class="warn" id="vagueMetric">0</strong></div>
+        <div class="metric"><span>重复表达</span><strong class="warn" id="repeatMetric">0</strong></div>
+        <div class="metric"><span>当前语速</span><strong id="speedMetric">--</strong></div>
+        <div class="metric"><span>表达净度</span><strong class="good" id="densityMetric">--</strong></div>
+        <div class="metric"><span>有效字数</span><strong id="wordMetric">0</strong></div>
+      </div>
+      <div class="goal-card">
+        <small>本版只验证</small>
+        <p>面对真实镜头时，用户能否减少盯提词器、拖延开场和无意识口头禅。</p>
+      </div>
+      <p class="privacy-note">摄像头画面只在当前页面预览，原型不会录制或上传视频。</p>
+    </aside>
+
+    <section class="stage">
+      <div class="stage-head">
+        <div>
+          <h1>镜头口播基线</h1>
+          <p>先测自然状态，不引入数字观众压力。</p>
+        </div>
+        <div class="stage-status"><span class="status-dot"></span><span id="statusText">等待开始</span></div>
+      </div>
+
+      <div class="room camera-room">
+        <div class="video-tile">
+          <video id="cameraVideo" autoplay playsinline muted></video>
+          <div class="video-off">开启摄像头后，在真正的镜头位置建立视线目标</div>
+          <div class="camera-target" aria-label="镜头注视位置"></div>
+          <span class="tile-label">你 · 创作者</span>
+        </div>
+        <div class="prompt-banner"><strong>训练题：</strong> <span id="sessionPrompt"></span></div>
+      </div>
+
+      <div>
+        <div class="transcript" id="liveTranscript"></div>
+        <div class="loading-row"><span class="spinner"></span><span>正在整理本轮表达证据并生成复盘…</span></div>
+        <div class="controls">
+          <button class="primary-btn" type="button" data-session-toggle>开始 60 秒口播</button>
+          <span class="control-note">原型不会假装已经识别你的视线；粉色圆点只是镜头位置提示。</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side-panel right">
+      <h2 class="panel-heading">本轮教练</h2>
+      <div class="coach-card">
+        <small>唯一动作</small>
+        <p>第一句话直接说清楚：你能持续给观众什么价值。</p>
+      </div>
+      <h2 class="panel-heading" style="margin-top:24px">训练事件</h2>
+      <div class="event-feed" id="eventFeed"></div>
+    </aside>
+  </main>
+  <script src="control-panel.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

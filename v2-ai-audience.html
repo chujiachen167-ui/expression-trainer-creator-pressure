@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>V2 数字观众压力场 · Expression Trainer</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body class="trainer-page" data-mode="v2">
+  <header class="topbar">
+    <a class="back-link" href="index.html">← 三版总览</a>
+    <span class="brand">Expression Trainer</span>
+    <span class="version-pill">V2 数字观众压力场</span>
+    <span class="topbar-spacer"></span>
+    <span class="timer" id="timer">00:00</span>
+    <button class="ghost-btn" type="button" data-camera-toggle>开启摄像头</button>
+  </header>
+
+  <main class="workspace">
+    <aside class="side-panel left">
+      <h2 class="panel-heading">压力下表达</h2>
+      <div class="metric-list">
+        <div class="metric"><span>填充词</span><strong class="bad" id="fillerMetric">0</strong></div>
+        <div class="metric"><span>模糊词</span><strong class="warn" id="vagueMetric">0</strong></div>
+        <div class="metric"><span>重复表达</span><strong class="warn" id="repeatMetric">0</strong></div>
+        <div class="metric"><span>当前语速</span><strong id="speedMetric">--</strong></div>
+        <div class="metric"><span>表达净度</span><strong class="good" id="densityMetric">--</strong></div>
+        <div class="metric"><span>有效字数</span><strong id="wordMetric">0</strong></div>
+      </div>
+
+      <h2 class="panel-heading" style="margin-top:24px">压力等级</h2>
+      <div class="pressure-group">
+        <button class="pressure-btn" data-pressure="low">低压</button>
+        <button class="pressure-btn active" data-pressure="medium">中压</button>
+        <button class="pressure-btn" data-pressure="high">高压</button>
+      </div>
+      <div class="goal-card">
+        <small>数字观众的职责</small>
+        <p>等待、质疑、要求具体和压缩表达。它不提供通用陪聊，也不模拟面试官。</p>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage-head">
+        <div>
+          <h1>一个真正会反应的观众</h1>
+          <p>压力来自内容追问，而不是装饰性头像。</p>
+        </div>
+        <div class="stage-status"><span class="status-dot"></span><span id="statusText">等待开始</span></div>
+      </div>
+
+      <div class="room duo-room">
+        <div class="video-tile">
+          <video id="cameraVideo" autoplay playsinline muted></video>
+          <div class="video-off">开启摄像头，面对镜头完成一次真实口播</div>
+          <div class="camera-target" aria-label="镜头注视位置"></div>
+          <span class="tile-label">你 · 创作者</span>
+        </div>
+        <div class="audience-tile attention">
+          <div>
+            <div class="avatar">观</div>
+            <div class="audience-name">阿林</div>
+            <div class="audience-role">没有耐心的普通观众</div>
+            <div class="audience-reaction">我会关注你是否在前十秒说清价值。</div>
+          </div>
+        </div>
+        <div class="prompt-banner"><strong>训练题：</strong> <span id="sessionPrompt"></span></div>
+      </div>
+
+      <div>
+        <div class="transcript" id="liveTranscript"></div>
+        <div class="loading-row"><span class="spinner"></span><span>正在比较自然状态与压力状态，并生成下一轮动作…</span></div>
+        <div class="controls">
+          <button class="primary-btn" type="button" data-session-toggle>开始压力口播</button>
+          <span class="control-note">数字观众会按当前压力等级，在训练中提出内容相关的约束。</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side-panel right">
+      <h2 class="panel-heading">观众事件</h2>
+      <div class="event-feed" id="eventFeed">
+        <div class="event-card"><strong>阿林</strong><div>我不是面试官。我只代表一个随时可能划走的观众。</div></div>
+      </div>
+    </aside>
+  </main>
+  <script src="control-panel.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
