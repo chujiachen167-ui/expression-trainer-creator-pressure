@@ -43,6 +43,14 @@
     return window.CreatorQAControls ? window.CreatorQAControls.featureEnabled(name) : true;
   }
 
+  function v1Rules() {
+    return window.CreatorV1Controls?.getRules?.() || {};
+  }
+
+  function v1Language() {
+    return window.CreatorV1Controls?.getLanguage?.() || { mode: 'zh', sttLang: 'zh-CN' };
+  }
+
   function mountAudienceSetup() {
     if (mode === 'v1' || !window.CreatorAudienceEngine || !window.CreatorAvatarProvider) return;
     const leftPanel = document.querySelector('.side-panel.left');
@@ -182,7 +190,7 @@
 
   function updateMetrics() {
     if (mode === 'v1' && window.CreatorExpressionAnalysis) {
-      const analysis = window.CreatorExpressionAnalysis.analyze(`${transcript}${interim}`);
+      const analysis = window.CreatorExpressionAnalysis.analyze(`${transcript}${interim}`, v1Rules());
       if (featureEnabled('metrics')) {
         setMetric('fillerMetric', analysis.fillers.length);
         setMetric('vagueMetric', analysis.vague.length);
@@ -223,8 +231,8 @@
     }
     if (mode === 'v1' && window.CreatorExpressionAnalysis) {
       const finalLines = window.CreatorExpressionAnalysis.lines(transcript).slice(-4);
-      transcriptBox.innerHTML = finalLines.map((line, index) => `<div class="stt-line${index < finalLines.length - 1 ? ' old' : ''}">${window.CreatorExpressionAnalysis.highlight(line)}</div>`).join('');
-      if (interim) transcriptBox.insertAdjacentHTML('beforeend', `<div class="stt-line interim">${window.CreatorExpressionAnalysis.highlight(interim)}</div>`);
+      transcriptBox.innerHTML = finalLines.map((line, index) => `<div class="stt-line${index < finalLines.length - 1 ? ' old' : ''}">${window.CreatorExpressionAnalysis.highlight(line, v1Rules())}</div>`).join('');
+      if (interim) transcriptBox.insertAdjacentHTML('beforeend', `<div class="stt-line interim">${window.CreatorExpressionAnalysis.highlight(interim, v1Rules())}</div>`);
       transcriptBox.scrollTop = transcriptBox.scrollHeight;
       return;
     }
@@ -274,7 +282,7 @@
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) return null;
     const instance = new Recognition();
-    instance.lang = 'zh-CN';
+    instance.lang = mode === 'v1' ? v1Language().sttLang : 'zh-CN';
     instance.continuous = true;
     instance.interimResults = true;
     instance.onresult = event => {
@@ -406,7 +414,7 @@
     startButton.classList.add('running');
     statusDot.classList.add('live');
     statusText.textContent = '训练中';
-    promptText.textContent = prompts[mode];
+    promptText.textContent = mode === 'v1' ? (v1Rules().goal || prompts.v1) : prompts[mode];
     renderTranscript();
     updateMetrics();
     timerHandle = setInterval(() => { timer.textContent = formatTime(Date.now() - startedAt); }, 250);
@@ -424,7 +432,7 @@
 
   function populateReportPanel() {
     if (!reportPanel) return;
-    const analysis = mode === 'v1' ? window.CreatorExpressionAnalysis?.analyze(transcript) : null;
+    const analysis = mode === 'v1' ? window.CreatorExpressionAnalysis?.analyze(transcript, v1Rules()) : null;
     const filler = document.getElementById('fillerMetric')?.textContent || '0';
     const density = document.getElementById('densityMetric')?.textContent || '--';
     const words = document.getElementById('wordMetric')?.textContent || String(analysis?.totalChars || 0);
@@ -480,7 +488,7 @@
       const density = document.getElementById('densityMetric')?.textContent || '--';
       if (featureEnabled('feedback')) {
         if (mode === 'v1' && window.CreatorExpressionAnalysis) {
-          const analysis = window.CreatorExpressionAnalysis.analyze(transcript);
+          const analysis = window.CreatorExpressionAnalysis.analyze(transcript, v1Rules());
           const empty = document.querySelector('[data-feedback-empty]');
           if (empty) empty.hidden = true;
           addEvent('本轮诊断', `笼统词 ${analysis.vague.length} 次、填充词 ${analysis.fillers.length} 次、犹豫词 ${analysis.hedges.length} 次、重复表达 ${analysis.repeats.length} 处，表达密度 ${analysis.density}%。`, true, '诊断依据来自本轮逐字稿');
@@ -526,6 +534,33 @@
 
   document.addEventListener('creator:avatar-config-change', () => {
     if (audienceSetup) applyAudienceConfiguration(true);
+  });
+
+  document.addEventListener('creator:v1-rules-change', event => {
+    if (mode !== 'v1') return;
+    prompts.v1 = event.detail.goal || prompts.v1;
+    promptText.textContent = prompts.v1;
+    renderTranscript();
+    updateMetrics();
+    if (event.detail.customRules && eventFeed && !sessionRunning) {
+      addEvent('训练规则', event.detail.customRules, true, '已保存，接入大模型后会参与复盘', { key: 'v1-custom-rule' });
+    }
+  });
+
+  document.addEventListener('creator:v1-language-change', event => {
+    if (mode !== 'v1') return;
+    const wasRunning = sessionRunning;
+    if (recognition) {
+      try { recognition.stop(); } catch (_) { /* already stopped */ }
+      recognition = null;
+    }
+    statusText.textContent = wasRunning ? `${event.detail.label}切换中` : `${event.detail.label}已就绪`;
+    if (wasRunning) {
+      recognition = setupRecognition();
+      if (recognition) {
+        try { recognition.start(); } catch (_) { /* browser is already restarting */ }
+      }
+    }
   });
 
   document.querySelector('[data-paste-open]')?.addEventListener('click', () => {
@@ -580,7 +615,7 @@
     document.body.classList.remove('report-open');
     if (!sessionRunning) startSession();
   });
-  promptText.textContent = prompts[mode];
+  promptText.textContent = mode === 'v1' ? (v1Rules().goal || prompts.v1) : prompts[mode];
   renderTranscript();
   mountAudienceSetup();
   if (audienceSetup && mode !== 'v2') applyAudienceConfiguration(true);

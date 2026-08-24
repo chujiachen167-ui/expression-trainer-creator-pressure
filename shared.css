@@ -430,6 +430,27 @@ a { color: inherit; text-decoration: none; }
 
 .privacy-note { margin-top: 22px; color: #73798e; font-size: 11px; line-height: 1.6; }
 
+/* V1：诊断指标之外的训练控制，保留原项目的语言、规则与模型入口。 */
+.v1-training-tools { display: grid; gap: 10px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.v1-tools-title { display: grid; gap: 3px; }
+.v1-tools-title h3 { margin: 0; color: #e8ebf7; font-size: 13px; }
+.language-switch { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 5px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: #0c0e13; }
+.language-switch button { min-height: 29px; padding: 4px 5px; border: 0; border-radius: 7px; background: transparent; color: #9aa1b5; font-size: 10px; cursor: pointer; }
+.language-switch button.active { background: rgba(255, 47, 143, 0.16); color: #ff72b7; box-shadow: inset 0 0 0 1px rgba(255, 47, 143, 0.27); }
+.language-status { min-height: 28px; margin: -2px 0 0; color: #737b91; font-size: 10px; line-height: 1.4; }
+.v1-tool-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.v1-tool-actions button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 7px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: #cbd1e4; font-size: 11px; cursor: pointer; }
+.v1-tool-actions button:hover { border-color: #a53270; color: #ff8bc7; }
+.v1-tool-actions button > span:first-child { color: var(--pink); font-size: 15px; line-height: 1; }
+.v1-settings-dialog { width: min(610px, 100%); max-height: min(760px, calc(100vh - 40px)); overflow: auto; }
+.settings-field { display: grid; gap: 7px; margin-top: 16px; color: #d9deec; font-size: 12px; }
+.settings-field > span { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.settings-field small { color: #7d8498; font-size: 10px; font-weight: 400; }
+.settings-field input, .settings-field textarea, .settings-field select { width: 100%; box-sizing: border-box; border: 1px solid #30374b; border-radius: 10px; padding: 10px 11px; outline: none; background: #0c0e13; color: #eef1fa; font: inherit; line-height: 1.5; }
+.settings-field textarea { resize: vertical; }
+.settings-field input:focus, .settings-field textarea:focus, .settings-field select:focus { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(255, 47, 143, 0.1); }
+.settings-note { margin: 16px 0 0; color: #8790a6; font-size: 11px; line-height: 1.6; }
+
 /* 人工验收调控层：X/Y 和尺寸仅影响被选择的主元素，0 表示保留自适应尺寸。 */
 .topbar, .side-panel.left, .stage, .side-panel.right, .room, .video-tile, .prompt-banner, .transcript, .controls {
   transform: translate(var(--qa-x, 0px), var(--qa-y, 0px));

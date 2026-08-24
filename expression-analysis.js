@@ -32,11 +32,26 @@
 
   const cleanText = text => String(text || '').replace(/[\s，。！？、；：,.!?;:“”‘’（）()《》【】\[\]—…-]/g, '');
   const escapeHtml = text => String(text).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
-  function scanTerms(text) {
+  function customFillerTerms(options = {}) {
+    return String(options.customWords || '')
+      .split(/[，,、\s]+/)
+      .map(word => word.trim())
+      .filter(word => word.length >= 1)
+      .map(word => ({ word, type: 'filler' }));
+  }
+
+  function getTaggedTerms(options = {}) {
+    const known = new Set(taggedTerms.map(term => term.word));
+    return [...taggedTerms, ...customFillerTerms(options).filter(term => !known.has(term.word))]
+      .sort((a, b) => b.word.length - a.word.length || priority[a.type] - priority[b.type]);
+  }
+
+  function scanTerms(text, options = {}) {
     const hits = { filler: [], hedge: [], vague: [] };
+    const terms = getTaggedTerms(options);
     let index = 0;
     while (index < text.length) {
-      const match = taggedTerms.find(term => text.startsWith(term.word, index));
+      const match = terms.find(term => text.startsWith(term.word, index));
       if (match) { hits[match.type].push(match.word); index += match.word.length; }
       else index += 1;
     }
@@ -56,9 +71,9 @@
     return [...new Set(hits)];
   }
 
-  function analyze(text) {
+  function analyze(text, options = {}) {
     const compact = cleanText(text);
-    const hits = scanTerms(compact);
+    const hits = scanTerms(compact, options);
     const fillers = hits.filler;
     const hedges = hits.hedge;
     const vague = hits.vague;
@@ -68,12 +83,13 @@
     return { text: String(text || ''), totalChars: compact.length, fillers, hedges, vague, repeats, density };
   }
 
-  function highlight(text) {
+  function highlight(text, options = {}) {
     const input = String(text || '');
+    const terms = getTaggedTerms(options);
     let html = '';
     let index = 0;
     while (index < input.length) {
-      const match = taggedTerms.find(term => input.startsWith(term.word, index));
+      const match = terms.find(term => input.startsWith(term.word, index));
       if (match) {
         html += `<mark class="stt-token ${match.type}">${escapeHtml(match.word)}</mark>`;
         index += match.word.length;
