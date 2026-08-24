@@ -21,6 +21,15 @@
     v2: '请面对镜头，用 60 秒介绍你的账号能持续提供什么价值。',
     v3: '请用 45 秒完成一段自然的广告植入：先讲用户问题，再引出产品价值。'
   };
+  const avatarSkins = [
+    { id: 'ink', name: '夜读', note: '低光、克制、适合内容复盘', mark: '读' },
+    { id: 'signal', name: '信号', note: '冷色、敏锐、适合快速判断', mark: '讯' },
+    { id: 'paper', name: '纸页', note: '暖白、安静、适合知识表达', mark: '页' },
+    { id: 'pulse', name: '脉冲', note: '高对比、直接、适合压力训练', mark: '压' },
+    { id: 'prism', name: '棱镜', note: '亮色、清晰、适合观点口播', mark: '见' },
+    { id: 'mist', name: '雾面', note: '低饱和、柔和、适合经验分享', mark: '听' }
+  ];
+  const avatarSkinStorageKey = 'expression-trainer.avatar-skin.v1';
 
   let stream = null;
   let recognition = null;
@@ -42,6 +51,21 @@
     return window.CreatorQAControls ? window.CreatorQAControls.featureEnabled(name) : true;
   }
 
+  function selectedAvatarSkin() {
+    const saved = localStorage.getItem(avatarSkinStorageKey);
+    return avatarSkins.find(skin => skin.id === saved) || avatarSkins[0];
+  }
+
+  function avatarPickerMarkup() {
+    const selected = selectedAvatarSkin();
+    return `<div class="avatar-visual-choice"><div><span>数字观众形象</span><strong data-avatar-skin-label>${selected.name}</strong><small>只改变呈现形象，不改变受众逻辑。</small></div><button type="button" class="avatar-picker-open" data-avatar-picker-open>选择形象</button></div>
+      <section class="avatar-picker" data-avatar-picker hidden role="dialog" aria-modal="true" aria-label="选择数字观众形象">
+        <div class="avatar-picker-head"><div><span class="section-kicker">AUDIENCE VISUAL</span><h4>选择数字观众形象</h4></div><button type="button" data-avatar-picker-close aria-label="关闭形象选择">×</button></div>
+        <p>这是观众的视觉呈现，不会把产品变成泛化聊天室。</p>
+        <div class="drift-wall" aria-label="数字观众形象列表">${avatarSkins.map(skin => `<button type="button" class="drift-avatar-card${skin.id === selected.id ? ' selected' : ''}" data-avatar-skin="${skin.id}"><span class="drift-avatar-orb drift-${skin.id}">${skin.mark}</span><strong>${skin.name}</strong><small>${skin.note}</small><i>${skin.id === selected.id ? '已选' : '选择'}</i></button>`).join('')}</div>
+      </section>`;
+  }
+
   function mountAudienceSetup() {
     if (mode === 'v1' || !window.CreatorAudienceEngine || !window.CreatorAvatarProvider) return;
     const leftPanel = document.querySelector('.side-panel.left');
@@ -59,6 +83,7 @@
       <label class="brief-field"><span>受众模板</span><select data-audience-template>${window.CreatorAudienceEngine.templates.map(template => `<option value="${template.id}">${template.name}</option>`).join('')}</select></label>
       <div class="brief-summary" data-audience-summary></div>
       <div class="brief-provider-note"><span>数字观众</span><strong data-provider-label>${providerConfig.provider === 'live' ? '系统数字人' : '浏览器演示'}</strong><small>由系统提供，开发者接入配置不属于训练任务。</small></div>
+      ${avatarPickerMarkup()}
       <div class="audience-config-actions"><button type="button" data-audience-apply>应用模板</button><button type="button" data-audience-preview>试听反应</button></div>
       <div class="provider-status" data-provider-status>等待应用配置</div>`;
     if (useSheet) {
@@ -81,6 +106,25 @@
     templateSelect.value = window.CreatorAudienceEngine.getTemplate(savedTemplate).id;
     audienceSetup = section;
 
+    const picker = section.querySelector('[data-avatar-picker]');
+    const syncAvatarSkin = () => {
+      const skin = selectedAvatarSkin();
+      section.querySelector('[data-avatar-skin-label]').textContent = skin.name;
+      picker.querySelectorAll('[data-avatar-skin]').forEach(button => {
+        const selected = button.dataset.avatarSkin === skin.id;
+        button.classList.toggle('selected', selected);
+        button.querySelector('i').textContent = selected ? '已选' : '选择';
+      });
+      document.querySelectorAll('.audience-tile').forEach(tile => tile.dataset.avatarSkin = skin.id);
+    };
+    section.querySelector('[data-avatar-picker-open]').addEventListener('click', () => { picker.hidden = false; });
+    picker.querySelector('[data-avatar-picker-close]').addEventListener('click', () => { picker.hidden = true; });
+    picker.querySelectorAll('[data-avatar-skin]').forEach(button => button.addEventListener('click', () => {
+      localStorage.setItem(avatarSkinStorageKey, button.dataset.avatarSkin);
+      syncAvatarSkin();
+      picker.hidden = true;
+    }));
+
     const updateSummary = () => {
       const template = window.CreatorAudienceEngine.getTemplate(templateSelect.value);
       const summary = section.querySelector('[data-audience-summary]');
@@ -98,11 +142,12 @@
       section._closeSheet?.();
     });
     section.querySelector('[data-audience-preview]').addEventListener('click', () => fireAudienceReaction(true));
-    updateSummary();
+    updateSummary(); syncAvatarSkin();
+    window.CreatorQAControls?.refreshCopyLibrary?.();
   }
 
   function audienceCard(profile) {
-    return `<div class="audience-tile" data-profile-id="${profile.id}"><div class="audience-copy"><div class="avatar">${profile.glyph}</div><div class="audience-name">${profile.name}</div><div class="audience-role">${profile.role}</div><div class="audience-reaction">${profile.motivation}</div><div class="avatar-provider-state">等待连接</div></div></div>`;
+    return `<div class="audience-tile" data-profile-id="${profile.id}" data-avatar-skin="${selectedAvatarSkin().id}"><div class="audience-copy"><div class="avatar">${profile.glyph}</div><div class="audience-name">${profile.name}</div><div class="audience-role">${profile.role}</div><div class="audience-reaction">${profile.motivation}</div><div class="avatar-provider-state">等待连接</div></div></div>`;
   }
 
   function renderAudienceProfiles() {
