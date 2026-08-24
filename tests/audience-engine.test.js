@@ -37,6 +37,16 @@ assert.equal(reaction.signal, 'opening');
 assert.match(reaction.text, /结论/);
 assert.match(reaction.text, /帮助观众做购买判断/);
 
+const quietReaction = engine.nextReaction({
+  template: techTemplate,
+  profile: engine.getProfiles(techTemplate)[0],
+  observation: engine.observe('', 0),
+  pressure: 'medium',
+  eventIndex: 7
+});
+assert.equal(quietReaction.signal, 'continue');
+assert.doesNotMatch(quietReaction.text, /undefined/);
+
 const provider = avatar.create({ provider: 'mock' });
 assert.ok(provider, 'Mock provider should be constructible without a backend');
 assert.equal(avatar.loadConfig().provider, 'mock');

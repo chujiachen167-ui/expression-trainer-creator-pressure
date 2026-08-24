@@ -259,21 +259,54 @@
     return instance;
   }
 
-  function addEvent(who, text, system = false, meta = '') {
+  function addEvent(who, text, system = false, meta = '', options = {}) {
     if (!eventFeed || !featureEnabled('feedback')) return;
+    const { key = '', removable = false, kind = '' } = options;
+    const existing = key ? eventFeed.querySelector(`[data-event-key="${key}"]`) : null;
+    if (existing) {
+      existing.querySelector('[data-event-title]').textContent = who;
+      existing.querySelector('[data-event-body]').textContent = text;
+      const oldMeta = existing.querySelector('[data-event-meta]');
+      if (meta && oldMeta) oldMeta.textContent = meta;
+      else if (meta) {
+        const detail = document.createElement('small');
+        detail.dataset.eventMeta = '';
+        detail.textContent = meta;
+        existing.appendChild(detail);
+      } else oldMeta?.remove();
+      eventFeed.prepend(existing);
+      eventFeed.scrollTop = 0;
+      return existing;
+    }
     const card = document.createElement('div');
-    card.className = `event-card${system ? ' system' : ''}`;
+    card.className = `event-card${system ? ' system' : ''}${kind ? ` ${kind}-event` : ''}`;
+    if (removable) card.classList.add('removable');
+    if (key) card.dataset.eventKey = key;
     const title = document.createElement('strong');
+    title.dataset.eventTitle = '';
     title.textContent = who;
     const body = document.createElement('div');
+    body.dataset.eventBody = '';
     body.textContent = text;
     card.append(title, body);
     if (meta) {
       const detail = document.createElement('small');
+      detail.dataset.eventMeta = '';
       detail.textContent = meta;
       card.appendChild(detail);
     }
+    if (removable) {
+      const dismiss = document.createElement('button');
+      dismiss.type = 'button';
+      dismiss.className = 'event-dismiss';
+      dismiss.setAttribute('aria-label', `删除${who}记录`);
+      dismiss.textContent = '×';
+      dismiss.addEventListener('click', () => card.remove());
+      card.appendChild(dismiss);
+    }
     eventFeed.prepend(card);
+    eventFeed.scrollTop = 0;
+    return card;
   }
 
   function reactAudience(text, profileId) {
@@ -381,10 +414,12 @@
 
   document.querySelectorAll('.scenario-btn').forEach(button => {
     button.addEventListener('click', () => {
+      const isCurrentScenario = button.classList.contains('active') && prompts.v3 === button.dataset.prompt;
+      if (isCurrentScenario) return;
       document.querySelectorAll('.scenario-btn').forEach(item => item.classList.toggle('active', item === button));
       prompts.v3 = button.dataset.prompt;
       promptText.textContent = prompts.v3;
-      addEvent('场景切换', button.querySelector('[data-scenario-name]')?.textContent.trim() || button.textContent.trim(), true, '目标受众保持不变');
+      addEvent('场景切换', button.querySelector('[data-scenario-name]')?.textContent.trim() || button.textContent.trim(), true, '目标受众保持不变', { key: 'scene-switch', removable: true, kind: 'scene' });
     });
   });
 

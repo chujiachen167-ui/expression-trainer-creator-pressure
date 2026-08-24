@@ -93,8 +93,9 @@
   };
 
   function nextReaction({ template, profile, observation, pressure = 'medium', eventIndex = 0 }) {
-    const active = profile.priorities.filter(key => observation[key]);
-    const fallback = Object.keys(reactions).filter(key => key !== 'continue' && observation[key]);
+    const isTriggered = key => Array.isArray(observation[key]) ? observation[key].length > 0 : Boolean(observation[key]);
+    const active = profile.priorities.filter(isTriggered);
+    const fallback = Object.keys(reactions).filter(key => key !== 'continue' && isTriggered(key));
     const candidates = active.length ? active : fallback;
     const signal = candidates[eventIndex % Math.max(candidates.length, 1)] || 'continue';
     const text = reactions[signal]({ template, profile, observation });
