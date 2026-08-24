@@ -133,4 +133,5 @@
   function create(config = loadConfig()) { return config.provider === 'live' ? new LiveTalkingProvider(config) : new BrowserDemoProvider(config); }
 
   window.CreatorAvatarProvider = { defaults, loadConfig, saveConfig, create };
+  if (typeof window.dispatchEvent === 'function') window.dispatchEvent(new CustomEvent('creator:avatar-provider-ready'));
 })();

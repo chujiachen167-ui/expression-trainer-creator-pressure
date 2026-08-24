@@ -1,4 +1,5 @@
 (() => {
+  if (document.body.dataset.environment === 'production') return;
   const storageKey = 'expression-trainer.creator-qa.v1';
   const defaults = {
     flags: { v1: true, v2: true, v3: true, camera: true, audience: true, pressure: true, transcript: true, metrics: true, feedback: true },
@@ -89,6 +90,7 @@
           ${numberField('全局字号', 'theme.fontSize', 12, 24)}</section>
         <section><h2>主布局尺寸</h2>${numberField('画布最大宽度', 'layout.canvasWidth', 960, 1920, 10)}${numberField('左栏宽度', 'layout.leftWidth', 160, 420, 5)}${numberField('右栏宽度', 'layout.rightWidth', 180, 460, 5)}${numberField('训练窗口高度', 'layout.roomHeight', 320, 900, 10)}</section>
         <section><h2>元素坐标与尺寸</h2><label class="qa-select"><span>选择元素</span><select id="qaElement">${Object.entries(elementLabel).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}</select></label><div id="qaElementFields"></div></section>
+        <section class="qa-avatar-section"><h2>数字人 Provider（开发者）</h2><p class="qa-hint">普通用户不会看到这些字段。这里只配置本地或服务器上的数字人服务。</p><label class="qa-select"><span>来源</span><select id="qaAvatarProvider"><option value="mock">浏览器演示</option><option value="live">LiveTalking · WebRTC</option></select></label><label class="qa-provider-field"><span>服务地址</span><input id="qaAvatarServer" spellcheck="false"></label><label class="qa-provider-field"><span>Avatar IDs</span><input id="qaAvatarId" spellcheck="false" placeholder="avatar_a, avatar_b, avatar_c"></label><button type="button" class="qa-provider-save" data-qa-provider-save>保存数字人配置</button><p class="qa-provider-status" data-qa-provider-status>等待数字人模块加载…</p></section>
         <section><h2>配置操作</h2><div class="qa-actions"><button type="button" data-qa-copy>复制 JSON</button><button type="button" data-qa-reset>恢复默认</button></div><textarea class="qa-json" readonly aria-label="当前调控配置"></textarea></section>
       </div>`;
     document.body.append(trigger, panel);
@@ -100,6 +102,26 @@
     };
     const refreshJson = () => { panel.querySelector('.qa-json').value = JSON.stringify(state, null, 2); };
     const sync = () => { apply(); save(); refreshInputs(panel); refreshJson(); };
+    const refreshAvatarProvider = () => {
+      const provider = window.CreatorAvatarProvider;
+      const status = panel.querySelector('[data-qa-provider-status]');
+      if (!provider) { if (status) status.textContent = '数字人模块尚未加载'; return; }
+      const config = provider.loadConfig();
+      panel.querySelector('#qaAvatarProvider').value = config.provider;
+      panel.querySelector('#qaAvatarServer').value = config.serverUrl;
+      panel.querySelector('#qaAvatarId').value = config.avatarId;
+      if (status) status.textContent = config.provider === 'live' ? '已配置 LiveTalking，应用模板时连接。' : '当前使用浏览器演示，无需后端。';
+    };
+    const saveAvatarProvider = () => {
+      const provider = window.CreatorAvatarProvider;
+      const status = panel.querySelector('[data-qa-provider-status]');
+      if (!provider) { if (status) status.textContent = '数字人模块尚未加载'; return; }
+      provider.saveConfig({ provider: panel.querySelector('#qaAvatarProvider').value, serverUrl: panel.querySelector('#qaAvatarServer').value.trim() || provider.defaults.serverUrl, avatarId: panel.querySelector('#qaAvatarId').value.trim() });
+      if (status) status.textContent = '已保存。下一次应用模板时会重新连接数字人。';
+      document.dispatchEvent(new CustomEvent('creator:avatar-config-change'));
+    };
+    window.addEventListener('creator:avatar-provider-ready', refreshAvatarProvider);
+    panel.querySelector('[data-qa-provider-save]').addEventListener('click', saveAvatarProvider);
     trigger.addEventListener('click', () => { panel.hidden = !panel.hidden; trigger.setAttribute('aria-expanded', String(!panel.hidden)); });
     panel.querySelector('.qa-close').addEventListener('click', () => trigger.click());
     panel.addEventListener('input', event => {
@@ -116,7 +138,7 @@
       panel.querySelector('[data-qa-copy]').textContent = '已复制'; setTimeout(() => panel.querySelector('[data-qa-copy]').textContent = '复制 JSON', 1300);
     });
     panel.querySelector('[data-qa-reset]').addEventListener('click', () => { state = clone(defaults); sync(); renderElementFields(); });
-    renderElementFields(); refreshJson();
+    renderElementFields(); refreshJson(); refreshAvatarProvider();
   }
   window.CreatorQAControls = { featureEnabled, getState: () => clone(state), reset: () => { state = clone(defaults); apply(); save(); } };
   apply();

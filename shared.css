@@ -21,7 +21,8 @@
   --qa-room-height: 520px;
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+input, textarea, select, option, [contenteditable="true"], [contenteditable=""] { user-select: text; -webkit-user-select: text; }
 
 body {
   margin: 0;
@@ -192,6 +193,10 @@ a { color: inherit; text-decoration: none; }
 .brief-summary { margin-top: 12px; padding: 10px; border-radius: 10px; background: rgba(7, 8, 12, 0.62); }
 .brief-summary strong { display: block; color: var(--cyan); font-size: 12px; }
 .brief-summary span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.brief-provider-note { display: grid; gap: 4px; margin-top: 12px; padding: 10px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; background: rgba(7, 8, 12, 0.46); }
+.brief-provider-note span { color: var(--muted); font-size: 10px; }
+.brief-provider-note strong { color: var(--cyan); font-size: 11px; }
+.brief-provider-note small { color: #777e92; font-size: 9px; line-height: 1.45; }
 .provider-fields { display: none; }.provider-fields.visible { display: block; }
 .audience-config-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 12px; }
 .audience-config-actions button { padding: 9px 10px; border: 1px solid #3a4052; border-radius: 9px; background: #171a23; color: var(--text); cursor: pointer; font-size: 11px; }
@@ -365,6 +370,7 @@ a { color: inherit; text-decoration: none; }
 .qa-panel section { padding: 16px 0; border-bottom: 1px solid #292c38; }.qa-panel section:last-child { border-bottom: 0; }.qa-panel h2 { margin: 0 0 8px; font-size: 13px; }.qa-hint { margin: 0 0 12px; color: #8d93a7; font-size: 11px; line-height: 1.5; }
 .qa-switches { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 12px; }.qa-switch { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #cdd1df; font-size: 12px; cursor: pointer; }.qa-switch input { position: absolute; opacity: 0; }.qa-switch i { width: 30px; height: 17px; border-radius: 20px; background: #343846; position: relative; transition: 160ms; }.qa-switch i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 11px; height: 11px; border-radius: 50%; background: #fff; transition: 160ms; }.qa-switch input:checked + i { background: var(--pink); }.qa-switch input:checked + i::after { transform: translateX(13px); }
 .qa-colors { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }.qa-color, .qa-select { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; color: #cdd1df; font-size: 12px; }.qa-color input { width: 38px; height: 24px; padding: 1px; border: 1px solid #3c4050; border-radius: 5px; background: transparent; }.qa-select select { min-width: 170px; padding: 6px; border: 1px solid #3c4050; border-radius: 6px; background: #191c25; color: #eef0f8; font-size: 12px; }
+.qa-provider-field { display: grid; gap: 6px; margin-top: 10px; color: #cdd1df; font-size: 12px; }.qa-provider-field input { width: 100%; padding: 7px 8px; border: 1px solid #3c4050; border-radius: 6px; background: #0a0b0f; color: #eef0f8; font: 11px ui-monospace, Consolas, monospace; }.qa-provider-save { width: 100%; margin-top: 12px; padding: 8px; border: 1px solid rgba(255, 47, 146, 0.5); border-radius: 7px; background: var(--pink-soft); color: #fff; cursor: pointer; font-size: 12px; }.qa-provider-status { min-height: 16px; margin: 8px 0 0; color: #8d93a7; font-size: 11px; line-height: 1.45; }
 .qa-field { display: grid; grid-template-columns: 105px 1fr 42px; gap: 8px; align-items: center; margin-top: 9px; color: #cdd1df; font-size: 12px; }.qa-field input { accent-color: var(--pink); }.qa-field output { color: var(--cyan); text-align: right; font-variant-numeric: tabular-nums; }.qa-actions { display: flex; gap: 8px; }.qa-actions button { flex: 1; padding: 8px; border: 1px solid #3c4050; border-radius: 7px; background: #191c25; color: #eef0f8; cursor: pointer; font-size: 12px; }.qa-json { width: 100%; min-height: 110px; margin-top: 10px; resize: vertical; border: 1px solid #303442; border-radius: 8px; background: #0a0b0f; color: #aeb5cc; padding: 9px; font: 10px/1.45 ui-monospace, Consolas, monospace; }
 
 @keyframes spin { to { transform: rotate(360deg); } }

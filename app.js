@@ -58,11 +58,7 @@
       <p>先确定内容讲给谁。模板定义受众关注点，不保存固定台词。</p>
       <label class="brief-field"><span>受众模板</span><select data-audience-template>${window.CreatorAudienceEngine.templates.map(template => `<option value="${template.id}">${template.name}</option>`).join('')}</select></label>
       <div class="brief-summary" data-audience-summary></div>
-      <label class="brief-field"><span>数字形象来源</span><select data-avatar-provider><option value="mock">浏览器演示（无需后端）</option><option value="live">LiveTalking · WebRTC</option></select></label>
-      <div class="provider-fields" data-provider-fields>
-        <label class="brief-field"><span>LiveTalking 地址</span><input data-avatar-server spellcheck="false"></label>
-        <label class="brief-field"><span>Avatar IDs（多个用逗号分隔）</span><input data-avatar-id spellcheck="false" placeholder="avatar_a, avatar_b, avatar_c"></label>
-      </div>
+      <div class="brief-provider-note"><span>数字观众</span><strong data-provider-label>${providerConfig.provider === 'live' ? '系统数字人' : '浏览器演示'}</strong><small>由系统提供，开发者接入配置不属于训练任务。</small></div>
       <div class="audience-config-actions"><button type="button" data-audience-apply>应用模板</button><button type="button" data-audience-preview>试听反应</button></div>
       <div class="provider-status" data-provider-status>等待应用配置</div>`;
     if (useSheet) {
@@ -82,18 +78,13 @@
       leftPanel.insertBefore(section, leftPanel.firstChild.nextSibling);
     }
     const templateSelect = section.querySelector('[data-audience-template]');
-    const providerSelect = section.querySelector('[data-avatar-provider]');
     templateSelect.value = window.CreatorAudienceEngine.getTemplate(savedTemplate).id;
-    providerSelect.value = providerConfig.provider;
-    section.querySelector('[data-avatar-server]').value = providerConfig.serverUrl;
-    section.querySelector('[data-avatar-id]').value = providerConfig.avatarId;
     audienceSetup = section;
 
     const updateSummary = () => {
       const template = window.CreatorAudienceEngine.getTemplate(templateSelect.value);
       const summary = section.querySelector('[data-audience-summary]');
       summary.innerHTML = `<strong>${template.domain} · ${template.platform}</strong><span>${template.goal}</span>`;
-      section.querySelector('[data-provider-fields]').classList.toggle('visible', providerSelect.value === 'live');
       if (compactBrief) {
         compactBrief.querySelector('.compact-brief-tag').textContent = template.domain;
         compactBrief.querySelector('[data-compact-title]').textContent = template.name.split('·').pop().trim();
@@ -102,7 +93,6 @@
       }
     };
     templateSelect.addEventListener('change', updateSummary);
-    providerSelect.addEventListener('change', updateSummary);
     section.querySelector('[data-audience-apply]').addEventListener('click', async () => {
       await applyAudienceConfiguration(true);
       section._closeSheet?.();
@@ -137,11 +127,9 @@
     document.querySelectorAll('.scenario-btn').forEach(button => button.classList.remove('active'));
     renderAudienceProfiles();
 
-    const config = {
-      provider: audienceSetup.querySelector('[data-avatar-provider]').value,
-      serverUrl: audienceSetup.querySelector('[data-avatar-server]').value.trim() || window.CreatorAvatarProvider.defaults.serverUrl,
-      avatarId: audienceSetup.querySelector('[data-avatar-id]').value.trim()
-    };
+    const config = window.CreatorAvatarProvider.loadConfig();
+    const providerLabel = audienceSetup.querySelector('[data-provider-label]');
+    if (providerLabel) providerLabel.textContent = config.provider === 'live' ? '系统数字人' : '浏览器演示';
     window.CreatorAvatarProvider.saveConfig(config);
     const status = audienceSetup.querySelector('[data-provider-status]');
     if (!connectProvider) return;
@@ -408,6 +396,10 @@
     if (sessionRunning && !flags.transcript && !flags.metrics && recognition) {
       try { recognition.stop(); } catch (_) { /* already stopped */ }
     }
+  });
+
+  document.addEventListener('creator:avatar-config-change', () => {
+    if (audienceSetup) applyAudienceConfiguration(true);
   });
 
   cameraButton?.addEventListener('click', toggleCamera);
