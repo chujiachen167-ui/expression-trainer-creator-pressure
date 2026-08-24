@@ -1,0 +1,30 @@
+{
+  "name": "expression-trainer-creator-pressure",
+  "productName": "Expression Trainer Creator Pressure",
+  "version": "0.2.0",
+  "description": "面向自媒体新手的镜头表达与数字观众压力训练桌面应用",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "smoke": "electron . --smoke-test",
+    "test": "node tests/expression-analysis.test.js && node tests/audience-engine.test.js && node tests/desktop-core.test.js",
+    "check": "node --check main.js && node --check preload.js && node --check app.js && node --check v1-controls.js && node --check lib/asr.js && node --check lib/lexicon.js && node --check lib/ai-feedback.js && node --check lib/prompts.js"
+  },
+  "keywords": ["creator", "expression", "training", "speech", "asr", "digital-human"],
+  "author": "Sisi and contributors; Creator Pressure adaptation by chujiachen167-ui",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chujiachen167-ui/expression-trainer-creator-pressure.git"
+  },
+  "devDependencies": {
+    "electron": "^43.4.1"
+  },
+  "dependencies": {
+    "sherpa-onnx-node": "^1.10.0"
+  }
+}

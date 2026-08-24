@@ -1,58 +1,78 @@
 # Expression Trainer · Creator Pressure
 
-自媒体创作者的镜头压力训练工具：通过镜头、数字观众和自媒体实战场景，帮助新手减少口头禅、提升信息密度，并在可控压力下保持清晰表达。
+面向自媒体新手的镜头表达与可控压力训练桌面应用。项目继承 [fxy2311-youyou/expression-trainer](https://github.com/fxy2311-youyou/expression-trainer) 的 Electron、Sherpa-ONNX 离线转写、中文表达词库、多模型配置、实时反馈和完整报告能力，再增加摄像头、数字观众及自媒体实战训练层。
 
-## 打开方式
+## 当前能力
 
-直接用 Chrome 或 Edge 打开 `index.html`，再进入三个训练层。摄像头和语音识别需要浏览器授权；某些浏览器只允许在 `localhost` 或 HTTPS 页面调用摄像头，此时请用任意静态文件服务器打开本目录。
+| 层级 | 训练目标 | 已实现 |
+|---|---|---|
+| V1 镜头基线 | 面对镜头自然、紧凑地表达 | 摄像头、透明实时字幕、中/中英混合/英文模式、原词库指标、训练规则、AI 配置与报告 |
+| V2 数字观众 | 在可控观看压力下保持表达质量 | 受众模板、确定性行为触发、压力等级、数字人 Provider 接口、同题重练 |
+| V3 实战房间 | 完成自媒体常见高压任务 | 广告植入、热点观点、直播回应、知识口播及可删除的事件流 |
 
-## 三版关系
+三层共享同一个诊断核心，并非三个独立产品。当前数字观众的触发策略仍是可审计的确定性规则；LiveTalking 是可替换的形象呈现 Provider。
 
-- V1：保留原项目的实时字幕、词库统计、即时反馈和诊断报告，仅把摄像头加入字幕背景。
-- V2：增加有行为的数字观众与可控压力。
-- V3：增加广告植入、直播回应、热点观点等自媒体实战房间。
+## 桌面端运行
 
-这三个训练层不是三个独立产品，而是一条逐步加强的 Creator Pressure 训练路径。
+环境：Windows 10/11、Node.js 22.12 或更高版本。
 
-## V1 保留边界
+```powershell
+npm install
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-asr-model.ps1
+npm start
+```
 
-V1 以原项目 [`fxy2311-youyou/expression-trainer`](https://github.com/fxy2311-youyou/expression-trainer) 为能力基线：左侧仍统计笼统词、填充词、犹豫词与表达密度，右侧仍提供即时替换建议，逐字稿仍可单独粘贴分析，结束后仍生成诊断报告。摄像头只作为中央实时字幕的透明背景，不取代原表达诊断流程。
+模型安装脚本会从 sherpa-onnx 官方发布页下载约 1 GB 的中英双语流式 Paraformer 模型。模型保存在本机 `models/`，已被 `.gitignore` 排除，不随仓库分发。
 
-## V3 界面来源
+桌面端提供：
 
-V3 的界面不是凭空生成的视觉稿。它分别参考 LiveKit Meet 的镜头舞台、OpenCut 的创作者工作台、shadcn/ui 的设置侧滑层与分段控制，以及 Umami 的指标复盘结构。详细映射、许可证和明确不采用的部分见 [`UI_REFERENCE.md`](UI_REFERENCE.md)。
+- Sherpa-ONNX 本地麦克风转写，不依赖浏览器语音服务。
+- 原项目的笼统词、填充词、犹豫词、重复表达与表达密度分析。
+- 训练菜单中的“原始诊断模式”“训练规则”和“大模型配置”。
+- OpenAI、DeepSeek、Ollama 及兼容 OpenAI 接口的自定义服务。
+- 本地诊断兜底；配置模型后追加实时 AI 建议和完整复盘。
 
-## 第一版受众模拟
+## 浏览器预览
 
-V2 和 V3 已加入创作简报与受众模板系统：
+直接打开 `index.html`，或用静态服务器访问本目录。浏览器模式用于快速验收 UI、摄像头、受众模板和场景流程；它会降级使用 Web Speech API 与本地 JavaScript 词库，不能替代桌面端的离线诊断核心。
 
-- 提供知识科普、科技测评、美妆种草、财经解释、健身教学、生活方式、母婴育儿和个人 IP 八类模板。
-- 每个模板明确内容领域、平台、内容目标和代表性受众，不保存固定台词。
-- 受众模拟引擎根据当轮转写中的开场、信息密度、模糊词、术语、例子、证据、风险边界和广告感产生反应。
-- “试听反应”可在训练开始前验证当前模板；正式训练时会按压力等级控制反应频率和直接程度。
+## 开发与验证
 
-## LiveTalking 接入
+```powershell
+npm run check
+npm test
+npm run smoke
+```
 
-普通训练界面默认使用无需后端的浏览器演示。LiveTalking 的服务地址和 Avatar ID 属于开发者配置，已从用户训练设置中移到“人工验收调控板”；真实用户只选择受众模板，不需要理解 Provider 或 Avatar ID：
-
-1. 按 [LiveTalking 官方仓库](https://github.com/lipku/LiveTalking)启动服务，推荐使用 MuseTalk 模型。
-2. 在开发者调控板中配置默认服务地址 `http://127.0.0.1:8010`；多个受众可填写逗号分隔的 Avatar ID，并按窗口顺序连接不同形象。
-3. 点击“应用模板”，页面会通过 `/offer` 创建 WebRTC 会话；受众反应通过 `/human` 以 `echo` 模式驱动数字人。
-4. 连接失败的窗口会自动降级为浏览器语音演示，不影响受众模板和训练流程验收。
-
-LiveTalking 只是可替换的数字形象 Provider。受众身份、触发原因和反应内容始终由 Expression Trainer 的受众模拟层决定。
+- `check`：检查桌面主进程、预加载脚本、训练界面和诊断核心语法。
+- `test`：验证表达分析、受众引擎、词库、自定义口癖词、提示词和 ASR 状态契约。
+- `smoke`：启动真实 Electron 渲染器，验证 V1、预加载桥接和离线模型状态。
 
 ## 人工验收调控板
 
-每个页面右下角都有“调控板”。其配置会保存在当前浏览器的 `localStorage`：
+每个训练页面右下角都有仅供开发阶段使用的调控板，配置保存在当前浏览器的 `localStorage`：
 
-这是开发者工具。正式用户版本应将页面设置为 `<body data-environment="production">`，调控板脚本会自动退出；用户训练界面也不会出现服务地址、Provider 或 Avatar ID。
+- “UI 参数”：能力开关、颜色、字体、画布、布局和元素位置/尺寸。
+- “文案”：管理当前页面全部可见静态文案和浏览器标题。
+- “组件”：管理 Drift Wall 等外部视觉组件的参数。
 
-- “UI 参数”页：开关 V1/V2/V3 与训练能力，调节颜色、字体、画布、布局及元素 X/Y/宽高；开发者数字人 Provider 也只在此页出现。
-- “文案”页：只管理当前页面的静态文字与浏览器标签标题。
-- “组件”页：管理 React Bits Drift Wall 的官方参数模型；以后接入带 customized 选项的开源组件也各自放在这里，不再混入 UI 或文案页面。
-- 可复制完整 JSON 配置，并一键恢复默认，便于人工验收记录和复现。
+正式用户环境将页面设为 `<body data-environment="production">` 后，调控板不会初始化；LiveTalking 地址、Avatar ID 等开发者字段也不会暴露。
 
-## 隐私原则
+## 数据与隐私边界
 
-当前版本默认不上传、不保存摄像头画面。语音识别是否由浏览器在线服务处理，取决于浏览器实现。正式产品应明确展示数据流和保存策略。
+- 默认不录制、不上传摄像头画面。
+- Electron 语音转写在本机执行；只有明确配置并启用大模型时，文字内容才会发送给相应服务商。
+- 当前不使用视觉模型判断视线，也不进行颜值、人格、情绪或可信度评分。
+- 设置仍沿用上游的本地 JSON 存储方式；正式发布前应迁移 API Key 至 Electron `safeStorage` 或系统凭据库。
+
+## 来源、许可证与第三方材料
+
+本仓库使用 MIT License，并保留上游作者 Sisi 的版权声明。Creator Pressure 的新增改动由 chujiachen167-ui 维护。
+
+- [LICENSE](LICENSE)：本仓库 MIT 许可证与双方版权声明。
+- [NOTICE.md](NOTICE.md)：上游来源、基准提交和主要改动。
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)：Electron、sherpa-onnx、React Bits、LiveTalking、词库与演示素材边界。
+- [UI_REFERENCE.md](UI_REFERENCE.md)：界面参考与未复制内容。
+- [ARCHITECTURE.md](ARCHITECTURE.md)：当前实现结构和能力边界。
+
+注意：离线模型、词库数据和运行时远程图片可能具有独立许可证。本仓库不会借由 MIT 声明覆盖这些第三方材料的许可条件；生产分发前必须按第三方清单逐项复核。

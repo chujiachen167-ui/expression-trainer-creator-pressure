@@ -38,6 +38,12 @@
   let avatarProvider = null;
   let audienceSetup = null;
   let compactBrief = null;
+  let desktopRuntime = null;
+  let coreAnalysisTimer = null;
+  let coreAnalysisVersion = 0;
+  let lastAiFeedbackLength = 0;
+  let aiFeedbackPending = false;
+  let aiConfigurationNoticeShown = false;
 
   function featureEnabled(name) {
     return window.CreatorQAControls ? window.CreatorQAControls.featureEnabled(name) : true;
@@ -49,6 +55,13 @@
 
   function v1Language() {
     return window.CreatorV1Controls?.getLanguage?.() || { mode: 'zh', sttLang: 'zh-CN' };
+  }
+
+  async function refreshDesktopRuntime() {
+    if (!window.api?.getRuntimeStatus) return null;
+    try { desktopRuntime = await window.api.getRuntimeStatus(); } catch (_) { desktopRuntime = null; }
+    document.body.classList.toggle('desktop-runtime', Boolean(desktopRuntime?.desktop));
+    return desktopRuntime;
   }
 
   function mountAudienceSetup() {
@@ -190,7 +203,8 @@
 
   function updateMetrics() {
     if (mode === 'v1' && window.CreatorExpressionAnalysis) {
-      const analysis = window.CreatorExpressionAnalysis.analyze(`${transcript}${interim}`, v1Rules());
+      const currentText = `${transcript}${interim}`;
+      const analysis = window.CreatorExpressionAnalysis.analyze(currentText, v1Rules());
       if (featureEnabled('metrics')) {
         setMetric('fillerMetric', analysis.fillers.length);
         setMetric('vagueMetric', analysis.vague.length);
@@ -198,6 +212,7 @@
         setMetric('densityMetric', analysis.totalChars ? `${analysis.density}%` : '--');
       }
       renderDiagnosticFeedback(analysis);
+      scheduleCoreAnalysis(currentText, analysis);
       return;
     }
     if (!featureEnabled('metrics')) return;
@@ -221,6 +236,34 @@
   function setMetric(id, value) {
     const node = document.getElementById(id);
     if (node) node.textContent = value;
+  }
+
+  function scheduleCoreAnalysis(text, localAnalysis) {
+    if (!window.api?.analyzeText || !text.trim()) return;
+    clearTimeout(coreAnalysisTimer);
+    const version = ++coreAnalysisVersion;
+    coreAnalysisTimer = setTimeout(async () => {
+      try {
+        const core = await window.api.analyzeText(text);
+        if (!core || version !== coreAnalysisVersion) return;
+        const normalized = {
+          text,
+          totalChars: core.totalWords,
+          fillers: core.fillers.map(item => item.word),
+          hedges: core.hedges.map(item => item.word),
+          vague: core.vagueWords.map(item => item.word),
+          repeats: localAnalysis.repeats,
+          density: core.density
+        };
+        if (featureEnabled('metrics')) {
+          setMetric('fillerMetric', normalized.fillers.length);
+          setMetric('vagueMetric', normalized.vague.length);
+          setMetric('hedgeMetric', normalized.hedges.length);
+          setMetric('densityMetric', `${normalized.density}%`);
+        }
+        renderDiagnosticFeedback(normalized);
+      } catch (_) { /* Browser preview keeps the local analyzer as fallback. */ }
+    }, 120);
   }
 
   function renderTranscript() {
@@ -278,7 +321,76 @@
     if (cameraButton) cameraButton.innerHTML = '<span class="control-indicator"></span>开启摄像头';
   }
 
+  function applyRecognitionResult(piece, isFinal) {
+    if (isFinal) {
+      transcript += piece;
+      interim = '';
+    } else interim = piece;
+    renderTranscript();
+    updateMetrics();
+    if (isFinal) requestCoreAiFeedback();
+  }
+
+  function createElectronRecognition() {
+    let audioStream = null;
+    let audioContext = null;
+    let source = null;
+    let processor = null;
+    let feedPending = false;
+    const instance = {
+      _manualStop: false,
+      onend: null,
+      onerror: null,
+      async start() {
+        instance._manualStop = false;
+        const init = await window.api.initASR();
+        if (!init.success) {
+          instance.onerror?.({ error: 'desktop-asr', message: init.error });
+          return;
+        }
+        try {
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          audioContext = new AudioContextClass({ sampleRate: 16000 });
+          source = audioContext.createMediaStreamSource(audioStream);
+          processor = audioContext.createScriptProcessor(4096, 1, 1);
+          processor.onaudioprocess = event => {
+            if (!sessionRunning || feedPending) return;
+            const samples = Float32Array.from(event.inputBuffer.getChannelData(0));
+            feedPending = true;
+            window.api.feedAudio(samples).then(result => {
+              if (result?.text) applyRecognitionResult(result.text, result.isFinal);
+            }).catch(error => instance.onerror?.({ error: 'desktop-asr', message: error.message })).finally(() => { feedPending = false; });
+          };
+          source.connect(processor);
+          processor.connect(audioContext.destination);
+        } catch (error) {
+          await window.api.stopASR().catch(() => {});
+          instance.onerror?.({ error: 'microphone', message: error.message });
+        }
+      },
+      async stop() {
+        processor?.disconnect(); source?.disconnect();
+        processor = null; source = null;
+        audioStream?.getTracks().forEach(track => track.stop());
+        audioStream = null;
+        if (audioContext) await audioContext.close().catch(() => {});
+        audioContext = null;
+        const result = await window.api.stopASR().catch(() => ({ finalText: '' }));
+        if (result?.finalText) applyRecognitionResult(result.finalText, true);
+        instance.onend?.();
+      }
+    };
+    return instance;
+  }
+
   function setupRecognition() {
+    if (window.api?.initASR) {
+      const instance = createElectronRecognition();
+      instance.onend = () => {};
+      instance.onerror = event => addEvent('离线语音识别', event.message || event.error, true, 'Sherpa-ONNX');
+      return instance;
+    }
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) return null;
     const instance = new Recognition();
@@ -289,14 +401,14 @@
       interim = '';
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const piece = event.results[i][0].transcript;
-        if (event.results[i].isFinal) transcript += piece;
+        if (event.results[i].isFinal) { transcript += piece; requestCoreAiFeedback(); }
         else interim += piece;
       }
       renderTranscript();
       updateMetrics();
     };
     instance.onend = () => {
-      if (sessionRunning) {
+      if (sessionRunning && !instance._manualStop) {
         try { instance.start(); } catch (_) { /* browser is already restarting */ }
       }
     };
@@ -304,6 +416,26 @@
       if (event.error !== 'no-speech') addEvent('系统', `语音识别暂不可用：${event.error}`, true);
     };
     return instance;
+  }
+
+  async function requestCoreAiFeedback() {
+    if (mode !== 'v1' || !window.api?.getRealtimeFeedback || aiFeedbackPending) return;
+    if (transcript.length - lastAiFeedbackLength < 50) return;
+    const runtime = await refreshDesktopRuntime();
+    if (!runtime?.llmConfigured) {
+      if (!aiConfigurationNoticeShown) {
+        addEvent('AI 教练', '完整词库与离线转写已启用；配置模型后，每 50 字会追加一次语境反馈。', true, '大模型尚未配置', { key: 'ai-not-configured' });
+        aiConfigurationNoticeShown = true;
+      }
+      return;
+    }
+    aiFeedbackPending = true;
+    lastAiFeedbackLength = transcript.length;
+    try {
+      const result = await window.api.getRealtimeFeedback(transcript);
+      if (result.success && result.feedback?.trim()) addEvent('AI 教练', result.feedback.trim(), false, runtime.provider, { key: `ai-${lastAiFeedbackLength}`, kind: 'ai' });
+      else if (result.error) addEvent('AI 教练', result.error, true, '模型调用失败', { key: 'ai-runtime-error' });
+    } finally { aiFeedbackPending = false; }
   }
 
   function addEvent(who, text, system = false, meta = '', options = {}) {
@@ -401,6 +533,8 @@
     }
     transcript = '';
     interim = '';
+    lastAiFeedbackLength = 0;
+    aiConfigurationNoticeShown = false;
     eventIndex = 0;
     document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report]').forEach(button => { button.hidden = true; });
     if (mode === 'v1' && eventFeed) {
@@ -421,7 +555,7 @@
     if (featureEnabled('transcript') || featureEnabled('metrics')) {
       recognition = recognition || setupRecognition();
       if (recognition) {
-        try { recognition.start(); } catch (_) { /* already started */ }
+        Promise.resolve(recognition.start()).catch(error => addEvent('语音识别', error.message, true));
       } else {
         addEvent('系统', '当前浏览器不支持 Web Speech API，仍可体验摄像头和压力流程。建议使用 Chrome 或 Edge。', true);
       }
@@ -459,6 +593,32 @@
     populateReportPanel();
     reportPanel.hidden = false;
     document.body.classList.add('report-open');
+    generateCoreReport();
+  }
+
+  async function generateCoreReport() {
+    const container = reportPanel?.querySelector('[data-core-report]');
+    if (!container || !window.api?.getFinalReport || !transcript.trim()) return;
+    const runtime = await refreshDesktopRuntime();
+    if (!runtime?.llmConfigured) {
+      container.hidden = false;
+      container.textContent = '当前显示本地词库诊断。完成“大模型配置”后，这里会追加原项目的完整 AI 报告。';
+      return;
+    }
+    container.hidden = false;
+    container.textContent = '正在调用已配置的大模型生成完整报告…';
+    const analysis = window.CreatorExpressionAnalysis?.analyze(transcript, v1Rules());
+    const result = await window.api.getFinalReport({
+      fullText: transcript,
+      stats: {
+        duration: startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 1000)) : 0,
+        totalWords: analysis?.totalChars || transcript.length,
+        fillers: analysis?.fillers.length || 0,
+        hedges: analysis?.hedges.length || 0,
+        vagueWords: analysis?.vague.length || 0
+      }
+    });
+    container.textContent = result.success ? result.report : `完整报告生成失败：${result.error}`;
   }
 
   function showTranscriptActions() {
@@ -466,12 +626,12 @@
     document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report]').forEach(button => { button.hidden = false; });
   }
 
-  function stopSession() {
+  async function stopSession() {
     sessionRunning = false;
     clearInterval(timerHandle);
     clearInterval(pressureHandle);
     if (recognition) {
-      try { recognition.stop(); } catch (_) { /* already stopped */ }
+      try { await Promise.resolve(recognition.stop()); } catch (_) { /* already stopped */ }
     }
     avatarProvider?.interrupt();
     startButton.disabled = true;
@@ -549,8 +709,13 @@
 
   document.addEventListener('creator:v1-language-change', event => {
     if (mode !== 'v1') return;
+    if (window.api?.initASR) {
+      statusText.textContent = `${event.detail.label}已就绪 · 离线中英双语模型`;
+      return;
+    }
     const wasRunning = sessionRunning;
     if (recognition) {
+      recognition._manualStop = true;
       try { recognition.stop(); } catch (_) { /* already stopped */ }
       recognition = null;
     }
@@ -617,6 +782,8 @@
   });
   promptText.textContent = mode === 'v1' ? (v1Rules().goal || prompts.v1) : prompts[mode];
   renderTranscript();
+  refreshDesktopRuntime();
+  window.api?.onSettingsUpdated?.(() => refreshDesktopRuntime());
   mountAudienceSetup();
   if (audienceSetup && mode !== 'v2') applyAudienceConfiguration(true);
   window.addEventListener('beforeunload', () => avatarProvider?.disconnect());

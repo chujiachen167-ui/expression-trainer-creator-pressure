@@ -1,0 +1,8 @@
+node_modules/
+.cache/
+*.tgz
+npm-debug.log*
+settings.json
+custom-prompt.json
+models/sherpa-onnx-streaming-paraformer-bilingual-zh-en/
+models/*.tar.bz2

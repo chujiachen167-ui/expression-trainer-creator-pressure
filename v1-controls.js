@@ -123,10 +123,13 @@
     if (previous !== state.language) dispatch('creator:v1-language-change', { ...languageMap[state.language], mode: state.language });
   }));
   tools.querySelector('[data-rules-open]').addEventListener('click', () => { renderRules(); open(rulesPanel); });
-  tools.querySelector('[data-llm-open]').addEventListener('click', () => { renderModels(); open(llmPanel); });
+  tools.querySelector('[data-llm-open]').addEventListener('click', () => {
+    if (window.api?.openSettings) window.api.openSettings();
+    else { renderModels(); open(llmPanel); }
+  });
   rulesPanel.querySelectorAll('[data-rules-close]').forEach(button => button.addEventListener('click', () => close(rulesPanel)));
   llmPanel.querySelectorAll('[data-llm-close]').forEach(button => button.addEventListener('click', () => close(llmPanel)));
-  rulesPanel.querySelector('[data-rules-form]').addEventListener('submit', event => {
+  rulesPanel.querySelector('[data-rules-form]').addEventListener('submit', async event => {
     event.preventDefault();
     state.rules = {
       goal: rulesPanel.querySelector('[data-rule-goal]').value.trim() || defaults.rules.goal,
@@ -134,7 +137,16 @@
       customRules: rulesPanel.querySelector('[data-rule-custom]').value.trim(),
       styleReference: rulesPanel.querySelector('[data-rule-style]').value.trim()
     };
-    save(); dispatch('creator:v1-rules-change', clone(state.rules)); close(rulesPanel);
+    save();
+    if (window.api?.saveCustomPrompt) {
+      await window.api.saveCustomPrompt({
+        goals: state.rules.goal,
+        customRules: state.rules.customRules,
+        styleRef: state.rules.styleReference,
+        customWords: state.rules.customWords
+      });
+    }
+    dispatch('creator:v1-rules-change', clone(state.rules)); close(rulesPanel);
   });
   llmPanel.querySelector('[data-llm-provider]').addEventListener('change', event => {
     state.llm.provider = event.target.value;
@@ -154,5 +166,20 @@
     getRules: () => clone(state.rules),
     getModelConfig: () => clone(state.llm)
   };
+  function applyDesktopPrompt(saved) {
+    if (!saved) return;
+    state.rules = {
+      goal: saved.goals || state.rules.goal,
+      customRules: saved.customRules || '',
+      styleReference: saved.styleRef || '',
+      customWords: saved.customWords || ''
+    };
+    save(); renderRules();
+    dispatch('creator:v1-rules-change', clone(state.rules));
+  }
+  if (window.api?.getCustomPrompt) {
+    window.api.getCustomPrompt().then(applyDesktopPrompt).catch(() => {});
+  }
+  window.api?.onCustomPromptUpdated?.(applyDesktopPrompt);
   window.CreatorQAControls?.refreshCopyLibrary?.();
 })();

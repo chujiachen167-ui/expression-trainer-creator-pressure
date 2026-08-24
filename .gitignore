@@ -1,0 +1,9 @@
+node_modules/
+.cache/
+npm-debug.log*
+settings.json
+custom-prompt.json
+
+# Pretrained model weights are local runtime assets with separate licensing.
+models/sherpa-onnx-streaming-paraformer-bilingual-zh-en/
+models/*.tar.bz2

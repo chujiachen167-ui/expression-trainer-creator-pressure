@@ -7,7 +7,7 @@
 ### Expression Trainer 原项目
 
 - 仓库：https://github.com/fxy2311-youyou/expression-trainer
-- 许可证：MIT
+- 许可证：MIT + Commons Clause License Condition v1.0
 - 必须保留：中央实时字幕、左侧词库统计、右侧实时反馈、粘贴逐字稿和诊断报告。
 - 本项目变化：V1 只把摄像头加入中央字幕区背景；不再用镜头功能替换或削弱原表达诊断器。
 
@@ -45,7 +45,7 @@
 - 组件：https://www.reactbits.dev/components/drift-wall
 - 许可证：MIT
 - 借鉴：V2 在应用受众模板前使用 Drift Wall 的默认图片、参数模型、纵向漂移、视差和悬浮纵深效果。
-- 实现方式：当前项目没有 React 运行时，因此按官方 JS/CSS 版本做原生 JavaScript 适配；默认参数保持一致，参数入口单独放在调控板“组件”页。
+- 实现方式：当前项目没有 React 运行时，因此将组件适配在应用内部使用；不把它作为独立组件、组件包或可移植版本销售或再分发。参数入口单独放在调控板“组件”页。
 
 ## 映射到 V3
 
