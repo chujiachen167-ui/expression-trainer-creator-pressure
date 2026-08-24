@@ -156,6 +156,7 @@ a { color: inherit; text-decoration: none; }
 .metric strong { font-variant-numeric: tabular-nums; }
 .metric .bad { color: var(--red); }
 .metric .warn { color: var(--yellow); }
+.metric .hedge { color: #ffa94d; }
 .metric .good { color: var(--green); }
 
 .goal-card, .coach-card, .event-card {
@@ -276,6 +277,49 @@ a { color: inherit; text-decoration: none; }
 }
 .video-tile.camera-on .video-off { display: none; }
 
+/* V1 keeps the original expression-diagnostic boundary; the camera is only the subtitle background. */
+.v1-diagnostic-room { padding: 14px; }
+.v1-diagnostic-room .video-tile { width: 100%; height: 100%; min-height: calc(var(--qa-room-height) - 28px); aspect-ratio: auto; background: #08090d; }
+.v1-diagnostic-room .video-tile video { position: absolute; inset: 0; }
+.v1-diagnostic-room .video-off { z-index: 1; }
+.v1-diagnostic-room .camera-target, .v1-diagnostic-room .tile-label { z-index: 6; }
+.v1-diagnostic-room .prompt-banner { z-index: 7; }
+.stt-camera-overlay {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  min-height: 0;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 11px;
+  overflow: hidden;
+  padding: 74px clamp(24px, 5vw, 72px) 100px;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(4,5,8,.08) 12%, rgba(4,5,8,.36) 54%, rgba(4,5,8,.9) 100%);
+  color: #fff;
+  pointer-events: none;
+  text-shadow: 0 2px 12px rgba(0,0,0,.8);
+}
+.stt-camera-overlay .placeholder { align-self: center; margin: auto; color: rgba(255,255,255,.52); font-size: clamp(17px, 2vw, 24px); }
+.stt-line { font-size: clamp(19px, 2.25vw, 30px); font-weight: 520; line-height: 1.55; letter-spacing: .01em; transition: opacity 180ms ease, transform 180ms ease; }
+.stt-line.old { color: rgba(255,255,255,.48); font-size: clamp(15px, 1.7vw, 22px); }
+.stt-line.interim { color: rgba(255,255,255,.72); }
+.stt-token { padding: 0; border: 0; background: transparent; color: inherit; text-shadow: inherit; }
+.stt-token.filler { color: #ff7b8d; text-decoration: underline wavy #ff7b8d; text-underline-offset: 5px; }
+.stt-token.hedge { color: #ffb15c; }
+.stt-token.vague { color: #ffe06e; border-bottom: 2px dashed #ffe06e; }
+.diagnostic-feedback-panel .feedback-empty { margin: 0 0 16px; color: #666d7e; font-size: 12px; line-height: 1.6; }
+.diagnostic-feedback { max-height: calc(100vh - 150px); }
+.diagnostic-feedback .event-card { position: relative; padding: 11px 0 12px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+.diagnostic-feedback .event-card strong { display: block; margin-bottom: 5px; }
+.diagnostic-feedback .vague-event strong { color: #ffe06e; }
+.diagnostic-feedback .filler-event strong { color: #ff7b8d; }
+.diagnostic-feedback .hedge-event strong { color: #ffb15c; }
+.diagnostic-feedback .repeat-event strong { color: #9dc8ff; }
+
 .camera-target {
   position: absolute;
   top: 12px;
@@ -350,6 +394,20 @@ a { color: inherit; text-decoration: none; }
 }
 .transcript .placeholder { color: #62687a; }
 .interim { color: #747b91; }
+
+.v1-diagnostic-room .stt-camera-overlay {
+  inset: 0;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  padding: 74px clamp(24px, 5vw, 72px) 100px;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(4,5,8,.08) 12%, rgba(4,5,8,.36) 54%, rgba(4,5,8,.9) 100%);
+}
+.v1-diagnostic-room .stt-camera-overlay .placeholder { color: rgba(255,255,255,.52); }
 
 .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .primary-btn { padding: 12px 20px; border: 0; border-radius: 999px; background: var(--pink); font-weight: 850; }
@@ -628,13 +686,14 @@ a { color: inherit; text-decoration: none; }
 .report-panel { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 20px; }
 .report-panel[hidden] { display: none; }
 .report-backdrop { position: absolute; inset: 0; background: rgba(4, 5, 7, 0.78); backdrop-filter: blur(8px); }
-.report-dialog { position: relative; width: min(680px, 100%); padding: 27px; border: 1px solid var(--studio-line-strong); border-radius: 18px; background: #111318; box-shadow: 0 34px 100px rgba(0, 0, 0, 0.6); }
+.report-dialog { position: relative; width: min(680px, 100%); padding: 27px; border: 1px solid var(--studio-line-strong, rgba(255,255,255,.14)); border-radius: 18px; background: #111318; box-shadow: 0 34px 100px rgba(0, 0, 0, 0.6); }
 .report-head { display: flex; align-items: flex-start; justify-content: space-between; }
 .report-head h2 { margin: 0; font-size: 22px; }
 .report-head button { border: 0; background: transparent; color: #858a94; cursor: pointer; font-size: 24px; }
 .report-lead { margin: 8px 0 22px; color: #747984; font-size: 10px; }
 .report-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
-.report-metrics > div { padding: 16px; border: 1px solid var(--studio-line); border-radius: 12px; background: #0c0e11; }
+.v1-report .report-metrics { grid-template-columns: repeat(4, 1fr); }
+.report-metrics > div { padding: 16px; border: 1px solid var(--studio-line, rgba(255,255,255,.08)); border-radius: 12px; background: #0c0e11; }
 .report-metrics small, .report-metrics strong, .report-metrics span { display: block; }
 .report-metrics small { color: #777c85; font-size: 9px; }
 .report-metrics strong { margin-top: 12px; font-size: 25px; letter-spacing: -0.04em; }
@@ -645,6 +704,9 @@ a { color: inherit; text-decoration: none; }
 .report-focus p { margin: 7px 0 0; color: #777c85; font-size: 9px; }
 .report-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .report-actions .primary-btn { min-width: 138px; }
+.paste-dialog { width: min(720px, 100%); }
+.paste-transcript-input { width: 100%; min-height: 280px; resize: vertical; padding: 15px 16px; border: 1px solid var(--studio-line-strong, rgba(255,255,255,.14)); border-radius: 12px; background: #090b0f; color: #eef1f7; font: 14px/1.75 Inter, "Microsoft YaHei", sans-serif; outline: none; }
+.paste-transcript-input:focus { border-color: rgba(255,47,146,.65); box-shadow: 0 0 0 3px rgba(255,47,146,.09); }
 
 @media (max-width: 1240px) {
   .creator-studio-page .workspace { grid-template-columns: 224px minmax(520px, 1fr) 270px; }
@@ -668,4 +730,5 @@ a { color: inherit; text-decoration: none; }
   .creator-studio-page .controls { grid-template-columns: 1fr; justify-items: stretch; }
   .privacy-inline { justify-self: center; }
   .report-metrics { grid-template-columns: 1fr; }
+  .v1-report .report-metrics { grid-template-columns: 1fr; }
 }

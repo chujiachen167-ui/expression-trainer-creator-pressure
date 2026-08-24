@@ -49,7 +49,7 @@
   const version = document.body.dataset.mode;
   const pageKey = version || 'launcher';
   const copySelector = 'h1, h2, h3, h4, h5, p, span, strong, small, a, button';
-  const dynamicCopySelector = '#timer, #fillerMetric, #vagueMetric, #repeatMetric, #speedMetric, #densityMetric, #wordMetric, #liveTranscript, #eventFeed, .avatar-provider-state, .audience-reaction, [data-provider-status], [data-qa-provider-status]';
+  const dynamicCopySelector = '#timer, #fillerMetric, #vagueMetric, #hedgeMetric, #repeatMetric, #speedMetric, #densityMetric, #wordMetric, #liveTranscript, #eventFeed, #reportDensity, #reportFiller, #reportHedge, #reportVague, #reportWords, .avatar-provider-state, .audience-reaction, [data-provider-status], [data-qa-provider-status]';
   if (document.documentElement.dataset.qaTitleDefault == null) document.documentElement.dataset.qaTitleDefault = document.title;
 
   const getByPath = path => path.split('.').reduce((obj, key) => obj[key], state);

@@ -4,6 +4,13 @@
 
 ## 参考项目
 
+### Expression Trainer 原项目
+
+- 仓库：https://github.com/fxy2311-youyou/expression-trainer
+- 许可证：MIT
+- 必须保留：中央实时字幕、左侧词库统计、右侧实时反馈、粘贴逐字稿和诊断报告。
+- 本项目变化：V1 只把摄像头加入中央字幕区背景；不再用镜头功能替换或削弱原表达诊断器。
+
 ### LiveKit Meet
 
 - 仓库：https://github.com/livekit-examples/meet

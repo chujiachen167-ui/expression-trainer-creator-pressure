@@ -13,6 +13,8 @@
   const eventFeed = document.querySelector('#eventFeed');
   const openBriefButton = document.querySelector('[data-open-brief]');
   const reportPanel = document.querySelector('#sessionReport');
+  const pastePanel = document.querySelector('#pasteTranscriptPanel');
+  const pasteInput = document.querySelector('#pasteTranscriptInput');
 
   const fillerWords = ['嗯', '啊', '然后', '就是', '那个', '其实', '怎么说呢', '对吧', '你知道吧'];
   const vagueWords = ['很多', '比较', '可能', '感觉', '东西', '方面', '有点', '某种'];
@@ -166,14 +168,37 @@
     return terms.reduce((sum, term) => sum + (text.split(term).length - 1), 0);
   }
 
+  function renderDiagnosticFeedback(analysis) {
+    if (!eventFeed || !featureEnabled('feedback') || !window.CreatorExpressionAnalysis) return;
+    const suggestions = window.CreatorExpressionAnalysis.suggestions(analysis);
+    const activeKeys = new Set(suggestions.map(item => `diagnostic-${item.key}`));
+    eventFeed.querySelectorAll('[data-event-key^="diagnostic-"]').forEach(card => {
+      if (!activeKeys.has(card.dataset.eventKey)) card.remove();
+    });
+    suggestions.forEach(item => addEvent(item.title, item.text, false, '', { key: `diagnostic-${item.key}`, kind: item.type }));
+    const empty = document.querySelector('[data-feedback-empty]');
+    if (empty) empty.hidden = suggestions.length > 0;
+  }
+
   function updateMetrics() {
+    if (mode === 'v1' && window.CreatorExpressionAnalysis) {
+      const analysis = window.CreatorExpressionAnalysis.analyze(`${transcript}${interim}`);
+      if (featureEnabled('metrics')) {
+        setMetric('fillerMetric', analysis.fillers.length);
+        setMetric('vagueMetric', analysis.vague.length);
+        setMetric('hedgeMetric', analysis.hedges.length);
+        setMetric('densityMetric', analysis.totalChars ? `${analysis.density}%` : '--');
+      }
+      renderDiagnosticFeedback(analysis);
+      return;
+    }
     if (!featureEnabled('metrics')) return;
     const clean = transcript.replace(/[，。！？、；：\s]/g, '');
     const fillerCount = countTerms(clean, fillerWords);
     const vagueCount = countTerms(clean, vagueWords);
     const repeatedCount = [...clean.matchAll(/(.{2,4})\1+/g)].length;
     const elapsedMinutes = Math.max((Date.now() - startedAt) / 60000, 0.1);
-    const speed = sessionRunning ? Math.round(clean.length / elapsedMinutes) : 0;
+    const speed = startedAt ? Math.round(clean.length / elapsedMinutes) : 0;
     const fillerChars = fillerWords.reduce((sum, word) => sum + countTerms(clean, [word]) * word.length, 0);
     const density = clean.length ? Math.max(0, Math.round((1 - fillerChars / clean.length) * 100)) : 0;
 
@@ -193,7 +218,14 @@
   function renderTranscript() {
     if (!featureEnabled('transcript')) return;
     if (!transcript && !interim) {
-      transcriptBox.innerHTML = '<span class="placeholder">开始后，实时转写会出现在这里。系统不会把数字人提示混进你的正文。</span>';
+      transcriptBox.innerHTML = `<span class="placeholder">${mode === 'v1' ? '开启摄像头并开始说话，实时字幕会叠加在画面上。' : '开始后，实时转写会出现在这里。系统不会把数字人提示混进你的正文。'}</span>`;
+      return;
+    }
+    if (mode === 'v1' && window.CreatorExpressionAnalysis) {
+      const finalLines = window.CreatorExpressionAnalysis.lines(transcript).slice(-4);
+      transcriptBox.innerHTML = finalLines.map((line, index) => `<div class="stt-line${index < finalLines.length - 1 ? ' old' : ''}">${window.CreatorExpressionAnalysis.highlight(line)}</div>`).join('');
+      if (interim) transcriptBox.insertAdjacentHTML('beforeend', `<div class="stt-line interim">${window.CreatorExpressionAnalysis.highlight(interim)}</div>`);
+      transcriptBox.scrollTop = transcriptBox.scrollHeight;
       return;
     }
     transcriptBox.textContent = transcript;
@@ -362,6 +394,12 @@
     transcript = '';
     interim = '';
     eventIndex = 0;
+    document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report]').forEach(button => { button.hidden = true; });
+    if (mode === 'v1' && eventFeed) {
+      eventFeed.replaceChildren();
+      const empty = document.querySelector('[data-feedback-empty]');
+      if (empty) empty.hidden = false;
+    }
     sessionRunning = true;
     startedAt = Date.now();
     startButton.textContent = '结束并生成复盘';
@@ -381,7 +419,43 @@
       }
     }
     if (mode !== 'v1') schedulePressure();
-    if (featureEnabled('feedback')) addEvent('训练目标', promptText.textContent, true);
+    if (featureEnabled('feedback') && mode !== 'v1') addEvent('训练目标', promptText.textContent, true);
+  }
+
+  function populateReportPanel() {
+    if (!reportPanel) return;
+    const analysis = mode === 'v1' ? window.CreatorExpressionAnalysis?.analyze(transcript) : null;
+    const filler = document.getElementById('fillerMetric')?.textContent || '0';
+    const density = document.getElementById('densityMetric')?.textContent || '--';
+    const words = document.getElementById('wordMetric')?.textContent || String(analysis?.totalChars || 0);
+    const writeReport = (selector, value) => { const node = reportPanel.querySelector(selector); if (node) node.textContent = value; };
+    writeReport('#reportDensity', analysis ? `${analysis.density}%` : density);
+    writeReport('#reportFiller', analysis ? analysis.fillers.length : filler);
+    writeReport('#reportHedge', analysis?.hedges.length ?? 0);
+    writeReport('#reportVague', analysis?.vague.length ?? 0);
+    writeReport('#reportWords', words);
+    if (!analysis) return;
+    const priorities = [
+      { count: analysis.fillers.length, action: '把口头禅换成一秒停顿', reason: '填充词会占用观众注意力，却不增加信息。' },
+      { count: analysis.hedges.length, action: '删除弱化前缀，直接陈述判断', reason: '“我觉得、可能、应该”会削弱观点的可信度。' },
+      { count: analysis.vague.length, action: '把笼统词换成数字、对象或具体结果', reason: '“很多、东西、方面”不能让观众形成清晰画面。' },
+      { count: analysis.repeats.length, action: '相同意思只说一次，再补证据', reason: '重复不会加强观点，只会降低单位时间的信息量。' }
+    ].sort((a, b) => b.count - a.count);
+    const focus = priorities[0].count ? priorities[0] : { action: '保持当前清晰度，缩短开场', reason: '本轮问题词较少，下一轮继续压缩前十秒。' };
+    writeReport('#reportFocus', focus.action);
+    writeReport('#reportReason', focus.reason);
+  }
+
+  function openReport() {
+    if (!reportPanel) return;
+    populateReportPanel();
+    reportPanel.hidden = false;
+    document.body.classList.add('report-open');
+  }
+
+  function showTranscriptActions() {
+    if (mode !== 'v1' || !transcript.trim()) return;
+    document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report]').forEach(button => { button.hidden = false; });
   }
 
   function stopSession() {
@@ -404,14 +478,19 @@
       startButton.classList.remove('running');
       const filler = document.getElementById('fillerMetric')?.textContent || '0';
       const density = document.getElementById('densityMetric')?.textContent || '--';
-      const words = document.getElementById('wordMetric')?.textContent || '0';
-      if (featureEnabled('feedback')) addEvent('本轮复盘', `口头禅 ${filler} 次，表达净度 ${density}。下一轮只练一个动作：前十秒先说结论。`, true, currentTemplate ? `受众模板：${currentTemplate.name}` : '镜头基线');
+      if (featureEnabled('feedback')) {
+        if (mode === 'v1' && window.CreatorExpressionAnalysis) {
+          const analysis = window.CreatorExpressionAnalysis.analyze(transcript);
+          const empty = document.querySelector('[data-feedback-empty]');
+          if (empty) empty.hidden = true;
+          addEvent('本轮诊断', `笼统词 ${analysis.vague.length} 次、填充词 ${analysis.fillers.length} 次、犹豫词 ${analysis.hedges.length} 次、重复表达 ${analysis.repeats.length} 处，表达密度 ${analysis.density}%。`, true, '诊断依据来自本轮逐字稿');
+        } else {
+          addEvent('本轮复盘', `口头禅 ${filler} 次，表达净度 ${density}。下一轮只练一个动作：前十秒先说结论。`, true, currentTemplate ? `受众模板：${currentTemplate.name}` : '镜头基线');
+        }
+      }
       if (reportPanel) {
-        reportPanel.querySelector('#reportDensity').textContent = density;
-        reportPanel.querySelector('#reportFiller').textContent = filler;
-        reportPanel.querySelector('#reportWords').textContent = words;
-        reportPanel.hidden = false;
-        document.body.classList.add('report-open');
+        populateReportPanel();
+        if (mode === 'v1') showTranscriptActions(); else openReport();
       }
     }, 1500);
   }
@@ -447,6 +526,47 @@
 
   document.addEventListener('creator:avatar-config-change', () => {
     if (audienceSetup) applyAudienceConfiguration(true);
+  });
+
+  document.querySelector('[data-paste-open]')?.addEventListener('click', () => {
+    if (sessionRunning || !pastePanel) return;
+    pastePanel.hidden = false;
+    pasteInput?.focus();
+  });
+  pastePanel?.querySelectorAll('[data-paste-close]').forEach(button => button.addEventListener('click', () => { pastePanel.hidden = true; }));
+  pastePanel?.querySelector('[data-paste-analyze]')?.addEventListener('click', () => {
+    const value = pasteInput?.value.trim();
+    if (!value) { pasteInput?.focus(); return; }
+    transcript = value;
+    interim = '';
+    renderTranscript();
+    updateMetrics();
+    timer.textContent = '--:--';
+    statusText.textContent = '逐字稿已分析';
+    pastePanel.hidden = true;
+    populateReportPanel();
+    showTranscriptActions();
+  });
+  document.querySelector('[data-show-report]')?.addEventListener('click', openReport);
+  document.querySelector('[data-copy-transcript]')?.addEventListener('click', async event => {
+    if (!transcript.trim()) return;
+    await navigator.clipboard.writeText(transcript);
+    const button = event.currentTarget;
+    button.textContent = '已复制';
+    setTimeout(() => { button.textContent = '复制原文'; }, 1200);
+  });
+  document.querySelector('[data-clear-transcript]')?.addEventListener('click', () => {
+    transcript = '';
+    interim = '';
+    startedAt = 0;
+    timer.textContent = '00:00';
+    statusText.textContent = '等待开始';
+    eventFeed?.replaceChildren();
+    const empty = document.querySelector('[data-feedback-empty]');
+    if (empty) empty.hidden = false;
+    renderTranscript();
+    updateMetrics();
+    document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report]').forEach(button => { button.hidden = true; });
   });
 
   cameraButton?.addEventListener('click', toggleCamera);

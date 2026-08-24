@@ -17,19 +17,13 @@
   </header>
 
   <main class="workspace">
-    <aside class="side-panel left">
-      <h2 class="panel-heading">表达基线</h2>
+    <aside class="side-panel left diagnostic-panel">
+      <h2 class="panel-heading">表达分析</h2>
       <div class="metric-list">
-        <div class="metric"><span>填充词</span><strong class="bad" id="fillerMetric">0</strong></div>
-        <div class="metric"><span>模糊词</span><strong class="warn" id="vagueMetric">0</strong></div>
-        <div class="metric"><span>重复表达</span><strong class="warn" id="repeatMetric">0</strong></div>
-        <div class="metric"><span>当前语速</span><strong id="speedMetric">--</strong></div>
-        <div class="metric"><span>表达净度</span><strong class="good" id="densityMetric">--</strong></div>
-        <div class="metric"><span>有效字数</span><strong id="wordMetric">0</strong></div>
-      </div>
-      <div class="goal-card">
-        <small>本版只验证</small>
-        <p>面对真实镜头时，用户能否减少盯提词器、拖延开场和无意识口头禅。</p>
+        <div class="metric"><span>笼统词</span><strong class="bad" id="vagueMetric">0</strong></div>
+        <div class="metric"><span>填充词</span><strong class="warn" id="fillerMetric">0</strong></div>
+        <div class="metric"><span>犹豫词</span><strong class="hedge" id="hedgeMetric">0</strong></div>
+        <div class="metric"><span>表达密度</span><strong class="good" id="densityMetric">--</strong></div>
       </div>
       <p class="privacy-note">摄像头画面只在当前页面预览，原型不会录制或上传视频。</p>
     </aside>
@@ -37,43 +31,68 @@
     <section class="stage">
       <div class="stage-head">
         <div>
-          <h1>镜头口播基线</h1>
-          <p>先测自然状态，不引入数字观众压力。</p>
+          <h1>实时表达诊断</h1>
+          <p>保留原项目的字幕、词库统计和反馈，只在字幕后加入真实镜头。</p>
         </div>
         <div class="stage-status"><span class="status-dot"></span><span id="statusText">等待开始</span></div>
       </div>
 
-      <div class="room camera-room">
+      <div class="room camera-room v1-diagnostic-room">
         <div class="video-tile">
           <video id="cameraVideo" autoplay playsinline muted></video>
-          <div class="video-off">开启摄像头后，在真正的镜头位置建立视线目标</div>
+          <div class="video-off" aria-label="摄像头未开启"></div>
           <div class="camera-target" aria-label="镜头注视位置"></div>
           <span class="tile-label">你 · 创作者</span>
+          <div class="transcript stt-camera-overlay" id="liveTranscript" aria-live="polite"></div>
         </div>
         <div class="prompt-banner"><strong>训练题：</strong> <span id="sessionPrompt"></span></div>
       </div>
 
       <div>
-        <div class="transcript" id="liveTranscript"></div>
         <div class="loading-row"><span class="spinner"></span><span>正在整理本轮表达证据并生成复盘…</span></div>
         <div class="controls">
           <button class="primary-btn" type="button" data-session-toggle>开始 60 秒口播</button>
+          <button class="ghost-btn" type="button" data-paste-open>粘贴逐字稿</button>
+          <button class="ghost-btn" type="button" data-copy-transcript hidden>复制原文</button>
+          <button class="ghost-btn" type="button" data-clear-transcript hidden>清空</button>
+          <button class="ghost-btn" type="button" data-show-report hidden>生成诊断报告</button>
           <span class="control-note">原型不会假装已经识别你的视线；粉色圆点只是镜头位置提示。</span>
         </div>
       </div>
     </section>
 
-    <aside class="side-panel right">
-      <h2 class="panel-heading">本轮教练</h2>
-      <div class="coach-card">
-        <small>唯一动作</small>
-        <p>第一句话直接说清楚：你能持续给观众什么价值。</p>
-      </div>
-      <h2 class="panel-heading" style="margin-top:24px">训练事件</h2>
-      <div class="event-feed" id="eventFeed"></div>
+    <aside class="side-panel right diagnostic-feedback-panel">
+      <h2 class="panel-heading">实时反馈</h2>
+      <p class="feedback-empty" data-feedback-empty>检测到笼统词、填充词、犹豫词或重复表达后，会立即给出修改建议。</p>
+      <div class="event-feed diagnostic-feedback" id="eventFeed"></div>
     </aside>
   </main>
+  <section class="report-panel v1-report" id="sessionReport" hidden aria-labelledby="reportTitle">
+    <div class="report-backdrop" data-report-close></div>
+    <div class="report-dialog">
+      <div class="report-head"><div><span class="section-kicker">EXPRESSION REPORT</span><h2 id="reportTitle">本轮表达诊断</h2></div><button type="button" data-report-close aria-label="关闭复盘">×</button></div>
+      <p class="report-lead">报告严格依据本轮逐字稿，不因镜头功能改变原项目的诊断边界。</p>
+      <div class="report-metrics">
+        <div><small>表达密度</small><strong id="reportDensity">--</strong><span>综合问题词与重复表达</span></div>
+        <div><small>笼统词</small><strong id="reportVague">0</strong><span>需要改成具体信息</span></div>
+        <div><small>填充词</small><strong id="reportFiller">0</strong><span>建议用停顿替代</span></div>
+        <div><small>犹豫词</small><strong id="reportHedge">0</strong><span>建议直接陈述判断</span></div>
+      </div>
+      <div class="report-focus"><span>下一轮优先动作</span><strong id="reportFocus">先完整说完一轮</strong><p id="reportReason">系统会根据出现最多的问题选择一个动作，而不是给出宽松的泛化鼓励。</p></div>
+      <div class="report-actions"><button type="button" class="ghost-btn" data-report-close>返回逐字稿</button><button type="button" class="primary-btn" data-report-retry>立即同题重练</button></div>
+    </div>
+  </section>
+  <section class="report-panel" id="pasteTranscriptPanel" hidden aria-labelledby="pasteTitle">
+    <div class="report-backdrop" data-paste-close></div>
+    <div class="report-dialog paste-dialog">
+      <div class="report-head"><div><span class="section-kicker">TRANSCRIPT ANALYSIS</span><h2 id="pasteTitle">粘贴逐字稿</h2></div><button type="button" data-paste-close aria-label="关闭逐字稿分析">×</button></div>
+      <p class="report-lead">保留原项目的无录音分析入口。文字只在当前页面中处理。</p>
+      <textarea class="paste-transcript-input" id="pasteTranscriptInput" placeholder="把需要诊断的逐字稿粘贴到这里……"></textarea>
+      <div class="report-actions"><button type="button" class="ghost-btn" data-paste-close>取消</button><button type="button" class="primary-btn" data-paste-analyze>开始分析</button></div>
+    </div>
+  </section>
   <script src="control-panel.js"></script>
+  <script src="expression-analysis.js"></script>
   <script src="audience-templates.js"></script>
   <script src="avatar-provider.js"></script>
   <script src="app.js"></script>
