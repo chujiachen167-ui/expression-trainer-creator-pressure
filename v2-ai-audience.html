@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>V2 数字观众压力场 · Expression Trainer</title>
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="drift-wall.css">
 </head>
 <body class="trainer-page" data-mode="v2">
   <header class="topbar">
@@ -49,20 +50,17 @@
         <div class="stage-status"><span class="status-dot"></span><span id="statusText">等待开始</span></div>
       </div>
 
-      <div class="room duo-room">
-        <div class="video-tile">
+      <div class="room duo-room audience-primary-room">
+        <div class="audience-primary-stage">
+          <div id="avatarDriftWall" class="avatar-drift-preview" aria-label="数字观众形象预览"></div>
+          <div class="audience-live-slot" data-primary-audience hidden></div>
+          <div class="audience-preview-caption"><span>数字观众预览</span><strong>先选择受众模板，再进入压力训练</strong></div>
+        </div>
+        <div class="video-tile creator-mini-tile">
           <video id="cameraVideo" autoplay playsinline muted></video>
-          <div class="video-off">开启摄像头，面对镜头完成一次真实口播</div>
+          <div class="video-off">开启摄像头<br>检查自己的镜头状态</div>
           <div class="camera-target" aria-label="镜头注视位置"></div>
           <span class="tile-label">你 · 创作者</span>
-        </div>
-        <div class="audience-tile attention">
-          <div>
-            <div class="avatar">观</div>
-            <div class="audience-name">阿林</div>
-            <div class="audience-role">没有耐心的普通观众</div>
-            <div class="audience-reaction">我会关注你是否在前十秒说清价值。</div>
-          </div>
         </div>
         <div class="prompt-banner"><strong>训练题：</strong> <span id="sessionPrompt"></span></div>
       </div>
@@ -84,8 +82,8 @@
       </div>
     </aside>
   </main>
-  <script src="read-transition.js"></script>
   <script src="control-panel.js"></script>
+  <script src="drift-wall.js"></script>
   <script src="audience-templates.js"></script>
   <script src="avatar-provider.js"></script>
   <script src="app.js"></script>

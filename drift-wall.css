@@ -1,0 +1,86 @@
+/* Faithful static port of React Bits DriftWall JS/CSS: https://github.com/DavidHDev/react-bits/tree/main/src/content/Components/DriftWall */
+.avatar-drift-preview {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--dw-overlay, #060010);
+  isolation: isolate;
+}
+
+.avatar-drift-preview[hidden] { display: none; }
+.avatar-drift-preview::after { content: ''; position: absolute; z-index: 3; inset: 0; background: var(--dw-overlay, #060010); opacity: var(--dw-dim, .55); pointer-events: none; }
+
+.rb-drift-wall {
+  --dw-pointer-x: 0px;
+  --dw-pointer-y: 0px;
+  position: absolute;
+  inset: -30% -20%;
+  display: grid;
+  grid-template-columns: repeat(var(--dw-columns), var(--dw-tile-width));
+  justify-content: center;
+  gap: var(--dw-gap);
+  transform-style: preserve-3d;
+  transform:
+    perspective(var(--dw-perspective))
+    translate3d(var(--dw-pointer-x), var(--dw-pointer-y), 0)
+    rotateX(var(--dw-tilt))
+    rotateY(var(--dw-turn))
+    rotateZ(var(--dw-roll));
+  transition: transform 220ms ease-out;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 var(--dw-fade-edge), #000 calc(100% - var(--dw-fade-edge)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 var(--dw-fade-edge), #000 calc(100% - var(--dw-fade-edge)), transparent 100%);
+}
+
+.rb-drift-column {
+  width: var(--dw-tile-width);
+  height: 160%;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+.rb-drift-track {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dw-gap);
+  will-change: transform;
+  transform-style: preserve-3d;
+}
+
+.rb-drift-tile {
+  flex: 0 0 var(--dw-tile-height);
+  width: var(--dw-tile-width);
+  height: var(--dw-tile-height);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--dw-radius);
+  background: #14111b;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transform: translateZ(0);
+  transition: transform 250ms cubic-bezier(.2,.8,.2,1), border-color 250ms ease, filter 250ms ease;
+}
+
+.rb-drift-tile:hover,
+.rb-drift-tile.is-active {
+  z-index: 3;
+  border-color: rgba(255, 255, 255, 0.48);
+  transform: translateZ(var(--dw-lift)) scale(1.035);
+  filter: brightness(1.1);
+}
+
+.rb-drift-tile img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.rb-drift-wall.is-grayscale img { filter: grayscale(1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-drift-wall,
+  .rb-drift-tile { transition: none; }
+}

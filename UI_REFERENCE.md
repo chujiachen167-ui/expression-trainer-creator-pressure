@@ -1,4 +1,4 @@
-# V3 UI 开源参考与设计映射
+# UI 开源参考与设计映射
 
 本轮不是从空白审美稿出发，而是把四类成熟开源产品各自最擅长的界面模式映射到 Expression Trainer。只借鉴通用布局和交互原则，不复制品牌资产或整页代码。
 
@@ -32,6 +32,14 @@
 - 借鉴：复盘先展示少量关键指标，再给解释和单一行动建议；避免把分析结果做成长篇报告。
 - 不借鉴：通用网站分析导航和复杂筛选器。
 
+### React Bits · Drift Wall
+
+- 仓库：https://github.com/DavidHDev/react-bits
+- 组件：https://www.reactbits.dev/components/drift-wall
+- 许可证：MIT
+- 借鉴：V2 在应用受众模板前使用 Drift Wall 的默认图片、参数模型、纵向漂移、视差和悬浮纵深效果。
+- 实现方式：当前项目没有 React 运行时，因此按官方 JS/CSS 版本做原生 JavaScript 适配；默认参数保持一致，参数入口单独放在调控板“组件”页。
+
 ## 映射到 V3
 
 | V3 区域 | 采用的开源模式 | 产品内含义 |
@@ -41,6 +49,7 @@
 | 训练设置侧滑层 | shadcn/ui Sheet | 低频配置退出主舞台，需要时再展开 |
 | 压力等级 | shadcn/ui Segmented Control | 只控制反应频率和直接程度 |
 | 结束复盘弹层 | Umami 指标概览 | 三个关键数值加一个下一轮动作 |
+| V2 数字人默认舞台 | React Bits Drift Wall | 选定受众模板前的数字形象预览 |
 
 ## 视觉约束
 
