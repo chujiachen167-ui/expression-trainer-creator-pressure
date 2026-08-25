@@ -3,7 +3,7 @@
 
   const storageKey = 'expression-trainer.v1-controls';
   const defaults = {
-    language: 'zh',
+    language: 'mixed',
     rules: {
       goal: '请用 60 秒解释：为什么观众应该关注你的账号？',
       customRules: '',
@@ -17,6 +17,7 @@
   function load() {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      if (saved.language === 'zh' || !['mixed', 'en'].includes(saved.language)) saved.language = 'mixed';
       return {
         ...clone(defaults), ...saved,
         rules: { ...clone(defaults.rules), ...(saved.rules || {}) },
@@ -25,10 +26,10 @@
     } catch (_) { return clone(defaults); }
   }
   let state = load();
+  let languageLocked = false;
   const languageMap = {
-    zh: { label: '中文模式', sttLang: 'zh-CN', hint: '普通话识别' },
-    mixed: { label: '中英文混合模式', sttLang: 'zh-CN', hint: '以中文引擎识别；英文识别能力取决于浏览器' },
-    en: { label: '英文模式', sttLang: 'en-US', hint: 'English (US) recognition' }
+    mixed: { label: '中英混合', sttLang: 'zh-CN', hint: '中文为主，支持夹杂 English' },
+    en: { label: 'English', sttLang: 'en-US', hint: 'English-first recognition' }
   };
   const modelOptions = {
     openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini'],
@@ -50,11 +51,11 @@
   tools.innerHTML = `
     <div class="v1-tools-title"><span class="section-kicker">TRAINING CONTROL</span><h3>训练控制</h3></div>
     <div class="language-switch" role="group" aria-label="语音识别语言">
-      <button type="button" data-language="zh">中文</button>
       <button type="button" data-language="mixed">中英混合</button>
       <button type="button" data-language="en">English</button>
     </div>
     <p class="language-status" data-language-status></p>
+    <p class="stt-status" data-stt-status aria-live="polite">正在检测语音识别引擎…</p>
     <div class="v1-tool-actions">
       <button type="button" data-rules-open><span aria-hidden="true">◎</span><span>训练规则</span></button>
       <button type="button" data-llm-open><span aria-hidden="true">⚙</span><span>模型配置</span></button>
@@ -117,11 +118,23 @@
   }
 
   tools.querySelectorAll('[data-language]').forEach(button => button.addEventListener('click', () => {
+    if (languageLocked) {
+      tools.querySelector('[data-language-status]').textContent = '请结束本轮训练后再切换识别语言。';
+      return;
+    }
     const previous = state.language;
     state.language = button.dataset.language;
     save(); renderLanguages();
     if (previous !== state.language) dispatch('creator:v1-language-change', { ...languageMap[state.language], mode: state.language });
   }));
+  document.addEventListener('creator:session-state', event => {
+    languageLocked = Boolean(event.detail?.running);
+    tools.querySelectorAll('[data-language]').forEach(button => {
+      button.disabled = languageLocked;
+      button.title = languageLocked ? '请先结束本轮训练' : '';
+    });
+    if (!languageLocked) renderLanguages();
+  });
   tools.querySelector('[data-rules-open]').addEventListener('click', () => { renderRules(); open(rulesPanel); });
   tools.querySelector('[data-llm-open]').addEventListener('click', () => {
     if (window.api?.openSettings) window.api.openSettings();

@@ -92,11 +92,14 @@ function createMainWindow() {
   if (smokeTest) {
     mainWindow.webContents.once('did-finish-load', async () => {
       try {
+        await new Promise(resolve => setTimeout(resolve, 300));
         const renderer = await mainWindow.webContents.executeJavaScript(`({
           title: document.title,
           mode: document.body.dataset.mode,
           api: typeof window.api?.getRuntimeStatus === 'function',
-          controls: Boolean(document.querySelector('.v1-training-tools'))
+          controls: Boolean(document.querySelector('.v1-training-tools')),
+          languages: [...document.querySelectorAll('[data-language]')].map(button => button.dataset.language),
+          sttStatus: document.querySelector('[data-stt-status]')?.textContent
         })`);
         process.stdout.write(`ELECTRON_SMOKE_OK ${JSON.stringify({ renderer, asr: getASRStatus() })}\n`);
         app.exit(0);

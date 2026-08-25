@@ -44,6 +44,20 @@
   let lastAiFeedbackLength = 0;
   let aiFeedbackPending = false;
   let aiConfigurationNoticeShown = false;
+  let sttDiagnostics = {
+    engine: 'detecting',
+    state: 'detecting',
+    inputSampleRate: null,
+    targetSampleRate: 16000,
+    processed: 0,
+    queued: 0,
+    maxQueueDepth: 0,
+    averageProcessMs: 0,
+    failed: 0,
+    starts: 0,
+    lastError: ''
+  };
+  let lastSTTStatusRender = 0;
 
   function featureEnabled(name) {
     return window.CreatorQAControls ? window.CreatorQAControls.featureEnabled(name) : true;
@@ -54,13 +68,63 @@
   }
 
   function v1Language() {
-    return window.CreatorV1Controls?.getLanguage?.() || { mode: 'zh', sttLang: 'zh-CN' };
+    return window.CreatorV1Controls?.getLanguage?.() || { mode: 'mixed', label: '中英混合', sttLang: 'zh-CN' };
+  }
+
+  function updateSTTDiagnostics(patch = {}, force = false) {
+    sttDiagnostics = { ...sttDiagnostics, ...patch };
+    window.CreatorSTTDiagnostics = { getStatus: () => ({ ...sttDiagnostics }) };
+    const now = Date.now();
+    if (!force && now - lastSTTStatusRender < 400) return;
+    lastSTTStatusRender = now;
+    const node = document.querySelector('[data-stt-status]');
+    if (!node) return;
+    const stateMap = {
+      detecting: 'warning',
+      ready: 'ready',
+      running: 'ready',
+      stopped: 'warning',
+      ended: 'warning',
+      error: 'error',
+      unsupported: 'error'
+    };
+    node.dataset.state = stateMap[sttDiagnostics.state] || 'warning';
+    if (sttDiagnostics.engine === 'sherpa') {
+      const sampleRate = sttDiagnostics.inputSampleRate
+        ? (sttDiagnostics.inputSampleRate / 1000) + ' kHz → 16 kHz'
+        : '等待麦克风';
+      const queue = sttDiagnostics.processed
+        ? ' · 帧 ' + sttDiagnostics.processed + ' · 队列 ' + sttDiagnostics.queued + ' · ' + sttDiagnostics.averageProcessMs + ' ms/帧'
+        : '';
+      node.textContent = '本地 Sherpa · ' + sampleRate + queue + (sttDiagnostics.lastError ? ' · ' + sttDiagnostics.lastError : '');
+      return;
+    }
+    if (sttDiagnostics.engine === 'web-speech') {
+      const label = v1Language().label || v1Language().mode;
+      const state = sttDiagnostics.state === 'ended' ? '已停止，不会自动重启' : '每轮只启动一次';
+      node.textContent = '浏览器 Web Speech · ' + label + ' · ' + state + (sttDiagnostics.lastError ? ' · ' + sttDiagnostics.lastError : '');
+      return;
+    }
+    node.textContent = sttDiagnostics.engine === 'unsupported'
+      ? '当前环境不支持语音识别'
+      : '正在检测语音识别引擎…';
   }
 
   async function refreshDesktopRuntime() {
-    if (!window.api?.getRuntimeStatus) return null;
+    if (!window.api?.getRuntimeStatus) {
+      desktopRuntime = null;
+      document.body.classList.remove('desktop-runtime');
+      const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      updateSTTDiagnostics({ engine: Recognition ? 'web-speech' : 'unsupported', state: Recognition ? 'ready' : 'unsupported' }, true);
+      return null;
+    }
     try { desktopRuntime = await window.api.getRuntimeStatus(); } catch (_) { desktopRuntime = null; }
     document.body.classList.toggle('desktop-runtime', Boolean(desktopRuntime?.desktop));
+    updateSTTDiagnostics({
+      engine: desktopRuntime?.desktop ? 'sherpa' : 'unsupported',
+      state: desktopRuntime?.asr?.ready ? 'ready' : 'error',
+      lastError: desktopRuntime?.asr?.ready ? '' : '模型缺失：' + (desktopRuntime?.asr?.missingFiles?.join('、') || '未知')
+    }, true);
     return desktopRuntime;
   }
 
@@ -336,36 +400,77 @@
     let audioContext = null;
     let source = null;
     let processor = null;
-    let feedPending = false;
+    let audioQueue = null;
     const instance = {
       _manualStop: false,
       onend: null,
       onerror: null,
       async start() {
         instance._manualStop = false;
+        updateSTTDiagnostics({
+          engine: 'sherpa',
+          state: 'detecting',
+          processed: 0,
+          queued: 0,
+          maxQueueDepth: 0,
+          averageProcessMs: 0,
+          failed: 0,
+          starts: sttDiagnostics.starts + 1,
+          lastError: ''
+        }, true);
         const init = await window.api.initASR();
         if (!init.success) {
+          updateSTTDiagnostics({ state: 'error', lastError: init.error }, true);
           instance.onerror?.({ error: 'desktop-asr', message: init.error });
           return;
         }
         try {
-          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              channelCount: 1,
+              sampleRate: 16000,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
           audioContext = new AudioContextClass({ sampleRate: 16000 });
+          const inputSampleRate = audioContext.sampleRate;
           source = audioContext.createMediaStreamSource(audioStream);
-          processor = audioContext.createScriptProcessor(4096, 1, 1);
+          // 2048 samples keeps the local subtitle cadence near 128 ms at 16 kHz.
+          processor = audioContext.createScriptProcessor(2048, 1, 1);
+          audioQueue = window.CreatorSTTAudio.createSerialAudioQueue(
+            samples => window.api.feedAudio(samples),
+            {
+              onResult: result => {
+                if (result?.text) applyRecognitionResult(result.text, result.isFinal);
+              },
+              onError: error => {
+                updateSTTDiagnostics({ state: 'error', lastError: error.message }, true);
+                instance.onerror?.({ error: 'desktop-asr', message: error.message });
+              },
+              onStatus: status => updateSTTDiagnostics(status)
+            }
+          );
           processor.onaudioprocess = event => {
-            if (!sessionRunning || feedPending) return;
-            const samples = Float32Array.from(event.inputBuffer.getChannelData(0));
-            feedPending = true;
-            window.api.feedAudio(samples).then(result => {
-              if (result?.text) applyRecognitionResult(result.text, result.isFinal);
-            }).catch(error => instance.onerror?.({ error: 'desktop-asr', message: error.message })).finally(() => { feedPending = false; });
+            if (!sessionRunning) return;
+            const samples = window.CreatorSTTAudio.resampleTo16k(
+              event.inputBuffer.getChannelData(0),
+              inputSampleRate
+            );
+            audioQueue.enqueue(samples);
           };
           source.connect(processor);
           processor.connect(audioContext.destination);
+          updateSTTDiagnostics({ engine: 'sherpa', state: 'running', inputSampleRate }, true);
         } catch (error) {
           await window.api.stopASR().catch(() => {});
+          audioStream?.getTracks().forEach(track => track.stop());
+          audioStream = null;
+          if (audioContext) await audioContext.close().catch(() => {});
+          audioContext = null;
+          updateSTTDiagnostics({ state: 'error', lastError: error.message }, true);
           instance.onerror?.({ error: 'microphone', message: error.message });
         }
       },
@@ -374,10 +479,14 @@
         processor = null; source = null;
         audioStream?.getTracks().forEach(track => track.stop());
         audioStream = null;
+        audioQueue?.close();
+        await audioQueue?.drain();
         if (audioContext) await audioContext.close().catch(() => {});
         audioContext = null;
         const result = await window.api.stopASR().catch(() => ({ finalText: '' }));
         if (result?.finalText) applyRecognitionResult(result.finalText, true);
+        updateSTTDiagnostics({ state: 'stopped', queued: 0 }, true);
+        audioQueue = null;
         instance.onend?.();
       }
     };
@@ -397,6 +506,27 @@
     instance.lang = mode === 'v1' ? v1Language().sttLang : 'zh-CN';
     instance.continuous = true;
     instance.interimResults = true;
+    instance._manualStop = false;
+    const browserStart = instance.start.bind(instance);
+    const browserStop = instance.stop.bind(instance);
+    instance.start = () => {
+      instance._manualStop = false;
+      updateSTTDiagnostics({
+        engine: 'web-speech',
+        state: 'running',
+        starts: sttDiagnostics.starts + 1,
+        lastError: ''
+      }, true);
+      try { return browserStart(); }
+      catch (error) {
+        updateSTTDiagnostics({ state: 'error', lastError: error.message }, true);
+        throw error;
+      }
+    };
+    instance.stop = () => {
+      instance._manualStop = true;
+      return browserStop();
+    };
     instance.onresult = event => {
       interim = '';
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
@@ -408,13 +538,30 @@
       updateMetrics();
     };
     instance.onend = () => {
-      if (sessionRunning && !instance._manualStop) {
-        try { instance.start(); } catch (_) { /* browser is already restarting */ }
+      const unexpected = sessionRunning && !instance._manualStop;
+      updateSTTDiagnostics({
+        state: unexpected ? 'ended' : 'stopped',
+        lastError: unexpected ? (sttDiagnostics.lastError || '识别服务提前结束') : sttDiagnostics.lastError
+      }, true);
+      if (unexpected) {
+        addEvent(
+          '系统',
+          '浏览器语音识别已停止，本轮不会自动重新申请麦克风权限。请结束后重新开始训练。',
+          true,
+          'Web Speech API',
+          { key: 'browser-stt-ended' }
+        );
       }
     };
     instance.onerror = event => {
-      if (event.error !== 'no-speech') addEvent('系统', `语音识别暂不可用：${event.error}`, true);
+      const ignored = event.error === 'no-speech' || (event.error === 'aborted' && instance._manualStop);
+      updateSTTDiagnostics({
+        state: ignored ? 'ended' : 'error',
+        lastError: ignored ? '' : event.error
+      }, true);
+      if (!ignored) addEvent('系统', '语音识别暂不可用：' + event.error, true);
     };
+    updateSTTDiagnostics({ engine: 'web-speech', state: 'ready', lastError: '' }, true);
     return instance;
   }
 
@@ -543,6 +690,7 @@
       if (empty) empty.hidden = false;
     }
     sessionRunning = true;
+    document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: true } }));
     startedAt = Date.now();
     startButton.textContent = '结束并生成复盘';
     startButton.classList.add('running');
@@ -633,6 +781,7 @@
     if (recognition) {
       try { await Promise.resolve(recognition.stop()); } catch (_) { /* already stopped */ }
     }
+    document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: false } }));
     avatarProvider?.interrupt();
     startButton.disabled = true;
     statusText.textContent = '生成复盘';
@@ -709,23 +858,22 @@
 
   document.addEventListener('creator:v1-language-change', event => {
     if (mode !== 'v1') return;
-    if (window.api?.initASR) {
-      statusText.textContent = `${event.detail.label}已就绪 · 离线中英双语模型`;
+    if (sessionRunning) {
+      statusText.textContent = '请结束本轮后再切换识别语言';
       return;
     }
-    const wasRunning = sessionRunning;
+    if (window.api?.initASR) {
+      statusText.textContent = `${event.detail.label}已就绪 · 离线中英双语模型`;
+      updateSTTDiagnostics({ engine: 'sherpa', state: 'ready', lastError: '' }, true);
+      return;
+    }
     if (recognition) {
       recognition._manualStop = true;
       try { recognition.stop(); } catch (_) { /* already stopped */ }
       recognition = null;
     }
-    statusText.textContent = wasRunning ? `${event.detail.label}切换中` : `${event.detail.label}已就绪`;
-    if (wasRunning) {
-      recognition = setupRecognition();
-      if (recognition) {
-        try { recognition.start(); } catch (_) { /* browser is already restarting */ }
-      }
-    }
+    statusText.textContent = `${event.detail.label}已就绪`;
+    updateSTTDiagnostics({ engine: 'web-speech', state: 'ready', lastError: '' }, true);
   });
 
   document.querySelector('[data-paste-open]')?.addEventListener('click', () => {

@@ -34,6 +34,7 @@ Creator Training Surfaces
 - `main.js`：窗口、菜单、设置、离线 ASR、词库分析、模型调用和文件保存。
 - `preload.js`：通过 `contextBridge` 暴露最小 IPC 接口；渲染进程不启用 Node.js。
 - `lib/asr.js`：继承上游 Sherpa-ONNX 流式双语识别。
+- `stt-audio.js`：把设备采样率统一转换为 16 kHz，并通过顺序队列保证 IPC 处理期间不丢音频帧。
 - `lib/lexicon.js`：继承上游中文词库并增加训练规则中的自定义口癖词。
 - `lib/ai-feedback.js`、`lib/prompts.js`：继承上游多供应商反馈与报告能力。
 - `desktop/`：保留上游原始诊断、模型设置、提示词编辑和词库工具界面。
