@@ -48,6 +48,38 @@ part of an application, website, or product, while prohibiting sale, sublicense,
 redistribution of the components themselves. See the upstream license for the controlling
 text: https://github.com/DavidHDev/react-bits/blob/main/LICENSE.md
 
+### React Bits · Scroll Expand
+
+- Source: https://github.com/DavidHDev/react-bits
+- Component: https://www.reactbits.dev/animations/scroll-expand
+- License: MIT + Commons Clause License Condition v1.0
+- Copyright: Copyright (c) 2026 David Haz
+- Use: adapted inside the launcher-to-training transition. This repository uses a local,
+  non-React implementation of the upstream component's expansion mechanism; it does not
+  redistribute the component as a standalone package.
+
+### Codrops · Async Page Transitions
+
+- Source: https://tympanus.net/codrops/2026/02/26/building-async-page-transitions-in-vanilla-javascript/
+- License: MIT (Codrops downloadable demos, unless stated otherwise)
+- Use: the background-handoff and `clip-path` reveal mechanism informed the local,
+  dependency-free transition between the launcher and V1/V2/V3. It is adapted to this
+  application's separate static pages and is not bundled as a standalone demo.
+
+### Magic UI · Marquee (shipped adaptation)
+
+- Source: https://github.com/magicuidesign/magicui/blob/main/apps/www/registry/magicui/marquee.tsx
+- Official registry snapshot consulted: https://magicui.design/r/marquee.json (2026-08-31)
+- Component: https://magicui.design/docs/components/marquee
+- License: MIT; Copyright (c) Magic UI. Full permission and warranty text: `vendor/magic-ui/LICENSE`.
+- Local files: `vendor/magic-ui/marquee.js`, `vendor/magic-ui/marquee.css`.
+- Adaptation: React/Tailwind repeated flex groups and per-group translate-by-size-plus-gap
+  are ported to vanilla DOM/CSS for the launcher. Reverse, pauseOnHover, repeat,
+  duration and gap are retained; the launcher fixes vertical=true. Added accessible
+  duplicate hiding, persistent pause, reduced-motion fallback, and QA integration.
+- No React dependency, network-loaded code, review-card styling, or stock avatar media
+  from the upstream demo is included.
+
 ## Optional external runtime
 
 ### LiveTalking
@@ -80,6 +112,18 @@ text: https://github.com/DavidHDev/react-bits/blob/main/LICENSE.md
   public commercial release; image rights remain subject to their original sources.
 
 ## Design references only — no source code incorporated
+
+Development-only tests additionally use `jsdom` (MIT, https://github.com/jsdom/jsdom).
+It is a devDependency used for non-rendering DOM/configuration assertions; it is not
+loaded by the application or a replacement for real visual/browser verification.
+
+### Radix Colors
+
+- Source: https://github.com/radix-ui/colors
+- License: MIT
+- Use: five local theme presets map selected Radix dark-scale values to this
+  project's existing global and V3 Studio color tokens. No Radix package or
+  source code is bundled at runtime.
 
 The following projects informed general layout or interaction patterns. Their source code
 and brand assets are not copied into this repository:

@@ -1,0 +1,20 @@
+/* Magic UI Marquee (MIT, ./LICENSE), adapted from https://magicui.design/r/marquee.json.
+   Each repeated group travels exactly its own size plus the shared gap. */
+.magic-marquee { display: flex; gap: var(--gap, 32px); overflow: hidden; }
+.magic-marquee[data-vertical="true"] { flex-direction: column; }
+.magic-marquee-group { display: flex; flex-shrink: 0; justify-content: space-around; gap: var(--gap, 32px); animation: magic-marquee var(--duration, 40s) linear infinite; }
+.magic-marquee[data-vertical="true"] > .magic-marquee-group { flex-direction: column; animation-name: magic-marquee-vertical; }
+.magic-marquee[data-reverse="true"] > .magic-marquee-group { animation-direction: reverse; }
+.magic-marquee[data-paused="true"] > .magic-marquee-group,
+.magic-marquee[data-pause-on-hover="true"]:hover > .magic-marquee-group { animation-play-state: paused; }
+.magic-marquee[data-playback-mode="static"] { overflow: auto; }
+.magic-marquee[data-playback-mode="static"] > .magic-marquee-group { animation: none; }
+.magic-marquee[data-playback-mode="static"] > .magic-marquee-group:not(:first-child) { display: none; }
+@keyframes magic-marquee { from { transform: translateX(0); } to { transform: translateX(calc(-100% - var(--gap))); } }
+@keyframes magic-marquee-vertical { from { transform: translateY(0); } to { transform: translateY(calc(-100% - var(--gap))); } }
+@media (prefers-reduced-motion: reduce) {
+  /* Only an explicit component playback choice overrides reduced motion. */
+  .magic-marquee:not([data-playback-mode="autoplay"]) { overflow: auto; }
+  .magic-marquee:not([data-playback-mode="autoplay"]) > .magic-marquee-group { animation: none; }
+  .magic-marquee:not([data-playback-mode="autoplay"]) > .magic-marquee-group:not(:first-child) { display: none; }
+}

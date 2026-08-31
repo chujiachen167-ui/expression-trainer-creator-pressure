@@ -97,6 +97,7 @@ function createMainWindow() {
           title: document.title,
           mode: document.body.dataset.mode,
           api: typeof window.api?.getRuntimeStatus === 'function',
+          projectSave: typeof window.api?.saveProjectConfig === 'function',
           controls: Boolean(document.querySelector('.v1-training-tools')),
           languages: [...document.querySelectorAll('[data-language]')].map(button => button.dataset.language),
           sttStatus: document.querySelector('[data-stt-status]')?.textContent
@@ -227,4 +228,18 @@ ipcMain.handle('save-file', async (_event, content, filename) => {
   if (result.canceled || !result.filePath) return { success: false };
   fs.writeFileSync(result.filePath, content, 'utf8');
   return { success: true, path: result.filePath };
+});
+ipcMain.handle('save-project-config', (_event, content) => {
+  if (app.isPackaged) return { success: false, error: '打包版不能修改源代码项目，请改用“下载备份”。' };
+  if (typeof content !== 'string' || content.length > 2_000_000 || !content.includes('window.CreatorProjectConfig =')) {
+    return { success: false, error: '项目配置内容无效。' };
+  }
+  const targetPath = path.resolve(__dirname, 'creator-project-config.js');
+  if (path.dirname(targetPath) !== path.resolve(__dirname)) return { success: false, error: '项目配置路径无效。' };
+  try {
+    fs.writeFileSync(targetPath, content, 'utf8');
+    return { success: true, path: targetPath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });

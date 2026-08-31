@@ -26,6 +26,7 @@
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const wall = document.createElement('div');
     wall.className = 'rb-drift-wall';
+    wall.setAttribute('aria-hidden', 'true');
     container.style.setProperty('--dw-overlay', settings.overlayColor);
     container.style.setProperty('--dw-dim', settings.dim);
     wall.style.setProperty('--dw-columns', settings.columns);
@@ -51,18 +52,12 @@
       const track = document.createElement('div');
       track.className = 'rb-drift-track';
       const orderedItems = items.map((_, itemIndex) => items[(itemIndex + columnIndex * 3) % items.length]);
-      [...orderedItems, ...orderedItems].forEach((item, itemIndex) => {
-        const tile = document.createElement('button');
-        tile.type = 'button';
+      [...orderedItems, ...orderedItems].forEach(item => {
+        const tile = document.createElement('div');
         tile.className = 'rb-drift-tile';
-        tile.setAttribute('aria-label', `预览形象 ${itemIndex % items.length + 1}`);
         const image = document.createElement('img');
-        image.src = item.src; image.alt = item.alt; image.loading = 'eager'; image.draggable = false;
+        image.src = item.src; image.alt = item.alt; image.loading = 'lazy'; image.decoding = 'async'; image.draggable = false;
         tile.appendChild(image);
-        tile.addEventListener('click', () => {
-          wall.querySelectorAll('.rb-drift-tile.is-active').forEach(node => node.classList.remove('is-active'));
-          tile.classList.add('is-active');
-        });
         if (settings.pauseOnHover) {
           tile.addEventListener('mouseenter', () => { column.dataset.paused = 'true'; });
           tile.addEventListener('mouseleave', () => { delete column.dataset.paused; });
@@ -80,6 +75,9 @@
     let frame = 0;
     let previous = performance.now();
     const cycle = items.length * (settings.tileHeight + settings.gap);
+    const renderColumns = () => {
+      columns.forEach(entry => { entry.track.style.transform = `translate3d(0, ${entry.offset}px, 0)`; });
+    };
     const animate = now => {
       const delta = Math.min((now - previous) / 1000, 0.05); previous = now;
       columns.forEach(entry => {
@@ -89,7 +87,7 @@
       });
       frame = requestAnimationFrame(animate);
     };
-    frame = requestAnimationFrame(animate);
+    if (reduceMotion) renderColumns(); else frame = requestAnimationFrame(animate);
 
     const pointerMove = event => {
       const rect = container.getBoundingClientRect();
@@ -98,12 +96,16 @@
       wall.style.setProperty('--dw-pointer-x', `${x}px`); wall.style.setProperty('--dw-pointer-y', `${y}px`);
     };
     const pointerLeave = () => { wall.style.setProperty('--dw-pointer-x', '0px'); wall.style.setProperty('--dw-pointer-y', '0px'); };
-    container.addEventListener('pointermove', pointerMove); container.addEventListener('pointerleave', pointerLeave);
+    if (!reduceMotion) {
+      container.addEventListener('pointermove', pointerMove); container.addEventListener('pointerleave', pointerLeave);
+    }
 
     const controller = {
       destroy() {
         cancelAnimationFrame(frame);
-        container.removeEventListener('pointermove', pointerMove); container.removeEventListener('pointerleave', pointerLeave);
+        if (!reduceMotion) {
+          container.removeEventListener('pointermove', pointerMove); container.removeEventListener('pointerleave', pointerLeave);
+        }
         if (container.contains(wall)) container.replaceChildren();
         if (activeController === controller) activeController = null;
       }

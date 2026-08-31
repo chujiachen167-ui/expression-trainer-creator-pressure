@@ -27,6 +27,8 @@
   }
   let state = load();
   let languageLocked = false;
+  let rulesRevision = 0;
+  let deferredDesktopPrompt = null;
   const languageMap = {
     mixed: { label: '中英混合', sttLang: 'zh-CN', hint: '中文为主，支持夹杂 English' },
     en: { label: 'English', sttLang: 'en-US', hint: 'English-first recognition' }
@@ -40,7 +42,8 @@
 
   function save() {
     // API key deliberately never enters this persisted state.
-    localStorage.setItem(storageKey, JSON.stringify(state));
+    try { localStorage.setItem(storageKey, JSON.stringify(state)); return true; }
+    catch (_) { return false; }
   }
   function dispatch(name, detail) { document.dispatchEvent(new CustomEvent(name, { detail })); }
   function close(panel) { panel.hidden = true; document.body.classList.remove('report-open'); }
@@ -133,7 +136,11 @@
       button.disabled = languageLocked;
       button.title = languageLocked ? '请先结束本轮训练' : '';
     });
-    if (!languageLocked) renderLanguages();
+    rulesPanel.querySelector('[data-rule-goal]').disabled = languageLocked;
+    if (!languageLocked) {
+      renderLanguages();
+      if (deferredDesktopPrompt) { const pending = deferredDesktopPrompt; deferredDesktopPrompt = null; applyDesktopPrompt(pending); }
+    }
   });
   tools.querySelector('[data-rules-open]').addEventListener('click', () => { renderRules(); open(rulesPanel); });
   tools.querySelector('[data-llm-open]').addEventListener('click', () => {
@@ -145,11 +152,12 @@
   rulesPanel.querySelector('[data-rules-form]').addEventListener('submit', async event => {
     event.preventDefault();
     state.rules = {
-      goal: rulesPanel.querySelector('[data-rule-goal]').value.trim() || defaults.rules.goal,
+      goal: languageLocked ? state.rules.goal : rulesPanel.querySelector('[data-rule-goal]').value.trim() || defaults.rules.goal,
       customWords: rulesPanel.querySelector('[data-rule-words]').value.trim(),
       customRules: rulesPanel.querySelector('[data-rule-custom]').value.trim(),
       styleReference: rulesPanel.querySelector('[data-rule-style]').value.trim()
     };
+    rulesRevision++;
     save();
     if (window.api?.saveCustomPrompt) {
       await window.api.saveCustomPrompt({
@@ -177,10 +185,29 @@
   window.CreatorV1Controls = {
     getLanguage: () => ({ ...languageMap[state.language], mode: state.language }),
     getRules: () => clone(state.rules),
-    getModelConfig: () => clone(state.llm)
+    getModelConfig: () => clone(state.llm),
+    setGoal: async goal => {
+      if (languageLocked) return { applied: false, error: '请先结束本轮训练，再更换选题。' };
+      if (typeof goal !== 'string' || !goal.trim() || goal.trim().length > 300) return { applied: false, error: '请填写 1–300 字的选题。' };
+      state.rules.goal = goal.trim();
+      rulesRevision++;
+      const persisted = save();
+      renderRules();
+      dispatch('creator:v1-rules-change', clone(state.rules));
+      let desktopSynced = true;
+      if (window.api?.saveCustomPrompt) {
+        try {
+          const result = await window.api.saveCustomPrompt({ goals: state.rules.goal, customRules: state.rules.customRules, styleRef: state.rules.styleReference, customWords: state.rules.customWords });
+          desktopSynced = result?.success !== false;
+        } catch (_) { desktopSynced = false; }
+      }
+      return { applied: true, persisted, desktopSynced };
+    }
   };
   function applyDesktopPrompt(saved) {
     if (!saved) return;
+    rulesRevision++;
+    if (languageLocked) { deferredDesktopPrompt = saved; return; }
     state.rules = {
       goal: saved.goals || state.rules.goal,
       customRules: saved.customRules || '',
@@ -191,7 +218,8 @@
     dispatch('creator:v1-rules-change', clone(state.rules));
   }
   if (window.api?.getCustomPrompt) {
-    window.api.getCustomPrompt().then(applyDesktopPrompt).catch(() => {});
+    const revisionAtLoad = rulesRevision;
+    window.api.getCustomPrompt().then(saved => { if (revisionAtLoad === rulesRevision) applyDesktopPrompt(saved); }).catch(() => {});
   }
   window.api?.onCustomPromptUpdated?.(applyDesktopPrompt);
   window.CreatorQAControls?.refreshCopyLibrary?.();

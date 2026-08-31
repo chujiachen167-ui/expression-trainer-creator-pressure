@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>V3 自媒体实战房间 · Expression Trainer</title>
+  <script>try { const entry = JSON.parse(sessionStorage.getItem('expression-trainer.scroll-expand.entry') || 'null'); if (entry?.mode === 'v3') { document.documentElement.classList.add('scroll-expand-entry-pending'); document.documentElement.dataset.scrollExpandMode = entry.mode; document.documentElement.dataset.scrollExpandDirection = entry.direction || 'up'; } } catch (_) {}</script>
   <link rel="stylesheet" href="shared.css">
 </head>
 <body class="trainer-page creator-studio-page" data-mode="v3">
@@ -52,7 +53,7 @@
     <section class="stage">
       <div class="stage-head">
         <div><span class="section-kicker">CAMERA PRACTICE</span><h1>镜头表达实战</h1><p>面对明确受众说话，让压力暴露真正的表达问题。</p></div>
-        <div class="stage-status"><span class="status-dot"></span><span id="statusText">等待开始</span></div>
+        <div class="stage-status" data-stt-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText">等待开始</span><button type="button" data-stt-retry hidden data-qa-copy-ignore>重试</button></div>
       </div>
 
       <div class="room creator-room">
@@ -87,6 +88,7 @@
     <aside class="side-panel right">
       <div class="panel-title-row"><div><span class="section-kicker">AUDIENCE FEED</span><h2 class="panel-heading">观众现场反应</h2></div><span class="panel-step">03</span></div>
       <p class="feed-intro">这里只保留会影响内容效果的信号，避免反馈淹没表达本身。</p>
+      <section class="interest-panel" data-interest-curve data-qa-copy-ignore aria-label="观众兴趣度原型估算"></section>
       <div class="event-feed" id="eventFeed" role="log" aria-live="polite" aria-label="观众现场反应"><div class="event-card system"><strong>训练边界</strong><div>只模拟自媒体观众，不加入面试官、考官或企业会议角色。</div></div></div>
       <div class="goal-card"><div class="goal-icon">1</div><div><small>本轮复盘准则</small><p>只指出最影响内容效果的一个问题，并允许立即重练同一题。</p></div></div>
     </aside>
@@ -107,9 +109,15 @@
     </div>
   </section>
 
+  <script src="creator-project-config.js"></script>
+  <script src="vertical-marquee-config.js"></script>
+  <script src="qa-element-editor.js"></script>
   <script src="control-panel.js"></script>
+  <script src="launcher-scroll-expand.js"></script>
   <script src="audience-templates.js"></script>
   <script src="avatar-provider.js"></script>
+  <script src="avatar-selector.js"></script>
+  <script src="interest-curve.js"></script>
   <script src="stt-audio.js?v=0.2.1"></script>
   <script src="app.js"></script>
 </body>

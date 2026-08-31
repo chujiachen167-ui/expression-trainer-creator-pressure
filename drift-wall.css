@@ -57,13 +57,12 @@
   border-radius: var(--dw-radius);
   background: #14111b;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
+  cursor: default;
   transform: translateZ(0);
   transition: transform 250ms cubic-bezier(.2,.8,.2,1), border-color 250ms ease, filter 250ms ease;
 }
 
-.rb-drift-tile:hover,
-.rb-drift-tile.is-active {
+.rb-drift-tile:hover {
   z-index: 3;
   border-color: rgba(255, 255, 255, 0.48);
   transform: translateZ(var(--dw-lift)) scale(1.035);
@@ -83,4 +82,5 @@
 @media (prefers-reduced-motion: reduce) {
   .rb-drift-wall,
   .rb-drift-tile { transition: none; }
+  .rb-drift-tile:hover { transform: translateZ(0); filter: none; }
 }

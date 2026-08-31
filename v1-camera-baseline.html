@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>V1 镜头基线 · Expression Trainer</title>
+  <script>try { const entry = JSON.parse(sessionStorage.getItem('expression-trainer.scroll-expand.entry') || 'null'); if (entry?.mode === 'v1') { document.documentElement.classList.add('scroll-expand-entry-pending'); document.documentElement.dataset.scrollExpandMode = entry.mode; document.documentElement.dataset.scrollExpandDirection = entry.direction || 'up'; } } catch (_) {}</script>
   <link rel="stylesheet" href="shared.css">
 </head>
 <body class="trainer-page" data-mode="v1">
@@ -34,7 +35,7 @@
           <h1>实时表达诊断</h1>
           <p>保留原项目的字幕、词库统计和反馈，只在字幕后加入真实镜头。</p>
         </div>
-        <div class="stage-status"><span class="status-dot"></span><span id="statusText">等待开始</span></div>
+        <div class="stage-status" data-stt-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText">等待开始</span><button type="button" data-stt-retry hidden data-qa-copy-ignore>重试</button></div>
       </div>
 
       <div class="room camera-room v1-diagnostic-room">
@@ -92,9 +93,14 @@
       <div class="report-actions"><button type="button" class="ghost-btn" data-paste-close>取消</button><button type="button" class="primary-btn" data-paste-analyze>开始分析</button></div>
     </div>
   </section>
+  <script src="creator-project-config.js"></script>
+  <script src="vertical-marquee-config.js"></script>
+  <script src="qa-element-editor.js"></script>
   <script src="control-panel.js"></script>
+  <script src="launcher-scroll-expand.js"></script>
   <script src="expression-analysis.js"></script>
   <script src="v1-controls.js"></script>
+  <script src="v1-topic-picker.js"></script>
   <script src="audience-templates.js"></script>
   <script src="avatar-provider.js"></script>
   <script src="stt-audio.js?v=0.2.1"></script>

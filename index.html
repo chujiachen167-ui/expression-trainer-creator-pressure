@@ -5,21 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Expression Trainer · Creator Pressure</title>
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="vendor/magic-ui/marquee.css">
 </head>
 <body class="launcher-page">
   <main class="launcher-shell">
-    <p class="eyebrow" data-qa-copy-label="首页眉题">EXPRESSION TRAINER / CREATOR PRESSURE</p>
-    <h1>不是泛化沟通工具，<br>只训练自媒体新手的镜头表达。</h1>
-    <p class="launcher-lead">面向自媒体创作者的镜头压力训练：从自然口播基线，到数字观众压力，再到自媒体实战房间。三版共用同一个用户、同一个目标、同一套训练闭环。</p>
+    <section class="launcher-hero" aria-labelledby="launcherTitle">
+      <div class="launcher-copy">
+        <p class="eyebrow" data-qa-copy-label="首页眉题">EXPRESSION TRAINER / CREATOR PRESSURE</p>
+        <h1 id="launcherTitle">不是泛化沟通工具，<br>只训练自媒体新手的镜头表达。</h1>
+        <p class="launcher-lead">面向自媒体创作者的镜头压力训练：从自然口播基线，到数字观众压力，再到自媒体实战房间。三版共用同一个用户、同一个目标、同一套训练闭环。</p>
+      </div>
 
+      <aside class="transcript-cover" data-transcript-cover aria-label="原始口播与精炼表达的连续对照" data-qa-copy-ignore>
+        <div class="transcript-stream" data-transcript-stream aria-label="表达精简示例。自动循环；鼠标移入暂停，移开继续。"></div>
+      </aside>
+    </section>
+
+    <div class="chapter-heading" data-qa-copy-ignore><span>CHAPTERS</span><strong>选择今天要承受的压力</strong></div>
     <section class="version-grid" aria-label="Creator Pressure 训练层">
-      <a class="version-card" data-version="v1" href="v1-camera-baseline.html">
-        <span class="version-index">V1</span>
+      <a class="version-card featured" data-version="v1" href="v1-camera-baseline.html">
+        <span class="version-card-meta"><span class="version-index">V1</span><span class="version-status">推荐起点</span></span>
         <h2>镜头基线</h2>
         <p>启用电脑摄像头，训练直视镜头、开场速度、口头禅和表达密度。</p>
         <span class="card-cta">打开训练层 →</span>
       </a>
-      <a class="version-card featured" data-version="v2" href="v2-ai-audience.html">
+      <a class="version-card" data-version="v2" href="v2-ai-audience.html">
         <span class="version-index">V2</span>
         <h2>数字观众压力场</h2>
         <p>加入会等待、追问和质疑的数字观众，让问题在可控压力下暴露。</p>
@@ -38,6 +48,12 @@
       <span>会议室和聊天室只是“观众压力的视觉隐喻”，不是新的业务领域。</span>
     </aside>
   </main>
+  <script src="creator-project-config.js"></script>
+  <script src="vertical-marquee-config.js"></script>
+  <script src="qa-element-editor.js"></script>
   <script src="control-panel.js"></script>
+  <script src="vendor/magic-ui/marquee.js"></script>
+  <script src="launcher-transcript.js"></script>
+  <script src="launcher-scroll-expand.js"></script>
 </body>
 </html>

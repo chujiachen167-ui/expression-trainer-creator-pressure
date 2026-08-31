@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>V2 数字观众压力场 · Expression Trainer</title>
+  <script>try { const entry = JSON.parse(sessionStorage.getItem('expression-trainer.scroll-expand.entry') || 'null'); if (entry?.mode === 'v2') { document.documentElement.classList.add('scroll-expand-entry-pending'); document.documentElement.dataset.scrollExpandMode = entry.mode; document.documentElement.dataset.scrollExpandDirection = entry.direction || 'up'; } } catch (_) {}</script>
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="drift-wall.css">
 </head>
@@ -47,7 +48,7 @@
           <h1>一个真正会反应的观众</h1>
           <p>压力来自内容追问，而不是装饰性头像。</p>
         </div>
-        <div class="stage-status"><span class="status-dot"></span><span id="statusText">等待开始</span></div>
+        <div class="stage-status" data-stt-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText">等待开始</span><button type="button" data-stt-retry hidden data-qa-copy-ignore>重试</button></div>
       </div>
 
       <div class="room duo-room audience-primary-room">
@@ -77,15 +78,22 @@
 
     <aside class="side-panel right">
       <h2 class="panel-heading">观众事件</h2>
+      <section class="interest-panel" data-interest-curve data-qa-copy-ignore aria-label="观众兴趣度原型估算"></section>
       <div class="event-feed" id="eventFeed">
         <div class="event-card"><strong>阿林</strong><div>我不是面试官。我只代表一个随时可能划走的观众。</div></div>
       </div>
     </aside>
   </main>
+  <script src="creator-project-config.js"></script>
+  <script src="vertical-marquee-config.js"></script>
+  <script src="qa-element-editor.js"></script>
   <script src="control-panel.js"></script>
+  <script src="launcher-scroll-expand.js"></script>
   <script src="drift-wall.js"></script>
   <script src="audience-templates.js"></script>
   <script src="avatar-provider.js"></script>
+  <script src="avatar-selector.js"></script>
+  <script src="interest-curve.js"></script>
   <script src="stt-audio.js?v=0.2.1"></script>
   <script src="app.js"></script>
 </body>

@@ -8,6 +8,8 @@
   const timer = document.querySelector('#timer');
   const statusDot = document.querySelector('.status-dot');
   const statusText = document.querySelector('#statusText');
+  const stageStatus = document.querySelector('.stage-status');
+  const sttRetryButton = document.querySelector('[data-stt-retry]');
   const promptText = document.querySelector('#sessionPrompt');
   const loadingRow = document.querySelector('.loading-row');
   const eventFeed = document.querySelector('#eventFeed');
@@ -71,9 +73,28 @@
     return window.CreatorV1Controls?.getLanguage?.() || { mode: 'mixed', label: '中英混合', sttLang: 'zh-CN' };
   }
 
+  function setStageState(state, message, { retry = false } = {}) {
+    if (stageStatus) stageStatus.dataset.sttState = state;
+    document.body.dataset.sttState = state;
+    statusDot?.classList.toggle('live', state === 'listening');
+    if (statusText && message) statusText.textContent = message;
+    if (sttRetryButton) sttRetryButton.hidden = !retry;
+  }
+
   function updateSTTDiagnostics(patch = {}, force = false) {
     sttDiagnostics = { ...sttDiagnostics, ...patch };
     window.CreatorSTTDiagnostics = { getStatus: () => ({ ...sttDiagnostics }) };
+    document.dispatchEvent(new CustomEvent('creator:stt-state', { detail: { ...sttDiagnostics } }));
+    if (['error', 'permission-denied', 'unsupported'].includes(sttDiagnostics.state)) {
+      const message = sttDiagnostics.state === 'permission-denied'
+        ? '麦克风权限被拒绝'
+        : sttDiagnostics.state === 'unsupported' ? '当前环境不支持转写' : '语音识别需要重试';
+      setStageState(sttDiagnostics.state, message, { retry: sttDiagnostics.state !== 'unsupported' });
+    } else if (sessionRunning) {
+      if (['detecting', 'requesting'].includes(sttDiagnostics.state)) setStageState('requesting', '正在准备麦克风');
+      if (sttDiagnostics.state === 'running') setStageState('listening', '正在转写');
+      if (['ended', 'paused'].includes(sttDiagnostics.state)) setStageState('paused', '转写已暂停', { retry: true });
+    }
     const now = Date.now();
     if (!force && now - lastSTTStatusRender < 400) return;
     lastSTTStatusRender = now;
@@ -83,6 +104,9 @@
       detecting: 'warning',
       ready: 'ready',
       running: 'ready',
+      requesting: 'warning',
+      paused: 'warning',
+      'permission-denied': 'error',
       stopped: 'warning',
       ended: 'warning',
       error: 'error',
@@ -145,7 +169,7 @@
       <label class="brief-field"><span>受众模板</span><select data-audience-template>${window.CreatorAudienceEngine.templates.map(template => `<option value="${template.id}">${template.name}</option>`).join('')}</select></label>
       <div class="brief-summary" data-audience-summary></div>
       <div class="brief-provider-note"><span>数字观众</span><strong data-provider-label>${providerConfig.provider === 'live' ? '系统数字人' : '浏览器演示'}</strong><small>由系统提供，开发者接入配置不属于训练任务。</small></div>
-      <div class="audience-config-actions"><button type="button" data-audience-apply>应用模板</button><button type="button" data-audience-preview>试听反应</button></div>
+      <div class="audience-config-actions"><button type="button" data-audience-apply>应用模板</button><button type="button" data-audience-choose>选择数字观众</button><button type="button" data-audience-preview>试听反应</button></div>
       <div class="provider-status" data-provider-status>等待应用配置</div>`;
     if (useSheet) {
       compactBrief = document.createElement('div');
@@ -183,6 +207,13 @@
       await applyAudienceConfiguration(true);
       section._closeSheet?.();
     });
+    section.querySelector('[data-audience-choose]').addEventListener('click', event => {
+      window.CreatorAvatarSelector?.open({
+        templateId: templateSelect.value,
+        max: mode === 'v2' ? 1 : 3,
+        trigger: event.currentTarget
+      });
+    });
     section.querySelector('[data-audience-preview]').addEventListener('click', () => fireAudienceReaction(true));
     updateSummary();
     window.CreatorQAControls?.refreshCopyLibrary?.();
@@ -214,7 +245,10 @@
     const engine = window.CreatorAudienceEngine;
     const templateId = audienceSetup.querySelector('[data-audience-template]').value;
     currentTemplate = engine.getTemplate(templateId);
-    currentProfiles = engine.getProfiles(currentTemplate, mode === 'v2' ? 1 : 3);
+    const profileLimit = mode === 'v2' ? 1 : 3;
+    const selectedIds = window.CreatorAvatarSelector?.getSelection(currentTemplate.id, profileLimit) || [];
+    currentProfiles = selectedIds.map(id => engine.profiles[id]).filter(Boolean);
+    if (!currentProfiles.length) currentProfiles = engine.getProfiles(currentTemplate, profileLimit);
     localStorage.setItem('expression-trainer.audience-template.v1', currentTemplate.id);
     prompts[mode] = currentTemplate.prompt;
     if (promptText) promptText.textContent = currentTemplate.prompt;
@@ -341,6 +375,7 @@
       transcriptBox.innerHTML = finalLines.map((line, index) => `<div class="stt-line${index < finalLines.length - 1 ? ' old' : ''}">${window.CreatorExpressionAnalysis.highlight(line, v1Rules())}</div>`).join('');
       if (interim) transcriptBox.insertAdjacentHTML('beforeend', `<div class="stt-line interim">${window.CreatorExpressionAnalysis.highlight(interim, v1Rules())}</div>`);
       transcriptBox.scrollTop = transcriptBox.scrollHeight;
+      document.dispatchEvent(new CustomEvent('creator:transcript-change', { detail: { text: `${transcript}${interim}`, final: !interim } }));
       return;
     }
     transcriptBox.textContent = transcript;
@@ -351,6 +386,7 @@
       transcriptBox.appendChild(span);
     }
     transcriptBox.scrollTop = transcriptBox.scrollHeight;
+    document.dispatchEvent(new CustomEvent('creator:transcript-change', { detail: { text: `${transcript}${interim}`, final: !interim } }));
   }
 
   async function toggleCamera() {
@@ -409,7 +445,7 @@
         instance._manualStop = false;
         updateSTTDiagnostics({
           engine: 'sherpa',
-          state: 'detecting',
+          state: 'requesting',
           processed: 0,
           queued: 0,
           maxQueueDepth: 0,
@@ -470,7 +506,8 @@
           audioStream = null;
           if (audioContext) await audioContext.close().catch(() => {});
           audioContext = null;
-          updateSTTDiagnostics({ state: 'error', lastError: error.message }, true);
+          const permissionDenied = error?.name === 'NotAllowedError' || error?.name === 'SecurityError';
+          updateSTTDiagnostics({ state: permissionDenied ? 'permission-denied' : 'error', lastError: error.message }, true);
           instance.onerror?.({ error: 'microphone', message: error.message });
         }
       },
@@ -513,7 +550,7 @@
       instance._manualStop = false;
       updateSTTDiagnostics({
         engine: 'web-speech',
-        state: 'running',
+        state: 'requesting',
         starts: sttDiagnostics.starts + 1,
         lastError: ''
       }, true);
@@ -523,6 +560,7 @@
         throw error;
       }
     };
+    instance.onstart = () => updateSTTDiagnostics({ engine: 'web-speech', state: 'running', lastError: '' }, true);
     instance.stop = () => {
       instance._manualStop = true;
       return browserStop();
@@ -538,9 +576,15 @@
       updateMetrics();
     };
     instance.onend = () => {
+      if (instance._terminalState) {
+        updateSTTDiagnostics({ state: instance._terminalState, lastError: instance._terminalError || sttDiagnostics.lastError }, true);
+        instance._terminalState = '';
+        instance._terminalError = '';
+        return;
+      }
       const unexpected = sessionRunning && !instance._manualStop;
       updateSTTDiagnostics({
-        state: unexpected ? 'ended' : 'stopped',
+        state: unexpected ? 'paused' : 'stopped',
         lastError: unexpected ? (sttDiagnostics.lastError || '识别服务提前结束') : sttDiagnostics.lastError
       }, true);
       if (unexpected) {
@@ -555,8 +599,13 @@
     };
     instance.onerror = event => {
       const ignored = event.error === 'no-speech' || (event.error === 'aborted' && instance._manualStop);
+      const permissionDenied = event.error === 'not-allowed' || event.error === 'service-not-allowed';
+      if (!ignored) {
+        instance._terminalState = permissionDenied ? 'permission-denied' : 'error';
+        instance._terminalError = event.error;
+      }
       updateSTTDiagnostics({
-        state: ignored ? 'ended' : 'error',
+        state: ignored ? 'paused' : permissionDenied ? 'permission-denied' : 'error',
         lastError: ignored ? '' : event.error
       }, true);
       if (!ignored) addEvent('系统', '语音识别暂不可用：' + event.error, true);
@@ -694,8 +743,7 @@
     startedAt = Date.now();
     startButton.textContent = '结束并生成复盘';
     startButton.classList.add('running');
-    statusDot.classList.add('live');
-    statusText.textContent = '训练中';
+    setStageState('requesting', '正在准备麦克风');
     promptText.textContent = mode === 'v1' ? (v1Rules().goal || prompts.v1) : prompts[mode];
     renderTranscript();
     updateMetrics();
@@ -784,12 +832,11 @@
     document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: false } }));
     avatarProvider?.interrupt();
     startButton.disabled = true;
-    statusText.textContent = '生成复盘';
+    setStageState('processing', '生成复盘');
     loadingRow?.classList.add('visible');
     setTimeout(() => {
       loadingRow?.classList.remove('visible');
-      statusDot.classList.remove('live');
-      statusText.textContent = '本轮完成';
+      setStageState('complete', '本轮完成');
       startButton.disabled = false;
       startButton.textContent = '再练同一题';
       startButton.classList.remove('running');
@@ -843,6 +890,11 @@
 
   document.addEventListener('creator:avatar-config-change', () => {
     if (audienceSetup) applyAudienceConfiguration(true);
+  });
+
+  document.addEventListener('creator:audience-selection-change', event => {
+    if (!audienceSetup || event.detail?.templateId !== audienceSetup.querySelector('[data-audience-template]')?.value) return;
+    applyAudienceConfiguration(true);
   });
 
   document.addEventListener('creator:v1-rules-change', event => {
@@ -908,7 +960,7 @@
     interim = '';
     startedAt = 0;
     timer.textContent = '00:00';
-    statusText.textContent = '等待开始';
+    setStageState('idle', '等待开始');
     eventFeed?.replaceChildren();
     const empty = document.querySelector('[data-feedback-empty]');
     if (empty) empty.hidden = false;
@@ -918,6 +970,16 @@
   });
 
   cameraButton?.addEventListener('click', toggleCamera);
+  sttRetryButton?.addEventListener('click', () => {
+    if (!sessionRunning) return;
+    sttRetryButton.disabled = true;
+    setStageState('requesting', '正在重新连接');
+    try { recognition?.stop?.(); } catch (_) { /* Ignore a stale recognizer. */ }
+    recognition = setupRecognition();
+    Promise.resolve(recognition?.start?.())
+      .catch(error => updateSTTDiagnostics({ state: 'error', lastError: error.message }, true))
+      .finally(() => { sttRetryButton.disabled = false; });
+  });
   startButton?.addEventListener('click', () => sessionRunning ? stopSession() : startSession());
   reportPanel?.querySelectorAll('[data-report-close]').forEach(button => button.addEventListener('click', () => {
     reportPanel.hidden = true;
