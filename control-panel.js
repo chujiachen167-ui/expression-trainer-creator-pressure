@@ -2,6 +2,7 @@
   if (document.body.dataset.environment === 'production') return;
 
   const storageKey = 'expression-trainer.creator-qa.v1';
+  const panelPositionKey = 'expression-trainer.creator-qa.panel-position.v1';
   const defaults = {
     flags: { v1: true, v2: true, v3: true, camera: true, audience: true, pressure: true, transcript: true, metrics: true, feedback: true },
     theme: {
@@ -31,6 +32,14 @@
         enabled: true, duration: 480, startRadius: 24, endRadius: 0,
         overlayScrim: 0.32, contentDelay: 0.48, easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
         backgroundHandoff: true, handoffDuration: 340, handoffContentDelay: 0.16, handoffOffset: 24, handoffDirection: 'random'
+      },
+      warpText: {
+        enabled: true, color: '#a9a3b3', warpStrength: 0.08, warpScale: 1.7,
+        speed: 0.55, pointerInfluence: 0.42, pointerStrength: 0.38, refraction: 0.018, ripple: true
+      },
+      trueFocus: {
+        enabled: true, blurAmount: 3, animationDuration: 420, pauseBetweenAnimations: 1600,
+        borderColor: '#ff2f92', glowColor: '#ff2f92'
       },
       transcriptCover: window.CreatorMarqueeConfig.defaults
     },
@@ -82,6 +91,7 @@
     keys.reduce((obj, key) => obj[key], state)[final] = value;
     if (path.startsWith('theme.') && path !== 'theme.palette') state.theme.palette = 'custom';
     if (path === 'components.transcriptCover.pauseOnHover') state.components.transcriptCover.hoverPauseConfigured = true;
+    if (path === 'components.transcriptCover.highlightStyle') state.components.transcriptCover.randomMarksVersion = 1;
   };
   const announceDraftSave = detail => document.dispatchEvent(new CustomEvent('creator:qa-draft-save', { detail }));
   const save = () => {
@@ -128,7 +138,8 @@
         });
         const writable = await handle.createWritable();
         await writable.write(content); await writable.close();
-        acceptProjectEnvelope(envelope);
+        // A browser-selected location is not proof that the repository file
+        // was replaced. Only the desktop bridge can confirm that exact path.
         return { persisted: true, mode: 'picker', path: handle.name, savedAt: envelope.savedAt };
       } catch (error) {
         if (error?.name === 'AbortError') return { canceled: true };
@@ -196,14 +207,18 @@
   }
 
   function collectCopyTargets() {
+    let legacyIndex = 0;
     const items = [...document.querySelectorAll(copySelector)].filter(node => {
       if (node.closest('.qa-panel, .qa-trigger, [data-qa-copy-ignore]')) return false;
       if (node.matches(dynamicCopySelector) || node.closest(dynamicCopySelector)) return false;
       return node.textContent.trim() && !node.querySelector(copySelector);
-    }).map((node, index) => {
+    }).map(node => {
+      // Newly added static labels must not shift historical copy keys. The
+      // recommendation badge previously moved every saved card/footer edit.
+      const index = node.hasAttribute('data-qa-copy-added') ? null : legacyIndex++;
       // Freeze legacy keys before runtime modules insert extra controls. Added
       // copy uses a stable selector so it cannot renumber founder-edited text.
-      const key = node.dataset.qaCopyKey || (initialCopyScan ? `${pageKey}.${node.tagName.toLowerCase()}.${index}` : `${pageKey}.additional.${window.CreatorElementEditor.selectorFor(node)}`);
+      const key = node.dataset.qaCopyKey || (initialCopyScan && index !== null ? `${pageKey}.${node.tagName.toLowerCase()}.${index}` : `${pageKey}.additional.${window.CreatorElementEditor.selectorFor(node)}`);
       node.dataset.qaCopyKey = key;
       if (node.dataset.qaCopyDefault == null) node.dataset.qaCopyDefault = node.textContent.trim();
       return { key, node, label: node.dataset.qaCopyLabel || node.textContent.trim().slice(0, 36), defaultText: node.dataset.qaCopyDefault };
@@ -222,6 +237,7 @@
       if (node.textContent !== value) node.textContent = value;
       node.style.whiteSpace = value.includes('\n') ? 'pre-line' : '';
     });
+    document.dispatchEvent(new CustomEvent('creator:copy-change', { detail: { pageKey } }));
   }
 
   function applyComponents() {
@@ -249,7 +265,7 @@
     trigger.className = 'qa-trigger'; trigger.type = 'button'; trigger.textContent = '调控板'; trigger.setAttribute('aria-expanded', 'false');
     const panel = document.createElement('aside');
     panel.className = 'qa-panel'; panel.hidden = true;
-    panel.innerHTML = `<div class="qa-panel-head"><div><strong>人工验收调控板</strong><small>UI、文案与每个视觉组件分开管理</small></div><button type="button" class="qa-close" aria-label="关闭调控板">×</button></div>
+    panel.innerHTML = `<div class="qa-panel-head" data-qa-drag-handle title="按住此处拖动调控板"><div><strong>人工验收调控板</strong><small>UI、文案与每个视觉组件分开管理</small></div><span class="qa-drag-hint" aria-hidden="true">拖动</span><button type="button" class="qa-close" aria-label="关闭调控板">×</button></div>
       <div class="qa-tabs" role="tablist" aria-label="调控板页面">
         <button type="button" class="qa-tab active" data-qa-tab="ui" role="tab" aria-selected="true">UI 参数</button>
         <button type="button" class="qa-tab" data-qa-tab="palette" role="tab" aria-selected="false">色彩方案</button>
@@ -257,6 +273,7 @@
         <button type="button" class="qa-tab" data-qa-tab="components" role="tab" aria-selected="false">Drift Wall</button>
         <button type="button" class="qa-tab" data-qa-tab="scroll-expand" role="tab" aria-selected="false">页面过渡</button>
         <button type="button" class="qa-tab" data-qa-tab="vertical-marquee" role="tab" aria-selected="false">Vertical Marquee</button>
+        <button type="button" class="qa-tab" data-qa-tab="text-effects" role="tab" aria-selected="false">文字动效</button>
       </div>
       <div class="qa-scroll">
         <div class="qa-page" data-qa-page="palette" hidden>
@@ -276,10 +293,7 @@
         <div class="qa-page" data-qa-page="copy" hidden>
           <section data-qa-fine-copy></section>
           <section class="qa-copy-section"><h2>本页文案库</h2><p class="qa-hint">输入时自动保存浏览器草稿，普通刷新不会丢。完成验收后，再把整套配置写入项目。</p><label class="qa-copy-field"><span>浏览器标签标题</span><input data-copy-document-title></label><div class="qa-copy-list" data-copy-list></div></section>
-          <section class="qa-save-section"><h2>保存与项目同步</h2>
-            <div class="qa-save-state"><i></i><div><strong data-qa-save-status>浏览器草稿已载入</strong><small data-qa-project-status>${projectEnvelope.savedAt ? `项目版本：${new Date(projectEnvelope.savedAt).toLocaleString('zh-CN')}` : '项目文件尚未保存过验收配置'}</small></div></div>
-            <p class="qa-hint">“保存到项目”会更新项目根目录的 creator-project-config.js，之后刷新、换浏览器或把仓库拉到另一台电脑，都能加载这套配置。</p>
-            <div class="qa-actions qa-save-actions"><button type="button" class="qa-primary-action" data-qa-save-project>保存到项目</button><button type="button" data-qa-backup>下载备份</button></div>
+          <section><h2>恢复项目版本</h2><p class="qa-hint">保存入口已统一到调控板底部，保存范围包含全部七个分页，不仅是文案。</p>
             <button type="button" class="qa-project-restore" data-qa-restore-project>放弃浏览器草稿，恢复项目版本</button>
           </section>
         </div>
@@ -314,8 +328,8 @@
           <section><h2>文字与问题词标记</h2>
             <div class="qa-switches qa-component-switches">${toggleField('字色跟随全局主题', 'components.transcriptCover.followTheme')}</div>
             <div class="qa-colors">${colorField('普通句字色', 'components.transcriptCover.rawColor')}${colorField('优化句字色', 'components.transcriptCover.cleanColor')}${colorField('问题词下划线', 'components.transcriptCover.issueColor')}${colorField('问题词高亮色', 'components.transcriptCover.highlightColor')}${colorField('优化关键词字色', 'components.transcriptCover.emphasisColor')}</div>
-            <p class="qa-hint">手动调整字色会切换为独立配色；下划线和高亮始终可单独调节。</p>
-            <label class="qa-select"><span>问题词样式</span><select data-path="components.transcriptCover.highlightStyle"><option value="underline">细下划线</option><option value="highlight">Highlight</option><option value="both">下划线 + Highlight</option></select></label>
+            <p class="qa-hint">手动调整字色会切换为独立配色；下划线与虚线框共用问题词色，高亮底色单独调节。随机模式对每处标记独立抽取，可能连续出现同一种。</p>
+            <label class="qa-select"><span>问题词样式</span><select data-path="components.transcriptCover.highlightStyle"><option value="random">随机三类</option><option value="underline">细下划线</option><option value="highlight">Highlight</option><option value="box">虚线框</option><option value="both">下划线 + Highlight</option></select></label>
             ${numberField('高亮底色透明度', 'components.transcriptCover.highlightOpacity', 0, 0.5, 0.01)}
             ${numberField('普通句字号', 'components.transcriptCover.rawFontSize', 14, 24)}
             ${numberField('优化句字号', 'components.transcriptCover.cleanFontSize', 18, 36)}
@@ -327,14 +341,101 @@
             ${numberField('边缘文字不透明度', 'components.transcriptCover.edgeOpacity', 0, 1, 0.05)}
             <p class="qa-hint">渐隐仅改变文字透明度，不绘制背景，也不模糊文字。</p>
           </section>
-          <section><h2>滚动句子</h2><p class="qa-hint">每组两行：普通句在上，优化句在下；组间空一行。用 [[双括号]] 标出问题词或优化关键词。最多 20 组，每行 220 字。内容是可编辑示例，不是实时 AI 生成。</p>
+          <section><h2>悬停液化换句</h2><div class="qa-switches qa-component-switches">${toggleField('启用 Gooey 换句', 'components.transcriptCover.gooeySwapEnabled')}</div>
+            ${numberField('换句过渡时长（毫秒）', 'components.transcriptCover.hoverSwapDuration', 220, 1200, 20)}${numberField('液化模糊强度', 'components.transcriptCover.gooeyBlur', 0, 14, 0.5)}${colorField('液化高光颜色', 'components.transcriptCover.gooeyColor')}
+            <p class="qa-hint">正常显示口播原句；鼠标悬停或键盘聚焦句组时，原句隐去并显现优化句。三类问题词标记只作用于原句。</p>
+          </section>
+          <section><h2>滚动句子</h2><p class="qa-hint">编辑格式为每组两行：第一行普通句，第二行优化句；组间空一行。页面会在同一个位置悬停换句，不会同时显示两行。用 [[双括号]] 标出问题词或优化关键词。最多 20 组，每行 220 字。内容是可编辑示例，不是实时 AI 生成。</p>
             <label class="qa-copy-field"><span>句子内容</span><textarea data-path="components.transcriptCover.examples" rows="8" maxlength="9200" spellcheck="false"></textarea></label>
             <p class="qa-hint" data-marquee-example-status role="status"></p>
-            <button type="button" data-qa-marquee-save>保存到项目</button><p class="qa-hint" data-marquee-save-status role="status">普通刷新保留浏览器草稿；保存到项目后可随代码一同提交。</p>
+            <p class="qa-hint">使用底部“保存全部参数到项目”，会将这里的句子与其他六个分页的参数一起保存。</p>
           </section>
         </div>
-      </div>`;
+        <div class="qa-page" data-qa-page="text-effects" hidden>
+          <section><h2>React Bits · True Focus</h2><p class="qa-hint">只作用于首页 Read Yourself 主标题。编辑文字仍在“文案”页；这里控制焦点框和自动聚焦节奏。</p>
+            <div class="qa-switches qa-component-switches">${toggleField('启用主标题动效', 'components.trueFocus.enabled')}</div>
+            ${numberField('失焦模糊', 'components.trueFocus.blurAmount', 0, 10, 0.5)}${numberField('聚焦移动时长（毫秒）', 'components.trueFocus.animationDuration', 120, 900, 20)}${numberField('两次聚焦停留（毫秒）', 'components.trueFocus.pauseBetweenAnimations', 400, 5000, 100)}
+            <div class="qa-colors">${colorField('焦点框颜色', 'components.trueFocus.borderColor')}${colorField('焦点光晕颜色', 'components.trueFocus.glowColor')}</div>
+          </section>
+          <section><h2>React Bits · Warp Text</h2><p class="qa-hint">只作用于首页副标题。使用原生 WebGL2 绘制视觉层，底层保留可编辑、可读的语义文本；设备不支持 WebGL2 时自动回退为普通文字。</p>
+            <div class="qa-switches qa-component-switches">${toggleField('启用副标题动效', 'components.warpText.enabled')}${toggleField('指针波纹', 'components.warpText.ripple')}</div>
+            <div class="qa-colors">${colorField('副标题颜色', 'components.warpText.color')}</div>
+            ${numberField('环境扭曲', 'components.warpText.warpStrength', 0, 0.3, 0.01)}${numberField('噪声尺度', 'components.warpText.warpScale', 0.5, 4, 0.1)}${numberField('自动流动速度', 'components.warpText.speed', 0, 2, 0.05)}${numberField('指针影响范围', 'components.warpText.pointerInfluence', 0.1, 1, 0.05)}${numberField('指针扭曲强度', 'components.warpText.pointerStrength', 0, 1, 0.05)}${numberField('RGB 折射', 'components.warpText.refraction', 0, 0.08, 0.002)}
+          </section>
+        </div>
+      </div>
+      <footer class="qa-global-save" aria-label="全部参数保存">
+        <div class="qa-save-state" role="status" aria-live="polite"><i aria-hidden="true"></i><div><strong data-qa-save-status>已载入当前配置</strong><small data-qa-project-status></small></div></div>
+        <div class="qa-actions qa-save-actions"><button type="button" class="qa-primary-action" data-qa-save-project>保存全部参数到项目</button><button type="button" data-qa-backup>导出全部参数 JSON</button></div>
+        <p class="qa-save-scope">包含七个分页，以及此地址下已编辑的起始页、V1／V2／V3 文案与元素样式。图片保存引用，不打包外部图片。账号密钥、录音与设备连接配置不导出。</p>
+      </footer>`;
     document.body.append(trigger, panel);
+
+    // Keep the control panel out of the document flow: only its title bar is
+    // a drag handle, so switches, sliders and text fields remain safe to use.
+    const panelMargin = 12;
+    const panelBounds = () => {
+      const width = panel.offsetWidth || Math.min(390, Math.max(280, window.innerWidth - 28));
+      const height = panel.offsetHeight || Math.min(760, Math.max(280, window.innerHeight - 96));
+      return {
+        maxLeft: Math.max(panelMargin, window.innerWidth - width - panelMargin),
+        maxTop: Math.max(panelMargin, window.innerHeight - height - panelMargin)
+      };
+    };
+    const clampPanelPosition = (left, top) => {
+      const bounds = panelBounds();
+      return {
+        left: Math.round(Math.min(bounds.maxLeft, Math.max(panelMargin, Number(left) || panelMargin))),
+        top: Math.round(Math.min(bounds.maxTop, Math.max(panelMargin, Number(top) || panelMargin)))
+      };
+    };
+    const setPanelPosition = (left, top, persist = false) => {
+      const position = clampPanelPosition(left, top);
+      panel.style.left = `${position.left}px`;
+      panel.style.top = `${position.top}px`;
+      panel.style.right = 'auto';
+      panel.style.bottom = 'auto';
+      if (persist) {
+        try { localStorage.setItem(panelPositionKey, JSON.stringify(position)); } catch (_) { /* Browser draft persistence is best-effort. */ }
+      }
+      return position;
+    };
+    const restorePanelPosition = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(panelPositionKey));
+        if (Number.isFinite(saved?.left) && Number.isFinite(saved?.top)) setPanelPosition(saved.left, saved.top);
+      } catch (_) { /* The default CSS position remains available. */ }
+    };
+    restorePanelPosition();
+    let drag = null;
+    const dragHandle = panel.querySelector('[data-qa-drag-handle]');
+    dragHandle.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || event.target.closest('button, input, select, textarea, a, label')) return;
+      const rect = panel.getBoundingClientRect();
+      drag = { pointerId: event.pointerId, offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top };
+      dragHandle.setPointerCapture?.(event.pointerId);
+      panel.classList.add('is-dragging');
+      event.preventDefault();
+    });
+    window.addEventListener('pointermove', event => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      setPanelPosition(event.clientX - drag.offsetX, event.clientY - drag.offsetY);
+    });
+    const finishDrag = event => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const position = setPanelPosition(event.clientX - drag.offsetX, event.clientY - drag.offsetY, true);
+      dragHandle.releasePointerCapture?.(event.pointerId);
+      drag = null;
+      panel.classList.remove('is-dragging');
+      panel.dataset.qaPosition = `${position.left},${position.top}`;
+    };
+    window.addEventListener('pointerup', finishDrag);
+    window.addEventListener('pointercancel', finishDrag);
+    window.addEventListener('resize', () => {
+      const left = Number.parseFloat(panel.style.left);
+      const top = Number.parseFloat(panel.style.top);
+      if (Number.isFinite(left) && Number.isFinite(top)) setPanelPosition(left, top, true);
+    });
 
     const titleKey = `${pageKey}.document-title`;
     const refreshJson = () => { panel.querySelector('.qa-json').value = JSON.stringify(state, null, 2); };
@@ -350,13 +451,12 @@
     const projectStatus = panel.querySelector('[data-qa-project-status]');
     const setSaveStatus = (message, status = 'draft') => {
       saveStatus.textContent = message;
-      panel.querySelector('[data-marquee-save-status]').textContent = message;
       panel.querySelector('.qa-save-state').dataset.state = status;
     };
     const updateProjectStatus = () => {
-      projectStatus.textContent = projectEnvelope.savedAt
-        ? `项目版本：${new Date(projectEnvelope.savedAt).toLocaleString('zh-CN')}`
-        : '项目文件尚未保存过验收配置';
+      const changed = JSON.stringify(state) !== JSON.stringify(merge(defaults, migrateConfig(projectEnvelope.config)));
+      projectStatus.textContent = !projectEnvelope.savedAt ? '当前项目文件尚未保存配置 · 未同步 GitHub'
+        : `${changed ? '有修改尚未写入项目' : '与已载入项目配置一致'} · 项目版本 ${new Date(projectEnvelope.savedAt).toLocaleString('zh-CN')}`;
     };
     const renderElementFields = () => {
       const key = panel.querySelector('#qaElement').value;
@@ -402,6 +502,7 @@
     document.addEventListener('creator:qa-draft-save', event => {
       if (event.detail?.success) setSaveStatus(`浏览器草稿已自动保存 · ${new Date(event.detail.savedAt).toLocaleTimeString('zh-CN')}`, 'draft');
       else setSaveStatus(`浏览器草稿保存失败：${event.detail?.error || '未知错误'}`, 'error');
+      updateProjectStatus();
     });
     panel.querySelector('[data-qa-provider-save]').addEventListener('click', saveAvatarProvider);
     panel.querySelector('[data-qa-palette-list]').innerHTML = Object.entries(palettes).map(([id, palette]) => `<button type="button" class="qa-palette" data-qa-palette="${id}" aria-label="应用 ${palette.name} 色彩方案"><span class="qa-palette-swatches" aria-hidden="true"><i style="background:${palette.theme.bg}"></i><i style="background:${palette.theme.panelRaised}"></i><i style="background:${palette.theme.accent}"></i><i style="background:${palette.theme.info}"></i></span><strong>${palette.name}</strong><small>${palette.note}</small></button>`).join('');
@@ -445,15 +546,15 @@
         const result = await saveToProject();
         if (result?.canceled) setSaveStatus('已取消，没有改动项目文件', 'draft');
         else if (result.persisted) {
-          setSaveStatus(result.mode === 'desktop' ? '已一键写入当前项目' : '项目配置文件已保存', 'project');
+          setSaveStatus(result.mode === 'desktop' ? '全部参数已写入当前项目 · 尚未提交 GitHub' : '全部参数已保存到所选文件；请确认已替换项目根目录同名文件', result.mode === 'desktop' ? 'project' : 'warning');
           updateProjectStatus();
         } else setSaveStatus('已下载项目配置；请把它放到项目根目录并覆盖同名文件', 'warning');
       } catch (error) { setSaveStatus(`写入项目失败：${error.message}`, 'error'); }
-      finally { button.disabled = false; button.textContent = '保存到项目'; }
+      finally { button.disabled = false; button.textContent = '保存全部参数到项目'; }
     });
-    panel.querySelector('[data-qa-marquee-save]').addEventListener('click', () => panel.querySelector('[data-qa-save-project]').click());
     panel.querySelector('[data-qa-backup]').addEventListener('click', () => {
-      downloadBackup(); setSaveStatus('已下载一份 JSON 备份；浏览器草稿仍会继续自动保存', 'draft');
+      try { downloadBackup(); setSaveStatus('已发起全部参数 JSON 下载 · 尚未写入项目或提交 GitHub', 'warning'); }
+      catch (error) { setSaveStatus(`导出失败：${error.message}。浏览器草稿未被删除，请重试。`, 'error'); }
     });
     panel.querySelector('[data-qa-restore-project]').addEventListener('click', () => {
       if (!window.confirm('确定放弃当前浏览器草稿，恢复为项目文件里的配置吗？')) return;
@@ -468,7 +569,7 @@
       commit: (kind, config) => { state[kind === 'styles' ? 'fineTune' : 'extraCopy'][pageKey] = config; save(); refreshJson(); }
     });
     window.CreatorQAControls.inspectElements = () => elementEditor.inventory();
-    renderElementFields(); renderCopyFields(); refreshJson(); refreshAvatarProvider(); refreshInputs(panel); refreshMarqueeEditor(); refreshPalettes();
+    renderElementFields(); renderCopyFields(); refreshJson(); refreshAvatarProvider(); refreshInputs(panel); refreshMarqueeEditor(); refreshPalettes(); updateProjectStatus();
   }
 
   window.CreatorQAControls = { featureEnabled, getState: () => clone(state), refreshCopyLibrary: applyCopy, reset: () => { state = clone(defaults); apply(); save(); } };

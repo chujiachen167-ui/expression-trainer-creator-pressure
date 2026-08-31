@@ -28,6 +28,11 @@ async function run() {
   assert.equal(migrate({ pauseOnHover: false }).pauseOnHover, true, 'old manual-control drafts migrate to hover pause');
   assert.equal(migrate({ labelColor: '#123456' }).issueColor, '#123456');
   assert.equal(migrate({ rawColor: '#654321' }).followTheme, false);
+  const legacyMarks = migrate({ highlightStyle: 'underline', rawColor: '#654321', examples: '自己的[[草稿]]\n自己的优化稿' });
+  assert.equal(legacyMarks.highlightStyle, 'random');
+  assert.equal(legacyMarks.rawColor, '#654321');
+  assert.equal(legacyMarks.examples, '自己的[[草稿]]\n自己的优化稿');
+  assert.equal(migrate({ ...legacyMarks, highlightStyle: 'box' }).highlightStyle, 'box', 'after migration, later explicit marker choices must survive refresh');
   assert.deepEqual(segments('a[[b]]c'), [{ text: 'a', marked: false }, { text: 'b', marked: true }, { text: 'c', marked: false }]);
 
   const extraScripts = ['vendor/magic-ui/marquee.js', 'launcher-transcript.js'];
@@ -99,11 +104,11 @@ async function run() {
 
   let saved;
   window.api = { saveProjectConfig: async content => { saved = content; return { success: true, path: 'test-config.js' }; } };
-  doc.querySelector('[data-qa-marquee-save]').click();
+  doc.querySelector('[data-qa-save-project]').click();
   await new Promise(resolve => setImmediate(resolve));
   assert.match(saved, /"reverse": true/);
   assert.match(saved, /Founder title/);
-  assert.match(doc.querySelector('[data-marquee-save-status]').textContent, /写入当前项目/);
+  assert.match(doc.querySelector('[data-qa-save-status]').textContent, /写入当前项目/);
   const reloaded = makePage('index.html', { extraScripts, draft: JSON.parse(window.localStorage.getItem(storageKey)) });
   assert.equal(reloaded.window.document.querySelector('[data-transcript-stream]').dataset.reverse, 'true');
   assert.equal(reloaded.window.document.title, 'Founder title');

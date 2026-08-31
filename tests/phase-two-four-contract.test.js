@@ -23,7 +23,7 @@ assert.match(transcript, /MagicUIMarquee\.mount/, 'transcript stream should use 
 assert.doesNotMatch(transcript, /<span>原句|<span>精炼/, 'sentence labels must not return');
 assert.doesNotMatch(launcher, /LIVE EDIT|正在整理表达|transcript-cover-foot/, 'remove decorative metadata and fake live status');
 assert.doesNotMatch(styles, /\.transcript-cover::before/, 'remove the tinted pseudo-background, not just the border');
-assert.doesNotMatch(transcript, /blur/, 'transcript stream should not blur copy during playback');
+assert.match(transcript, /creator-gooey-text|gooeyBlur/, 'transcript stream should reserve blur for the explicit hover swap, not playback');
 
 for (const page of ['v1-camera-baseline.html', 'v2-ai-audience.html', 'v3-creator-studio.html']) {
   const html = read(page);

@@ -29,7 +29,7 @@
 
   // Run after the initial QA scan: preserve existing page copy keys before
   // inserting new controls. Reuse the actual prompt node used by app.js.
-  banner.className = 'v1-topic-picker';
+  banner.className = 'creator-topic-picker v1-topic-picker';
   banner.id = 'v1TopicPicker';
   document.querySelector('.v1-diagnostic-room').after(banner);
   banner.replaceChildren();

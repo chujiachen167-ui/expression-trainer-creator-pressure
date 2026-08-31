@@ -4,7 +4,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const storageKey = 'expression-trainer.creator-qa.v1';
-function makePage(page = 'index.html', { draft, project, extraScripts = [], production = false, reducedMotion = false } = {}) {
+function makePage(page = 'index.html', { draft, project = {}, extraScripts = [], production = false, reducedMotion = false } = {}) {
   // Non-rendering DOM tests. No resources option: never fetch external assets.
   const virtualConsole = new VirtualConsole();
   const errors = [];
@@ -32,8 +32,9 @@ function makePage(page = 'index.html', { draft, project, extraScripts = [], prod
     sheet.textContent = read(link.getAttribute('href'));
     window.document.head.append(sheet);
   }
-  window.eval(read('creator-project-config.js'));
-  if (project) window.CreatorProjectConfig.config = project;
+  // Unit tests use explicit fixtures, not the founder's changing shipped
+  // palette/copy. Shipped-config integration passes that file in as `project`.
+  window.CreatorProjectConfig = { version: 1, savedAt: null, config: project };
   if (draft) window.localStorage.setItem(storageKey, JSON.stringify(draft));
   for (const script of ['vertical-marquee-config.js', 'qa-element-editor.js', 'control-panel.js', ...extraScripts]) window.eval(read(script));
   return dom;

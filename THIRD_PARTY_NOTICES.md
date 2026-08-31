@@ -39,6 +39,7 @@ compliance record, not legal advice.
 - Component: https://www.reactbits.dev/components/drift-wall
 - License: MIT + Commons Clause License Condition v1.0
 - Copyright: Copyright (c) 2026 David Haz
+- Full license: `vendor/react-bits/LICENSE.md` (retrieved 2026-08-31).
 - Use: adapted inside the V2 avatar-selection preview as part of this application.
 - Restriction: the component must not be sold, sublicensed, or redistributed by itself,
   in a component bundle, or as a standalone port. It is not exposed as a reusable package.
@@ -79,6 +80,33 @@ text: https://github.com/DavidHDev/react-bits/blob/main/LICENSE.md
   duplicate hiding, persistent pause, reduced-motion fallback, and QA integration.
 - No React dependency, network-loaded code, review-card styling, or stock avatar media
   from the upstream demo is included.
+
+### React Bits · Warp Text and True Focus (shipped adaptations)
+
+- Source: https://github.com/DavidHDev/react-bits
+- Components: https://www.reactbits.dev/text-animations/warp-text and
+  https://www.reactbits.dev/text-animations/true-focus
+- License: MIT + Commons Clause License Condition v1.0
+- Copyright: Copyright (c) 2026 David Haz
+- Use: the launcher subtitle uses a dependency-free WebGL2 translation of the Warp Text
+  pointer lens; the Read Yourself title uses a native DOM translation of True Focus.
+- Adaptation boundary: the repository does not ship React, Motion, OGL, or a reusable
+  React Bits package. The source text remains semantic and editable, with a normal-text
+  fallback when WebGL2 is unavailable. The upstream license controls the adapted code.
+
+### Codrops · Gooey Text Hover Effect (shipped adaptation)
+
+- Source: https://github.com/codrops/GooeyTextHoverEffect
+- Demo: https://tympanus.net/Development/GooeyTextHoverEffect/
+- License: MIT
+- Copyright: Copyright (c) 2009 - 2020 Codrops
+- Full license: `vendor/codrops/GooeyTextHoverEffect.LICENSE`.
+- Use: the launcher's transcript pairs use the SVG filter idea for a hover/focus
+  transition from an informal phrase to its more concise creator-facing expression.
+- Adaptation: `src/index.html` and `src/js/demo1/menuItem.js` from the upstream
+  repository (retrieved 2026-08-31). Local DOM/RAF code preserves the shared-group
+  blur/crossfade and filter removal at both endpoints. The radius and alpha threshold
+  are adjusted for body-size Chinese text; no GSAP or upstream demo assets are bundled.
 
 ## Optional external runtime
 

@@ -91,6 +91,8 @@ a { color: inherit; text-decoration: none; }
 
 .launcher-copy { min-width: 0; }
 
+.launcher-copy { position: relative; }
+
 .eyebrow {
   margin: 0 0 18px;
   color: var(--pink);
@@ -108,13 +110,38 @@ a { color: inherit; text-decoration: none; }
   text-wrap: balance;
 }
 
+/* React Bits True Focus adaptation: the editable h1 remains the source of
+   truth, while a sibling overlay owns the decorative focus frame. */
+.launcher-shell h1[data-true-focus] { position: relative; z-index: 1; }
+.launcher-shell h1[data-true-focus] > [data-true-focus-source] { transition: color 220ms var(--ease-out-ui), opacity 220ms var(--ease-out-ui); }
+.launcher-shell h1[data-true-focus].true-focus-ready > [data-true-focus-source] { color: transparent; }
+.true-focus-overlay { position: absolute; z-index: 2; pointer-events: auto; user-select: none; white-space: pre-line; overflow: visible; }
+.true-focus-word { position: relative; display: inline-block; cursor: default; transition: filter var(--true-focus-duration, 420ms) var(--ease-out-ui), opacity var(--true-focus-duration, 420ms) var(--ease-out-ui), color var(--true-focus-duration, 420ms) var(--ease-out-ui); }
+.true-focus-word:not(.active) { filter: blur(var(--true-focus-blur, 3px)); opacity: .42; }
+.true-focus-word.active { color: var(--color-text); }
+.true-focus-frame { position: absolute; pointer-events: none; border: 0; opacity: 0; transition: left var(--true-focus-duration, 420ms) var(--ease-out-ui), top var(--true-focus-duration, 420ms) var(--ease-out-ui), width var(--true-focus-duration, 420ms) var(--ease-out-ui), height var(--true-focus-duration, 420ms) var(--ease-out-ui), opacity 160ms ease-out; }
+.true-focus-overlay.ready .true-focus-frame { opacity: 1; }
+.true-focus-corner { position: absolute; width: 13px; height: 13px; border: 2px solid var(--true-focus-border, var(--pink)); filter: drop-shadow(0 0 5px var(--true-focus-glow, var(--pink))); }
+.true-focus-corner.tl { top: -8px; left: -8px; border-right: 0; border-bottom: 0; }
+.true-focus-corner.tr { top: -8px; right: -8px; border-left: 0; border-bottom: 0; }
+.true-focus-corner.bl { bottom: -8px; left: -8px; border-right: 0; border-top: 0; }
+.true-focus-corner.br { right: -8px; bottom: -8px; border-left: 0; border-top: 0; }
+
 .launcher-lead {
+  position: relative;
+  z-index: 1;
   max-width: 680px;
   margin: 28px 0 0;
   color: var(--muted);
   font-size: clamp(15px, 1.35vw, 18px);
   line-height: 1.78;
 }
+
+/* React Bits Warp Text adaptation. The semantic paragraph stays in the DOM
+   for copy editing and screen readers; the canvas is only a visual layer. */
+.launcher-lead[data-warp-text] { min-height: 2em; }
+.launcher-lead[data-warp-text].warp-text-ready { color: transparent; -webkit-text-fill-color: transparent; }
+.warp-text-canvas { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; display: block; pointer-events: auto; }
 
 .transcript-cover {
   position: relative;
@@ -137,12 +164,16 @@ a { color: inherit; text-decoration: none; }
 .transcript-stream:focus-visible { outline: 2px solid var(--pink); outline-offset: 6px; }
 .transcript-stream > .magic-marquee-group { min-height: 100%; }
 .transcript-pair {
+  position: relative;
   display: grid;
   flex: none;
-  gap: 12px;
   padding: 3px 0;
+  outline: none;
+  cursor: default;
 }
+.transcript-swap-layers { display: grid; align-items: center; pointer-events: none; }
 .transcript-pair p {
+  grid-area: 1 / 1;
   margin: 0;
   overflow-wrap: anywhere;
   text-wrap: pretty;
@@ -154,18 +185,24 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.85;
 }
 .transcript-clean {
-  color: var(--transcript-clean-color);
+  color: color-mix(in srgb, var(--transcript-gooey-color) var(--swap-glint, 0%), var(--transcript-clean-color));
   font-size: var(--transcript-clean-size, 25px);
   font-weight: var(--transcript-clean-weight, 750);
   line-height: 1.5;
   letter-spacing: -.025em;
+  opacity: 0;
 }
+.transcript-cover[data-gooey-swap="false"] .transcript-swap-layers { filter: none !important; }
+.transcript-stream[data-keyboard-pause="true"] > .magic-marquee-group { animation-play-state: paused; }
+.transcript-pair:focus-visible { outline: 1px solid color-mix(in srgb, var(--pink) 70%, transparent); outline-offset: 8px; }
 .transcript-raw mark { color: inherit; background: transparent; text-decoration: underline; text-decoration-color: var(--transcript-issue-color); text-decoration-thickness: 1.5px; text-underline-offset: .3em; }
-.transcript-cover[data-highlight-style="highlight"] mark,
-.transcript-cover[data-highlight-style="both"] mark { background: color-mix(in srgb, var(--transcript-highlight-color) var(--transcript-highlight-opacity, 16%), transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-.transcript-cover[data-highlight-style="highlight"] mark { text-decoration: none; }
-.transcript-clean strong { font-weight: inherit; color: var(--transcript-emphasis-color); }
+.transcript-raw mark[data-problem-style="highlight"] { background: color-mix(in srgb, var(--transcript-highlight-color) var(--transcript-highlight-opacity, 16%), transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; text-decoration: none; }
+.transcript-raw mark[data-problem-style="box"] { outline: 1px dashed color-mix(in srgb, var(--transcript-issue-color) 88%, transparent); outline-offset: 1px; border-radius: .12em; box-decoration-break: clone; -webkit-box-decoration-break: clone; text-decoration: none; }
+.transcript-raw mark[data-problem-style="both"] { background: color-mix(in srgb, var(--transcript-highlight-color) var(--transcript-highlight-opacity, 16%), transparent); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.transcript-clean strong { font-weight: inherit; color: color-mix(in srgb, var(--transcript-gooey-color) var(--swap-glint, 0%), var(--transcript-emphasis-color)); }
 .transcript-cover[data-static="true"] .transcript-stream { mask-image: none; }
+
+.text-effect-defs { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
 
 .chapter-heading {
   display: flex;
@@ -632,10 +669,11 @@ html.is-page-transitioning .version-card { pointer-events: none; }
 }
 .prompt-banner strong { color: var(--cyan); }
 
-/* V1 topic choice lives beneath the camera, never over the creator's image. */
+/* Topic choice lives beneath the training stage, never over the creator's image. */
 body[data-mode="v1"] .stage { grid-template-rows: auto minmax(0, 1fr) auto auto; }
-.v1-topic-picker { min-width: 0; color: var(--text); background: var(--control-bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; transform: translate(var(--qa-x, 0px), var(--qa-y, 0px)); width: var(--qa-width, auto); height: var(--qa-height, auto); }
-.v1-topic-picker [hidden] { display: none !important; }
+body[data-mode="v2"] .stage { grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.creator-topic-picker { min-width: 0; color: var(--text); background: var(--control-bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; transform: translate(var(--qa-x, 0px), var(--qa-y, 0px)); width: var(--qa-width, auto); height: var(--qa-height, auto); }
+.creator-topic-picker [hidden] { display: none !important; }
 .topic-toggle { display: flex; gap: 16px; align-items: center; width: 100%; min-height: 60px; padding: 14px 18px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .topic-toggle:hover { background: var(--panel-2); }
 .topic-label { flex: none; color: var(--cyan); font-size: 13px; font-weight: 700; }
@@ -653,11 +691,11 @@ body[data-mode="v1"] .stage { grid-template-rows: auto minmax(0, 1fr) auto auto;
 .topic-input-panel textarea { resize: vertical; min-height: 100px; max-height: 260px; }
 .topic-template-preview p { margin: 12px 0; color: var(--text); line-height: 1.7; font-size: 14px; overflow-wrap: anywhere; }
 .topic-hint { margin: 8px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
-.v1-topic-picker > .topic-hint { margin: 0; padding: 0 18px 12px; }
+.creator-topic-picker > .topic-hint { margin: 0; padding: 0 18px 12px; }
 .topic-error { color: var(--red); font-size: 13px; line-height: 1.6; }
 .topic-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .topic-actions button { min-height: 44px; }
-.v1-topic-picker :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.creator-topic-picker :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 .topic-panel fieldset:disabled { opacity: .65; }
 
 .transcript {
@@ -811,9 +849,13 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
 .version-disabled::after { content: "此版本已在调控板中关闭"; position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; color: var(--text); font-size: 24px; font-weight: 800; pointer-events: none; }
 
 .qa-trigger { position: fixed; right: 18px; bottom: 18px; z-index: 60; padding: 11px 15px; border: 1px solid rgba(255, 47, 146, 0.62); border-radius: 999px; background: #17101a; color: #fff; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.38); cursor: pointer; font-weight: 800; }
-.qa-panel { position: fixed; z-index: 61; right: 18px; bottom: 68px; width: min(390px, calc(100vw - 28px)); max-height: min(760px, calc(100vh - 96px)); overflow: hidden; border: 1px solid #494154; border-radius: 18px; background: #101117; color: #eef0f8; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56); }
-.qa-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid #292c38; }
+.qa-panel { position: fixed; display: flex; flex-direction: column; z-index: 61; right: 18px; bottom: 68px; width: min(390px, calc(100vw - 28px)); max-height: min(760px, calc(100vh - 96px)); overflow: hidden; border: 1px solid #494154; border-radius: 18px; background: #101117; color: #eef0f8; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56); }
+.qa-panel[hidden] { display: none; }
+.qa-panel-head, .qa-tabs, .qa-global-save { flex: none; }
+.qa-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; border-bottom: 1px solid #292c38; cursor: grab; user-select: none; touch-action: none; }
+.qa-panel.is-dragging .qa-panel-head { cursor: grabbing; }
 .qa-panel-head strong, .qa-panel-head small { display: block; }.qa-panel-head small { margin-top: 3px; color: #8d93a7; font-size: 11px; }
+.qa-drag-hint { margin-left: auto; color: #71788d; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
 .qa-close { border: 0; background: transparent; color: #c7cada; font-size: 24px; cursor: pointer; }
 .qa-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; padding: 8px 12px; border-bottom: 1px solid #292c38; background: #0c0d12; }
 .qa-fine-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
@@ -831,7 +873,7 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
 .qa-tab { padding: 8px 6px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #858b9c; cursor: pointer; font-size: 11px; font-weight: 750; }
 .qa-tab:hover { color: #d8dbe5; background: #161821; }
 .qa-tab.active { border-color: rgba(255,47,146,.45); background: rgba(255,47,146,.12); color: #fff; }
-.qa-scroll { max-height: calc(min(760px, 100vh - 96px) - 156px); overflow: auto; padding: 0 18px 18px; }
+.qa-scroll { min-height: 0; flex: 1 1 auto; overflow: auto; padding: 0 18px 18px; }
 .qa-page[hidden] { display: none; }
 .qa-panel section { padding: 16px 0; border-bottom: 1px solid #292c38; }.qa-panel section:last-child { border-bottom: 0; }.qa-panel h2 { margin: 0 0 8px; font-size: 13px; }.qa-hint { margin: 0 0 12px; color: #8d93a7; font-size: 11px; line-height: 1.5; }
 .qa-switches { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 12px; }.qa-switch { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #cdd1df; font-size: 12px; cursor: pointer; }.qa-switch input { position: absolute; opacity: 0; }.qa-switch i { width: 30px; height: 17px; border-radius: 20px; background: #343846; position: relative; transition: 160ms; }.qa-switch i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 11px; height: 11px; border-radius: 50%; background: #fff; transition: 160ms; }.qa-switch input:checked + i { background: var(--pink); }.qa-switch input:checked + i::after { transform: translateX(13px); }
@@ -840,7 +882,9 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
 .qa-field { display: grid; grid-template-columns: 105px 1fr 42px; gap: 8px; align-items: center; margin-top: 9px; color: #cdd1df; font-size: 12px; }.qa-field input { accent-color: var(--pink); }.qa-field output { color: var(--cyan); text-align: right; font-variant-numeric: tabular-nums; }.qa-actions { display: flex; gap: 8px; }.qa-actions button { flex: 1; padding: 8px; border: 1px solid #3c4050; border-radius: 7px; background: #191c25; color: #eef0f8; cursor: pointer; font-size: 12px; }.qa-json { width: 100%; min-height: 110px; margin-top: 10px; resize: vertical; border: 1px solid #303442; border-radius: 8px; background: #0a0b0f; color: #aeb5cc; padding: 9px; font: 10px/1.45 ui-monospace, Consolas, monospace; }
 .qa-copy-list { display: grid; gap: 9px; max-height: 330px; margin-top: 10px; overflow: auto; padding-right: 4px; }.qa-copy-field { display: grid; gap: 5px; color: #cdd1df; font-size: 11px; }.qa-copy-field input, .qa-copy-field textarea { width: 100%; border: 1px solid #3c4050; border-radius: 7px; background: #0a0b0f; color: #eef0f8; padding: 7px 8px; font: 11px/1.45 Inter, "Microsoft YaHei", sans-serif; resize: vertical; }
 .qa-palette-list { display: grid; gap: 8px; }.qa-palette { display: grid; grid-template-columns: 62px 1fr; column-gap: 10px; align-items: center; min-height: 62px; padding: 9px; border: 1px solid #303442; border-radius: 8px; background: #0c0d12; color: #eef0f8; text-align: left; cursor: pointer; }.qa-palette:hover { border-color: #565d71; }.qa-palette.active { border-color: var(--pink); box-shadow: inset 3px 0 var(--pink); }.qa-palette-swatches { display: flex; height: 30px; overflow: hidden; border: 1px solid #454a5b; border-radius: 5px; }.qa-palette-swatches i { flex: 1; }.qa-palette strong { font-size: 12px; }.qa-palette small { color: #9da3b5; font-size: 10px; line-height: 1.4; }
-.qa-save-section { position: sticky; bottom: -18px; margin: 0 -18px -18px; padding: 16px 18px 18px !important; border-top: 1px solid #343746; background: linear-gradient(180deg, rgba(16,17,23,.96), #101117 18%); box-shadow: 0 -14px 28px rgba(0,0,0,.2); }
+.qa-global-save { padding: 10px 14px 12px; border-top: 1px solid #343746; background: #101117; }
+.qa-global-save .qa-save-state { margin: 0 0 8px; padding: 0; border: 0; background: transparent; }
+.qa-save-scope { margin: 8px 0 0; color: #9ca3b8; font-size: 10px; line-height: 1.45; }
 .qa-save-state { display: flex; align-items: flex-start; gap: 9px; margin: 10px 0 12px; padding: 10px; border: 1px solid #303442; border-radius: 9px; background: #0a0b0f; }
 .qa-save-state > i { flex: 0 0 auto; width: 8px; height: 8px; margin-top: 4px; border-radius: 50%; background: #e3b050; box-shadow: 0 0 0 4px rgba(227,176,80,.1); }
 .qa-save-state[data-state="project"] > i { background: #52d69a; box-shadow: 0 0 0 4px rgba(82,214,154,.1); }
@@ -897,6 +941,9 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
   /* Marquee owns its reduced-motion mode. Keep its resume control available. */
   .version-card { animation: none !important; transition-duration: .01ms !important; }
   .version-card:hover { transform: none; }
+  .true-focus-word, .true-focus-frame, .transcript-raw, .transcript-clean { transition-duration: .01ms !important; animation: none !important; }
+  .true-focus-word:not(.active) { filter: none; opacity: .72; }
+  .true-focus-frame { opacity: 0 !important; }
 }
 
 /* V3 Creator Studio — sourced from open-source creator, meeting and analytics patterns. */

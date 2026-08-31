@@ -12,8 +12,8 @@
     <section class="launcher-hero" aria-labelledby="launcherTitle">
       <div class="launcher-copy">
         <p class="eyebrow" data-qa-copy-label="首页眉题">EXPRESSION TRAINER / CREATOR PRESSURE</p>
-        <h1 id="launcherTitle">不是泛化沟通工具，<br>只训练自媒体新手的镜头表达。</h1>
-        <p class="launcher-lead">面向自媒体创作者的镜头压力训练：从自然口播基线，到数字观众压力，再到自媒体实战房间。三版共用同一个用户、同一个目标、同一套训练闭环。</p>
+        <h1 id="launcherTitle" data-true-focus><span data-true-focus-source data-qa-copy-key="launcher.h1.1">Read Yourself</span></h1>
+        <p class="launcher-lead" data-warp-text>When thoughts become content, would you want to read it first?</p>
       </div>
 
       <aside class="transcript-cover" data-transcript-cover aria-label="原始口播与精炼表达的连续对照" data-qa-copy-ignore>
@@ -24,7 +24,7 @@
     <div class="chapter-heading" data-qa-copy-ignore><span>CHAPTERS</span><strong>选择今天要承受的压力</strong></div>
     <section class="version-grid" aria-label="Creator Pressure 训练层">
       <a class="version-card featured" data-version="v1" href="v1-camera-baseline.html">
-        <span class="version-card-meta"><span class="version-index">V1</span><span class="version-status">推荐起点</span></span>
+        <span class="version-card-meta"><span class="version-index">V1</span><span class="version-status" data-qa-copy-added>推荐起点</span></span>
         <h2>镜头基线</h2>
         <p>启用电脑摄像头，训练直视镜头、开场速度、口头禅和表达密度。</p>
         <span class="card-cta">打开训练层 →</span>
@@ -48,12 +48,22 @@
       <span>会议室和聊天室只是“观众压力的视觉隐喻”，不是新的业务领域。</span>
     </aside>
   </main>
+  <svg class="text-effect-defs" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="creator-gooey-text" x="-20%" y="-30%" width="140%" height="160%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur"></feGaussianBlur>
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 15 -4" result="gooey"></feColorMatrix>
+        <feComposite in="SourceGraphic" in2="gooey" operator="atop"></feComposite>
+      </filter>
+    </defs>
+  </svg>
   <script src="creator-project-config.js"></script>
   <script src="vertical-marquee-config.js"></script>
   <script src="qa-element-editor.js"></script>
   <script src="control-panel.js"></script>
   <script src="vendor/magic-ui/marquee.js"></script>
   <script src="launcher-transcript.js"></script>
+  <script src="launcher-text-effects.js"></script>
   <script src="launcher-scroll-expand.js"></script>
 </body>
 </html>

@@ -276,6 +276,29 @@
     addEvent('创作简报', `${currentTemplate.name}｜${currentTemplate.goal}`, true, `数字形象：${config.provider === 'live' ? 'LiveTalking' : '浏览器演示'}`);
   }
 
+  // V2 owns the topic as deliberately as V1 does. A selected audience
+  // template updates both its pressure audience and its prompt; a custom
+  // topic keeps the chosen audience but replaces the words the creator sees.
+  window.CreatorAudienceControls = {
+    getTopic: () => ({ goal: prompts.v2, templateId: audienceSetup?.querySelector('[data-audience-template]')?.value || null, running: sessionRunning }),
+    setTopic: async ({ goal, templateId } = {}) => {
+      if (mode !== 'v2') return { applied: false, error: '当前页面不是数字观众训练。' };
+      if (sessionRunning) return { applied: false, error: '请先结束本轮训练，再更换选题。' };
+      if (templateId && audienceSetup) {
+        const template = window.CreatorAudienceEngine?.getTemplate(templateId);
+        if (!template) return { applied: false, error: '没有找到这个选题模板。' };
+        audienceSetup.querySelector('[data-audience-template]').value = template.id;
+        await applyAudienceConfiguration(true);
+        return { applied: true, goal: prompts.v2, templateId: template.id };
+      }
+      const nextGoal = typeof goal === 'string' ? goal.trim() : '';
+      if (!nextGoal || nextGoal.length > 300) return { applied: false, error: '请填写 1–300 字的选题。' };
+      prompts.v2 = nextGoal;
+      if (promptText) promptText.textContent = nextGoal;
+      return { applied: true, goal: nextGoal, templateId: null };
+    }
+  };
+
   function formatTime(ms) {
     const total = Math.floor(ms / 1000);
     const minutes = String(Math.floor(total / 60)).padStart(2, '0');

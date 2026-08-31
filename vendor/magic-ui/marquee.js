@@ -30,8 +30,11 @@
       const groups = Array.from({ length: options.repeat }, (_, index) => {
         const group = root.ownerDocument.createElement('div');
         group.className = 'magic-marquee-group';
-        if (index > 0) { group.setAttribute('aria-hidden', 'true'); group.inert = true; }
+        if (index > 0) group.setAttribute('aria-hidden', 'true');
         children.forEach(child => group.append(child.cloneNode(true)));
+        // Duplicates must still respond to the pointer when they scroll into
+        // view. `inert` also disables hover; exclude only keyboard/AT duplicates.
+        if (index > 0) group.querySelectorAll('[tabindex], button, a, input, select, textarea').forEach(node => { node.tabIndex = -1; });
         return group;
       });
       root.replaceChildren(...groups);
