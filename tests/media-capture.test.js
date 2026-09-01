@@ -63,12 +63,20 @@ class FakeStream {
   window.MediaStream = FakeStream;
   window.URL.createObjectURL = () => 'blob:practice-take';
   window.URL.revokeObjectURL = () => {};
+  window.requestAnimationFrame = () => 1;
+  window.cancelAnimationFrame = () => {};
+  window.HTMLCanvasElement.prototype.getContext = () => ({
+    save() {}, clearRect() {}, translate() {}, scale() {}, drawImage() {}, restore() {}
+  });
+  window.HTMLCanvasElement.prototype.captureStream = () => new FakeStream([new FakeTrack('video', 'recording-flipped')]);
 
+  let lastRecorder = null;
   class FakeMediaRecorder extends window.EventTarget {
     static isTypeSupported(type) { return type.startsWith('video/webm'); }
     constructor(stream, options = {}) {
       super();
       this.stream = stream;
+      lastRecorder = this;
       this.mimeType = options.mimeType || 'video/webm';
       this.state = 'inactive';
     }
@@ -109,6 +117,8 @@ class FakeStream {
   await controller.startSessionRecording({ prompt: '测试选题' });
   controller.setSessionRunning(true);
   assert.equal(controller.isRecording(), true, 'opt-in session recording starts');
+  assert.equal(lastRecorder.stream.getVideoTracks()[0].deviceId, 'recording-flipped',
+    'recording uses a separately rendered horizontally flipped track while preview stays unchanged');
   assert.equal(cameraSelect.disabled, true, 'devices cannot switch during a recording session');
   const result = await controller.stopSessionRecording({ transcript: '这是一段练习。', prompt: '测试选题' });
   controller.setSessionRunning(false);
