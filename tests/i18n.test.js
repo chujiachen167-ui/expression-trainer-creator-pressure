@@ -32,6 +32,23 @@ assert.equal(window.localStorage.getItem('read-yourself.interface-locale.v1'), '
 for (const select of window.document.querySelectorAll('[data-locale-select]')) assert.equal(select.value, 'zh-CN');
 launcher.window.close();
 
+const dynamicSubtitle = new JSDOM(`<!doctype html><html><head><title>QA</title></head><body>
+  <p data-qa-copy-key="launcher.dynamic.subtitle">Founder subtitle<canvas class="warp-text-canvas"></canvas></p>
+</body></html>`, {
+  url: 'https://qa.invalid/index.html',
+  runScripts: 'outside-only'
+});
+dynamicSubtitle.window.eval(read('locales/zh-CN.js'));
+dynamicSubtitle.window.eval(read('locales/en-US.js'));
+dynamicSubtitle.window.eval(read('i18n.js'));
+dynamicSubtitle.window.document.dispatchEvent(new dynamicSubtitle.window.Event('DOMContentLoaded'));
+dynamicSubtitle.window.CreatorI18n.setLocale('en-US');
+dynamicSubtitle.window.CreatorI18n.setLocale('zh-CN');
+assert(dynamicSubtitle.window.document.querySelector('.warp-text-canvas'),
+  'untranslated live copy must retain its Warp Text canvas across locale changes');
+assert.match(dynamicSubtitle.window.document.querySelector('[data-qa-copy-key]').textContent, /Founder subtitle/);
+dynamicSubtitle.window.close();
+
 const v1 = makeLocalizedPage('v1-camera-baseline.html');
 assert.equal(v1.window.document.querySelector('[data-i18n="v1.title"]').textContent, 'Real-time Expression Diagnosis');
 assert.equal(v1.window.document.querySelector('[data-i18n="v1.devices"]').textContent, 'Devices and recording');
@@ -39,10 +56,15 @@ assert.equal(v1.window.document.body.dataset.mode, 'v1', 'interface locale leave
 assert.match(read('v1-controls.js'), /language:\s*'mixed'/, 'diagnostic mixed-language mode remains a separate V1 control');
 v1.window.close();
 
-for (const page of ['index.html', 'contact.html', 'v1-camera-baseline.html', 'v2-ai-audience.html', 'v3-creator-studio.html']) {
+for (const page of ['index.html', 'contact.html']) {
   const html = read(page);
   assert.match(html, /data-locale-select/, `${page} exposes an interface-language selector`);
   assert.doesNotMatch(html, /🇨🇳|🇺🇸|国旗/, `${page} does not encode locale as a flag`);
 }
 
-console.log('Interface localization: persisted zh/en switching, Chinese restoration, and diagnostic-language separation passed.');
+for (const page of ['v1-camera-baseline.html', 'v2-ai-audience.html', 'v3-creator-studio.html']) {
+  const html = read(page);
+  assert.doesNotMatch(html, /data-locale-select/, `${page} inherits locale without duplicating the selector in its topbar`);
+}
+
+console.log('Interface localization: persisted zh/en switching, animated subtitle preservation, compact training topbars, Chinese restoration, and diagnostic-language separation passed.');

@@ -107,7 +107,7 @@ a { color: inherit; text-decoration: none; }
 .product-account-status { display: flex; align-items: flex-start; gap: 9px; margin: 0 0 12px; padding: 11px 0; border-block: 1px solid color-mix(in srgb, var(--line) 70%, transparent); color: var(--muted); font-size: 11px; line-height: 1.55; }
 .product-account-status i { flex: 0 0 auto; width: 7px; height: 7px; margin-top: 5px; border-radius: 50%; background: var(--green); }
 .product-locale-field { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 10px; padding: 9px 7px; color: var(--muted); font-size: 11px; }
-.product-locale-field select, .footer-locale-field select, .topbar-locale-field select { min-height: 32px; padding: 5px 28px 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--text); font: inherit; cursor: pointer; }
+.product-locale-field select, .footer-locale-field select { min-height: 32px; padding: 5px 28px 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--text); font: inherit; cursor: pointer; }
 .product-account-actions { display: grid; gap: 2px; }
 .product-account-actions button { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 7px; border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .product-account-actions button:not(:disabled):hover, .product-account-actions button:not(:disabled):focus-visible { background: color-mix(in srgb, var(--text) 6%, transparent); }
@@ -493,8 +493,6 @@ html.is-page-transitioning .version-card { pointer-events: none; }
 .brand { font-weight: 850; letter-spacing: -0.02em; }
 .version-pill { padding: 5px 9px; border-radius: 7px; background: color-mix(in srgb, var(--mode-accent) 12%, transparent); color: var(--mode-accent); font-size: 11px; font-weight: 900; }
 .topbar-spacer { flex: 1; }
-.topbar-locale-field { display: inline-flex; align-items: center; }
-.topbar-locale-field select { min-width: 94px; border-color: var(--line); background: color-mix(in srgb, var(--panel-2) 88%, transparent); }
 .timer { min-width: 62px; font-variant-numeric: tabular-nums; color: #d9deee; }
 
 .ghost-btn, .primary-btn, .pressure-btn, .scenario-btn {
@@ -656,7 +654,7 @@ html.is-page-transitioning .version-card { pointer-events: none; }
   background: #11131a;
 }
 .camera-room .video-tile { width: min(780px, 100%); aspect-ratio: 16 / 9; }
-.video-tile video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); background: #0c0e14; }
+.video-tile video { width: 100%; height: 100%; object-fit: cover; transform: none; background: #0c0e14; }
 .video-off {
   position: absolute;
   inset: 0;
@@ -701,6 +699,7 @@ html.is-page-transitioning .version-card { pointer-events: none; }
 .stt-token.filler { color: #ff7b8d; text-decoration: underline wavy #ff7b8d; text-underline-offset: 5px; }
 .stt-token.hedge { color: #ffb15c; }
 .stt-token.vague { color: #ffe06e; border-bottom: 2px dashed #ffe06e; }
+.stt-token.repeat { padding-inline: .12em; border-radius: .16em; background: rgba(157, 200, 255, .2); color: #b9d8ff; }
 .diagnostic-feedback-panel .feedback-empty { margin: 0 0 16px; color: #666d7e; font-size: 12px; line-height: 1.6; }
 .diagnostic-feedback { max-height: calc(100vh - 150px); }
 .diagnostic-feedback .event-card { position: relative; padding: 11px 0 12px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }

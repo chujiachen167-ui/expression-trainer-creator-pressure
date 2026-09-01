@@ -193,18 +193,14 @@
     }
 
     async function toggleCamera() {
-      if (sessionRunning) {
-        setStatus('请先结束本轮训练，再切换或关闭摄像头。', 'warning');
-        return cameraStream;
-      }
       if (cameraStream) {
         closeCamera(true);
-        setStatus('摄像头已关闭。', '');
+        setStatus(sessionRunning ? '摄像头已关闭；语音训练仍在继续。' : '摄像头已关闭。', '');
         return null;
       }
       try {
         const active = await openCamera();
-        setStatus('摄像头仅在当前页面预览。', 'ready');
+        setStatus(sessionRunning ? '摄像头已加入当前训练。' : '摄像头仅在当前页面预览。', 'ready');
         return active;
       } catch (error) {
         const denied = error?.name === 'NotAllowedError' || error?.name === 'SecurityError';

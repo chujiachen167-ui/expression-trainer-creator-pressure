@@ -6,6 +6,7 @@ const html = read('v1-camera-baseline.html');
 const main = read('main.js');
 const preload = read('preload.js');
 const app = read('app.js');
+const styles = read('shared.css');
 
 assert.match(html, /data-camera-device/, 'V1 exposes a camera selector');
 assert.match(html, /data-microphone-device/, 'V1 exposes a microphone selector');
@@ -14,6 +15,7 @@ assert.match(html, /data-recording-review/, 'V1 has a local review surface');
 assert.match(main, /ipcMain\.handle\('save-recording'/, 'desktop runtime owns the video save dialog');
 assert.match(preload, /saveRecording:/, 'recording save IPC is exposed through the isolated preload');
 assert.match(app, /mediaController\?\.getAudioConstraints\(\)/, 'desktop STT uses the selected microphone constraints');
+assert.match(styles, /\.video-tile video\s*\{[^}]*transform:\s*none/s, 'camera preview and recorded composition are not mirrored');
 
 class FakeTrack {
   constructor(kind, deviceId) { this.kind = kind; this.deviceId = deviceId; this.stopped = false; }
@@ -115,9 +117,16 @@ class FakeStream {
   assert.equal(window.document.querySelector('[data-recording-transcript]').textContent, '这是一段练习。', 'review keeps the matching transcript');
   assert.equal(requests.some(request => request.audio?.deviceId?.exact === 'mic-usb'), true, 'recording uses the selected microphone');
 
+  controller.closeCamera(true);
+  controller.setSessionRunning(true);
+  await controller.toggleCamera();
+  assert.equal(window.document.querySelector('.video-tile').classList.contains('camera-on'), true,
+    'camera can join an already-running practice session when recording has not started');
+  controller.setSessionRunning(false);
+
   controller.dispose();
   dom.window.close();
-  console.log('Media capture: device enumeration, external camera/microphone selection, explicit recording, local review and desktop save contract passed (DOM/mocks).');
+  console.log('Media capture: device enumeration, external selection, unmirrored output, mid-session camera join, explicit recording, local review and desktop save contract passed (DOM/mocks).');
 })().catch(error => {
   console.error(error);
   process.exit(1);

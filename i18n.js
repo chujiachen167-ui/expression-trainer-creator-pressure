@@ -3,6 +3,7 @@
   const SUPPORTED = ['zh-CN', 'en-US'];
   const catalogs = window.CreatorLocaleCatalogs || {};
   const sources = new WeakMap();
+  const translatedNodes = new WeakSet();
   const sourceTitle = document.title;
   let locale = resolveInitialLocale();
   let applying = false;
@@ -35,8 +36,12 @@
     if (!key) return;
     const source = rememberSource(node);
     const translated = catalogs[locale]?.[key];
-    if (locale === 'zh-CN') node.innerHTML = source;
-    else if (typeof translated === 'string') node.textContent = translated;
+    if (locale === 'zh-CN') {
+      if (translatedNodes.has(node)) node.innerHTML = source;
+    } else if (typeof translated === 'string') {
+      translatedNodes.add(node);
+      node.textContent = translated;
+    }
   }
 
   function applyAttributes(node) {

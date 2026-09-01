@@ -32,7 +32,7 @@
 
 ### 中文 / English 界面
 
-起始页账户菜单、页脚以及 V1/V2/V3 顶栏都可以切换界面语言。选择保存在当前设备；中文会恢复项目配置中已保存的 founder 文案，英文当前为工作译文。界面语言与 V1 的“中英混合 / English”识别语言互不影响，详细约定见 [`docs/i18n/localization.md`](docs/i18n/localization.md)。
+起始页账户菜单与页脚可以切换界面语言；训练页沿用当前选择，不在紧凑顶栏重复放置控件。选择保存在当前设备；中文会恢复项目配置中已保存的 founder 文案，英文当前为工作译文。界面语言与 V1 的“中英混合 / English”识别语言互不影响，详细约定见 [`docs/i18n/localization.md`](docs/i18n/localization.md)。
 
 ## 桌面端运行
 

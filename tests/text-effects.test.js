@@ -12,6 +12,7 @@ assert.match(launcher, /creator-gooey-text/, 'launcher should define a local goo
 assert.match(launcher, /launcher-text-effects\.js/, 'launcher should load the native text-effect adapter');
 assert.match(effects, /webgl2/, 'Warp Text should progressively use a WebGL2 visual layer');
 assert.match(effects, /MutationObserver/, 'title and subtitle copy changes should refresh the visual layer');
+assert.match(effects, /creator:locale-change/, 'locale changes should remount the title and subtitle visual layers');
 assert.match(styles, /data-problem-style="box"/, 'problem words should support the dashed-box treatment');
 assert.match(controls, /data-qa-tab="text-effects"/, 'text effects should have a dedicated QA page');
 assert.match(controls, /components\.trueFocus\.blurAmount/, 'True Focus parameters should be editable');
