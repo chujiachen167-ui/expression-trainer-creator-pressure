@@ -827,6 +827,103 @@ body[data-mode="v2"] .stage { grid-template-rows: auto minmax(0, 1fr) auto auto;
 .primary-btn.running { background: var(--red); }
 .control-note { color: var(--muted); font-size: 12px; }
 
+.recording-badge {
+  position: absolute;
+  z-index: 8;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  background: rgba(7,8,12,.72);
+  color: #fff;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  backdrop-filter: blur(10px);
+}
+.recording-badge[hidden] { display: none; }
+.recording-badge > span { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px rgba(255,90,112,.14); animation: pulse 1.4s ease-in-out infinite; }
+.recording-badge strong { letter-spacing: .1em; }
+.recording-badge time { color: rgba(255,255,255,.72); }
+
+.media-device-panel {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+.media-device-panel summary {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 4px;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 750;
+}
+.media-device-panel summary::-webkit-details-marker { display: none; }
+.media-device-panel summary::after { content: '＋'; margin-left: auto; color: var(--muted); font-size: 16px; font-weight: 400; }
+.media-device-panel[open] summary::after { content: '－'; }
+.media-device-panel summary small { min-width: 0; overflow: hidden; color: var(--muted); font-size: 11px; font-weight: 450; text-overflow: ellipsis; white-space: nowrap; }
+.media-device-body { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto; gap: 14px; align-items: end; padding: 4px 4px 16px; }
+.media-device-field { display: grid; gap: 6px; min-width: 0; }
+.media-device-field > span { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .07em; }
+.media-device-field select {
+  min-width: 0;
+  width: 100%;
+  height: 42px;
+  padding: 0 34px 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--control-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.media-device-field select:focus-visible, .media-record-toggle:has(input:focus-visible) { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.media-record-toggle { grid-column: 1 / span 2; min-height: 52px; display: flex; align-items: center; gap: 11px; padding: 8px 0; cursor: pointer; }
+.media-record-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--pink); }
+.media-record-toggle > span { display: grid; gap: 3px; }
+.media-record-toggle strong { color: var(--text); font-size: 12px; }
+.media-record-toggle small { color: var(--muted); font-size: 10px; font-weight: 450; line-height: 1.5; }
+.media-refresh { grid-column: 3; grid-row: 1; min-height: 42px; white-space: nowrap; }
+.media-device-status { grid-column: 1 / -1; min-height: 18px; margin: 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.media-device-status[data-kind="ready"] { color: var(--green); }
+.media-device-status[data-kind="warning"] { color: var(--yellow); }
+.media-device-status[data-kind="recording"], .media-device-status[data-kind="error"] { color: var(--red); }
+.media-device-panel[data-session-running] summary { color: var(--muted); }
+
+.recording-review {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(260px, .85fr) minmax(300px, 1.15fr);
+  gap: 14px 20px;
+  padding: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+}
+.recording-review[hidden] { display: none; }
+.recording-review-copy { align-self: end; }
+.recording-review-copy h2 { margin: 6px 0; font-size: 18px; }
+.recording-review-copy p { margin: 0; color: var(--muted); font-size: 11px; }
+.recording-review video { grid-column: 2; grid-row: 1 / span 3; width: 100%; max-height: 330px; aspect-ratio: 16 / 9; border-radius: 12px; background: #08090d; object-fit: contain; }
+.recording-review-transcript { min-width: 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.recording-review-transcript strong { display: block; margin-bottom: 7px; color: var(--cyan); font-size: 10px; letter-spacing: .06em; }
+.recording-review-transcript p { max-height: 116px; margin: 0; overflow: auto; color: var(--text); font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
+.recording-review-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.recording-review-actions button { min-height: 40px; padding-block: 9px; }
+.recording-unsaved { grid-column: 1 / -1; margin: 0; color: var(--yellow); font-size: 10px; line-height: 1.6; }
+.recording-unsaved[data-kind="ready"] { color: var(--green); }
+.recording-unsaved[data-kind="error"] { color: var(--red); }
+
 .pressure-group, .scenario-list { display: flex; flex-wrap: wrap; gap: 7px; }
 .pressure-btn, .scenario-btn { padding: 8px 10px; border-radius: 9px; color: var(--muted); font-size: 12px; }
 .pressure-btn.active, .scenario-btn.active { border-color: var(--pink); color: #fff; background: var(--pink-soft); }
@@ -1049,6 +1146,10 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
   .audience-stack { grid-template-columns: repeat(2, 1fr); }
   .topbar { padding: 0 12px; }
   .brand { font-size: 13px; }
+  .media-device-body { grid-template-columns: 1fr; }
+  .media-device-field, .media-record-toggle, .media-refresh, .media-device-status { grid-column: 1; grid-row: auto; }
+  .recording-review { grid-template-columns: 1fr; }
+  .recording-review video { grid-column: 1; grid-row: auto; }
 }
 
 @media (max-width: 480px) {
@@ -1063,6 +1164,7 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
   .true-focus-word, .true-focus-frame, .transcript-raw, .transcript-clean { transition-duration: .01ms !important; animation: none !important; }
   .true-focus-word:not(.active) { filter: none; opacity: .72; }
   .true-focus-frame { opacity: 0 !important; }
+  .recording-badge > span { animation: none; }
 }
 
 /* V3 Creator Studio — sourced from open-source creator, meeting and analytics patterns. */

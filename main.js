@@ -229,6 +229,29 @@ ipcMain.handle('save-file', async (_event, content, filename) => {
   fs.writeFileSync(result.filePath, content, 'utf8');
   return { success: true, path: result.filePath };
 });
+ipcMain.handle('save-recording', async (event, bytes, filename, mimeType) => {
+  const byteLength = bytes?.byteLength ?? bytes?.length ?? 0;
+  if (!byteLength || byteLength > 1_500_000_000) return { success: false, error: '录像文件无效或超过 1.5 GB。' };
+  if (typeof filename !== 'string' || !/^read-yourself-practice-[\w.-]+\.webm$/i.test(filename)) {
+    return { success: false, error: '录像文件名无效。' };
+  }
+  if (typeof mimeType !== 'string' || !mimeType.startsWith('video/webm')) {
+    return { success: false, error: '当前只支持保存 WebM 录像。' };
+  }
+  const owner = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+  const result = await dialog.showSaveDialog(owner, {
+    title: '保存本轮练习视频',
+    defaultPath: path.join(app.getPath('videos'), filename),
+    filters: [{ name: 'WebM 视频', extensions: ['webm'] }]
+  });
+  if (result.canceled || !result.filePath) return { success: false, canceled: true };
+  try {
+    fs.writeFileSync(result.filePath, Buffer.from(bytes));
+    return { success: true, path: result.filePath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
 ipcMain.handle('save-project-config', (_event, content) => {
   if (app.isPackaged) return { success: false, error: '打包版不能修改源代码项目，请改用“下载备份”。' };
   if (typeof content !== 'string' || content.length > 2_000_000 || !content.includes('window.CreatorProjectConfig =')) {

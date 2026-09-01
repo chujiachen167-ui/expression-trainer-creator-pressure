@@ -60,6 +60,9 @@
     lastError: ''
   };
   let lastSTTStatusRender = 0;
+  const mediaController = mode === 'v1' && window.CreatorMediaCapture
+    ? window.CreatorMediaCapture.create({ video, videoTile, cameraButton })
+    : null;
 
   function featureEnabled(name) {
     return window.CreatorQAControls ? window.CreatorQAControls.featureEnabled(name) : true;
@@ -414,6 +417,11 @@
 
   async function toggleCamera() {
     if (!featureEnabled('camera')) return;
+    if (mediaController) {
+      try { await mediaController.toggleCamera(); }
+      catch (_) { /* The device panel already explains the recoverable failure. */ }
+      return;
+    }
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       stream = null;
@@ -435,6 +443,10 @@
   }
 
   function closeCamera() {
+    if (mediaController) {
+      mediaController.closeCamera();
+      return;
+    }
     if (!stream) return;
     stream.getTracks().forEach(track => track.stop());
     stream = null;
@@ -485,7 +497,7 @@
         }
         try {
           audioStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
+            audio: mediaController?.getAudioConstraints() || {
               channelCount: 1,
               sampleRate: 16000,
               echoCancellation: true,
@@ -744,11 +756,25 @@
     }, interval);
   }
 
-  function startSession() {
+  async function startSession() {
     if (mode !== 'v1' && !currentTemplate) {
       addEvent('系统', '请先在左侧选择受众模板并点击“应用模板”。', true);
       audienceSetup?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
+    }
+    promptText.textContent = mode === 'v1' ? (v1Rules().goal || prompts.v1) : prompts[mode];
+    if (mediaController?.isRecordingEnabled()) {
+      startButton.disabled = true;
+      setStageState('requesting', '正在准备本地录制');
+      try {
+        await mediaController.startSessionRecording({ prompt: promptText.textContent });
+      } catch (error) {
+        startButton.disabled = false;
+        setStageState('idle', '录制未开始');
+        addEvent('本地录制', `未能开始录制：${error.message}`, true, '录像不会上传；你可以关闭“同时录制本轮”后继续训练。');
+        return;
+      }
+      startButton.disabled = false;
     }
     transcript = '';
     interim = '';
@@ -762,12 +788,12 @@
       if (empty) empty.hidden = false;
     }
     sessionRunning = true;
+    mediaController?.setSessionRunning(true);
     document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: true } }));
     startedAt = Date.now();
     startButton.textContent = '结束并生成复盘';
     startButton.classList.add('running');
     setStageState('requesting', '正在准备麦克风');
-    promptText.textContent = mode === 'v1' ? (v1Rules().goal || prompts.v1) : prompts[mode];
     renderTranscript();
     updateMetrics();
     timerHandle = setInterval(() => { timer.textContent = formatTime(Date.now() - startedAt); }, 250);
@@ -852,6 +878,14 @@
     if (recognition) {
       try { await Promise.resolve(recognition.stop()); } catch (_) { /* already stopped */ }
     }
+    if (mediaController?.isRecording()) {
+      try {
+        await mediaController.stopSessionRecording({ transcript, prompt: promptText.textContent });
+      } catch (error) {
+        addEvent('本地录制', `录像收尾失败：${error.message}`, true);
+      }
+    }
+    mediaController?.setSessionRunning(false);
     document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: false } }));
     avatarProvider?.interrupt();
     startButton.disabled = true;
@@ -1003,7 +1037,10 @@
       .catch(error => updateSTTDiagnostics({ state: 'error', lastError: error.message }, true))
       .finally(() => { sttRetryButton.disabled = false; });
   });
-  startButton?.addEventListener('click', () => sessionRunning ? stopSession() : startSession());
+  startButton?.addEventListener('click', () => {
+    Promise.resolve(sessionRunning ? stopSession() : startSession())
+      .catch(error => addEvent('系统', error.message, true));
+  });
   reportPanel?.querySelectorAll('[data-report-close]').forEach(button => button.addEventListener('click', () => {
     reportPanel.hidden = true;
     document.body.classList.remove('report-open');
@@ -1011,7 +1048,7 @@
   reportPanel?.querySelector('[data-report-retry]')?.addEventListener('click', () => {
     reportPanel.hidden = true;
     document.body.classList.remove('report-open');
-    if (!sessionRunning) startSession();
+    if (!sessionRunning) Promise.resolve(startSession()).catch(error => addEvent('系统', error.message, true));
   });
   promptText.textContent = mode === 'v1' ? (v1Rules().goal || prompts.v1) : prompts[mode];
   renderTranscript();
@@ -1019,5 +1056,8 @@
   window.api?.onSettingsUpdated?.(() => refreshDesktopRuntime());
   mountAudienceSetup();
   if (audienceSetup && mode !== 'v2') applyAudienceConfiguration(true);
-  window.addEventListener('beforeunload', () => avatarProvider?.disconnect());
+  window.addEventListener('beforeunload', () => {
+    avatarProvider?.disconnect();
+    mediaController?.dispose();
+  });
 })();

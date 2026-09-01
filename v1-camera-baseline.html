@@ -26,7 +26,7 @@
         <div class="metric"><span>犹豫词</span><strong class="hedge" id="hedgeMetric">0</strong></div>
         <div class="metric"><span>表达密度</span><strong class="good" id="densityMetric">--</strong></div>
       </div>
-      <p class="privacy-note">摄像头画面只在当前页面预览，原型不会录制或上传视频。</p>
+      <p class="privacy-note">摄像头默认只在当前页面预览。只有你主动开启“同时录制本轮”才会录制；视频保留在本机，不会自动上传。</p>
     </aside>
 
     <section class="stage">
@@ -44,6 +44,7 @@
           <div class="video-off" aria-label="摄像头未开启"></div>
           <div class="camera-target" aria-label="镜头注视位置"></div>
           <span class="tile-label">你 · 创作者</span>
+          <div class="recording-badge" data-recording-badge hidden role="status" aria-live="polite"><span></span><strong>REC</strong><time data-recording-time>00:00</time></div>
           <div class="transcript stt-camera-overlay" id="liveTranscript" aria-live="polite"></div>
         </div>
         <div class="prompt-banner"><strong>训练题：</strong> <span id="sessionPrompt"></span></div>
@@ -59,6 +60,23 @@
           <button class="ghost-btn" type="button" data-show-report hidden>生成诊断报告</button>
           <span class="control-note">原型不会假装已经识别你的视线；粉色圆点只是镜头位置提示。</span>
         </div>
+        <details class="media-device-panel" data-media-panel>
+          <summary><span>设备与录制</span><small data-device-summary>系统默认设备</small></summary>
+          <div class="media-device-body">
+            <label class="media-device-field"><span>摄像头</span><select data-camera-device aria-label="选择摄像头"><option value="">系统默认摄像头</option></select></label>
+            <label class="media-device-field"><span>麦克风</span><select data-microphone-device aria-label="选择麦克风"><option value="">系统默认麦克风</option></select></label>
+            <label class="media-record-toggle"><input type="checkbox" data-record-session><span><strong>同时录制本轮</strong><small>录制画面和声音；实时字幕仍由诊断核心处理。</small></span></label>
+            <button class="ghost-btn media-refresh" type="button" data-media-refresh>检测已连接设备</button>
+            <p class="media-device-status" data-media-status role="status" aria-live="polite">设备名称会在获得摄像头和麦克风权限后显示。</p>
+          </div>
+        </details>
+        <section class="recording-review" data-recording-review hidden aria-labelledby="recordingReviewTitle">
+          <div class="recording-review-copy"><span class="section-kicker">PRACTICE TAKE</span><h2 id="recordingReviewTitle">本轮镜头回看</h2><p data-recording-meta>视频尚未保存到磁盘。</p></div>
+          <video controls playsinline preload="metadata" data-recording-preview></video>
+          <div class="recording-review-transcript"><strong>本轮逐字稿</strong><p data-recording-transcript>本轮没有可用逐字稿。</p></div>
+          <div class="recording-review-actions"><button class="primary-btn" type="button" data-recording-save>保存视频到本机</button><button class="ghost-btn" type="button" data-recording-discard>丢弃这次录制</button></div>
+          <p class="recording-unsaved" data-recording-save-status>刷新或关闭页面前请先保存；项目不会自动上传或保存录像。</p>
+        </section>
       </div>
     </section>
 
@@ -106,6 +124,7 @@
   <script src="audience-templates.js"></script>
   <script src="avatar-provider.js"></script>
   <script src="stt-audio.js?v=0.2.1"></script>
+  <script src="media-capture.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

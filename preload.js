@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('api', {
   getFinalReport: data => ipcRenderer.invoke('get-final-report', data),
   testLLMConnection: settings => ipcRenderer.invoke('test-llm-connection', settings),
   saveFile: (content, filename) => ipcRenderer.invoke('save-file', content, filename),
+  saveRecording: (bytes, filename, mimeType) => ipcRenderer.invoke('save-recording', bytes, filename, mimeType),
   saveProjectConfig: content => ipcRenderer.invoke('save-project-config', content),
   saveProjectBackup: content => ipcRenderer.invoke('save-project-backup', content),
   onSettingsUpdated: callback => {
