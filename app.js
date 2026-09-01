@@ -768,7 +768,10 @@
       startButton.disabled = true;
       setStageState('requesting', '正在准备本地录制');
       try {
-        await mediaController.startSessionRecording({ prompt: promptText.textContent });
+        const recording = await mediaController.startSessionRecording({ prompt: promptText.textContent });
+        if (!recording.recording && recording.reason === 'camera-not-open') {
+          addEvent('本地录制', '本轮未开启摄像头，已按语音训练继续。打开摄像头后可预览；录像从下一轮开始。', false);
+        }
       } catch (error) {
         startButton.disabled = false;
         setStageState('idle', '录制未开始');

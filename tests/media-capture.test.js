@@ -15,7 +15,7 @@ assert.match(html, /data-recording-review/, 'V1 has a local review surface');
 assert.match(main, /ipcMain\.handle\('save-recording'/, 'desktop runtime owns the video save dialog');
 assert.match(preload, /saveRecording:/, 'recording save IPC is exposed through the isolated preload');
 assert.match(app, /mediaController\?\.getAudioConstraints\(\)/, 'desktop STT uses the selected microphone constraints');
-assert.match(styles, /\.video-tile video\s*\{[^}]*transform:\s*scaleX\(1\) !important/s, 'camera preview is explicitly kept in the camera direction');
+assert.match(styles, /\.video-tile video\s*\{[^}]*transform:\s*scaleX\(-1\) !important/s, 'camera preview is normalized from the mirrored hardware stream');
 assert.match(styles, /\.recording-review video\s*\{[^}]*transform:\s*scaleX\(1\) !important/s, 'recording review does not add a second mirror transform');
 
 class FakeTrack {
@@ -64,6 +64,12 @@ class FakeStream {
   window.MediaStream = FakeStream;
   window.URL.createObjectURL = () => 'blob:practice-take';
   window.URL.revokeObjectURL = () => {};
+  window.requestAnimationFrame = () => 1;
+  window.cancelAnimationFrame = () => {};
+  window.HTMLCanvasElement.prototype.getContext = () => ({
+    save() {}, clearRect() {}, translate() {}, scale() {}, drawImage() {}, restore() {}
+  });
+  window.HTMLCanvasElement.prototype.captureStream = () => new FakeStream([new FakeTrack('video', 'direction-matched')]);
 
   let lastRecorder = null;
   class FakeMediaRecorder extends window.EventTarget {
@@ -112,8 +118,8 @@ class FakeStream {
   await controller.startSessionRecording({ prompt: '测试选题' });
   controller.setSessionRunning(true);
   assert.equal(controller.isRecording(), true, 'opt-in session recording starts');
-  assert.equal(lastRecorder.stream.getVideoTracks()[0].deviceId, 'camera-usb',
-    'recording uses the same unmirrored camera track as the preview');
+  assert.equal(lastRecorder.stream.getVideoTracks()[0].deviceId, 'direction-matched',
+    'recording receives the same horizontal correction as the mirrored preview');
   assert.equal(cameraSelect.disabled, true, 'devices cannot switch during a recording session');
   const result = await controller.stopSessionRecording({ transcript: '这是一段练习。', prompt: '测试选题' });
   controller.setSessionRunning(false);
@@ -123,6 +129,10 @@ class FakeStream {
   assert.equal(requests.some(request => request.audio?.deviceId?.exact === 'mic-usb'), true, 'recording uses the selected microphone');
 
   controller.closeCamera(true);
+  const cameraFreeRecording = await controller.startSessionRecording({ prompt: '不强制开启摄像头' });
+  assert.equal(cameraFreeRecording.recording, false,
+    'starting a practice never forces the camera open just because recording is enabled');
+  assert.equal(cameraFreeRecording.reason, 'camera-not-open');
   controller.setSessionRunning(true);
   await controller.toggleCamera();
   assert.equal(window.document.querySelector('.video-tile').classList.contains('camera-on'), true,
@@ -131,7 +141,7 @@ class FakeStream {
 
   controller.dispose();
   dom.window.close();
-  console.log('Media capture: device enumeration, external selection, synchronized unmirrored preview/review, mid-session camera join, explicit recording, local review and desktop save contract passed (DOM/mocks).');
+  console.log('Media capture: device enumeration, direction-matched preview/review, optional camera recording, mid-session camera join, local review and desktop save contract passed (DOM/mocks).');
 })().catch(error => {
   console.error(error);
   process.exit(1);

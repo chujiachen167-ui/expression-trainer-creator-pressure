@@ -63,6 +63,9 @@
     let latestRecording = null;
     let currentDevices = [];
     let sessionRunning = false;
+    let recordingCanvasTrack = null;
+    let recordingAnimationFrame = null;
+    let recordingCanvasActive = false;
 
     recordToggle.checked = preferences.recordSession;
 
@@ -218,22 +221,73 @@
       if (badgeTime) badgeTime.textContent = formatDuration(Date.now() - recordingStartedAt);
     }
 
+    function createDirectionMatchedRecordingTrack() {
+      const sourceTrack = cameraStream?.getVideoTracks?.()[0];
+      if (!sourceTrack) throw new Error('没有可用于录制的摄像头画面。');
+      const canvas = document.createElement('canvas');
+      const settings = sourceTrack.getSettings?.() || {};
+      const width = video.videoWidth || settings.width || 1280;
+      const height = video.videoHeight || settings.height || 720;
+      const context = canvas.getContext?.('2d');
+      if (!context || typeof canvas.captureStream !== 'function') {
+        throw new Error('当前环境不支持录制画面方向校正。');
+      }
+      canvas.width = width;
+      canvas.height = height;
+      recordingCanvasActive = true;
+      const drawFrame = () => {
+        if (!recordingCanvasActive) return;
+        context.save();
+        context.clearRect(0, 0, width, height);
+        context.translate(width, 0);
+        context.scale(-1, 1);
+        if (video.readyState >= 2) context.drawImage(video, 0, 0, width, height);
+        context.restore();
+        recordingAnimationFrame = window.requestAnimationFrame(drawFrame);
+      };
+      drawFrame();
+      recordingCanvasTrack = canvas.captureStream(30).getVideoTracks?.()[0] || null;
+      if (!recordingCanvasTrack) {
+        recordingCanvasActive = false;
+        throw new Error('无法创建方向校正后的录制画面。');
+      }
+      return recordingCanvasTrack;
+    }
+
+    function releaseDirectionMatchedRecordingTrack() {
+      recordingCanvasActive = false;
+      if (recordingAnimationFrame !== null) window.cancelAnimationFrame?.(recordingAnimationFrame);
+      recordingAnimationFrame = null;
+      recordingCanvasTrack?.stop?.();
+      recordingCanvasTrack = null;
+    }
+
     async function startSessionRecording({ prompt = '' } = {}) {
       if (!recordToggle.checked) return { recording: false };
       if (typeof MediaRecorder === 'undefined') throw new Error('当前环境不支持本地视频录制。');
       if (recorder && recorder.state !== 'inactive') throw new Error('已有一段录制正在进行。');
-      if (!cameraStream) await openCamera();
+      if (!cameraStream) {
+        setStatus('本轮未开启摄像头，将继续进行语音训练；如需录像，请先打开摄像头再开始下一轮。', 'warning');
+        return { recording: false, reason: 'camera-not-open' };
+      }
       recordingAudioStream = await mediaDevices.getUserMedia({ audio: getAudioConstraints(), video: false });
-      const recordingStream = new MediaStream([
-        ...cameraStream.getVideoTracks(),
-        ...recordingAudioStream.getAudioTracks()
-      ]);
-      const mimeType = selectMimeType();
-      recorder = new MediaRecorder(recordingStream, {
-        ...(mimeType ? { mimeType } : {}),
-        videoBitsPerSecond: 4_000_000,
-        audioBitsPerSecond: 128_000
-      });
+      try {
+        const recordingStream = new MediaStream([
+          createDirectionMatchedRecordingTrack(),
+          ...recordingAudioStream.getAudioTracks()
+        ]);
+        const mimeType = selectMimeType();
+        recorder = new MediaRecorder(recordingStream, {
+          ...(mimeType ? { mimeType } : {}),
+          videoBitsPerSecond: 4_000_000,
+          audioBitsPerSecond: 128_000
+        });
+      } catch (error) {
+        recordingAudioStream?.getTracks().forEach(track => track.stop());
+        recordingAudioStream = null;
+        releaseDirectionMatchedRecordingTrack();
+        throw error;
+      }
       chunks = [];
       recorder.addEventListener('dataavailable', event => { if (event.data?.size) chunks.push(event.data); });
       recorder.addEventListener('error', event => setStatus(`录制中断：${event.error?.message || '未知错误'}`, 'error'));
@@ -279,6 +333,7 @@
           saveStatus.textContent = '刷新或关闭页面前请先保存；项目不会自动上传或保存录像。';
           saveStatus.dataset.kind = 'warning';
           setStatus('本轮录制已完成，等待你回看或保存。', 'ready');
+          releaseDirectionMatchedRecordingTrack();
           recorder = null;
           resolve(latestRecording);
         }, { once: true });
@@ -378,6 +433,7 @@
       refreshDevices,
       dispose() {
         if (isRecording()) recorder.stop();
+        releaseDirectionMatchedRecordingTrack();
         closeCamera(true);
         recordingAudioStream?.getTracks().forEach(track => track.stop());
         if (latestRecording?.url) URL.revokeObjectURL(latestRecording.url);
