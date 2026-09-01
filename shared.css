@@ -666,7 +666,7 @@ html.is-page-transitioning .version-card { pointer-events: none; }
   background: #11131a;
 }
 .camera-room .video-tile { width: min(780px, 100%); aspect-ratio: 16 / 9; }
-.video-tile video { width: 100%; height: 100%; object-fit: cover; transform: none; background: #0c0e14; }
+.video-tile video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(1) !important; background: #0c0e14; }
 .video-off {
   position: absolute;
   inset: 0;
@@ -931,7 +931,7 @@ body[data-mode="v2"] .stage { grid-template-rows: auto minmax(0, 1fr) auto auto;
 .recording-review-copy { align-self: end; }
 .recording-review-copy h2 { margin: 6px 0; font-size: 18px; }
 .recording-review-copy p { margin: 0; color: var(--muted); font-size: 11px; }
-.recording-review video { grid-column: 2; grid-row: 1 / span 3; width: 100%; max-height: 330px; aspect-ratio: 16 / 9; border-radius: 12px; background: #08090d; object-fit: contain; }
+.recording-review video { grid-column: 2; grid-row: 1 / span 3; width: 100%; max-height: 330px; aspect-ratio: 16 / 9; border-radius: 12px; background: #08090d; object-fit: contain; transform: scaleX(1) !important; }
 .recording-review-transcript { min-width: 0; padding-top: 12px; border-top: 1px solid var(--line); }
 .recording-review-transcript strong { display: block; margin-bottom: 7px; color: var(--cyan); font-size: 10px; letter-spacing: .06em; }
 .recording-review-transcript p { max-height: 116px; margin: 0; overflow: auto; color: var(--text); font-size: 12px; line-height: 1.7; white-space: pre-wrap; }

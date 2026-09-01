@@ -63,9 +63,6 @@
     let latestRecording = null;
     let currentDevices = [];
     let sessionRunning = false;
-    let recordingCanvas = null;
-    let recordingCanvasTrack = null;
-    let recordingAnimationFrame = null;
 
     recordToggle.checked = preferences.recordSession;
 
@@ -217,48 +214,6 @@
       return MIME_TYPES.find(type => !MediaRecorder.isTypeSupported || MediaRecorder.isTypeSupported(type)) || '';
     }
 
-    function createFlippedRecordingTrack() {
-      const sourceTrack = cameraStream?.getVideoTracks?.()[0];
-      if (!sourceTrack) throw new Error('没有可用于录制的摄像头画面。');
-      const canvas = document.createElement('canvas');
-      const settings = sourceTrack.getSettings?.() || {};
-      const width = video.videoWidth || settings.width || 1280;
-      const height = video.videoHeight || settings.height || 720;
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext?.('2d');
-      if (!context || typeof canvas.captureStream !== 'function') {
-        setStatus('当前环境不支持录制方向校正，将保留摄像头原始画面。', 'warning');
-        return sourceTrack;
-      }
-      recordingCanvas = canvas;
-      const drawFrame = () => {
-        context.save();
-        context.clearRect(0, 0, width, height);
-        context.translate(width, 0);
-        context.scale(-1, 1);
-        if (video.readyState >= 2) context.drawImage(video, 0, 0, width, height);
-        context.restore();
-        recordingAnimationFrame = window.requestAnimationFrame(drawFrame);
-      };
-      drawFrame();
-      const stream = canvas.captureStream(30);
-      recordingCanvasTrack = stream.getVideoTracks?.()[0] || null;
-      if (!recordingCanvasTrack) {
-        recordingCanvas = null;
-        return sourceTrack;
-      }
-      return recordingCanvasTrack;
-    }
-
-    function releaseFlippedRecordingTrack() {
-      if (recordingAnimationFrame !== null) window.cancelAnimationFrame?.(recordingAnimationFrame);
-      recordingAnimationFrame = null;
-      recordingCanvasTrack?.stop?.();
-      recordingCanvasTrack = null;
-      recordingCanvas = null;
-    }
-
     function updateRecordingClock() {
       if (badgeTime) badgeTime.textContent = formatDuration(Date.now() - recordingStartedAt);
     }
@@ -269,9 +224,8 @@
       if (recorder && recorder.state !== 'inactive') throw new Error('已有一段录制正在进行。');
       if (!cameraStream) await openCamera();
       recordingAudioStream = await mediaDevices.getUserMedia({ audio: getAudioConstraints(), video: false });
-      const recordingVideoTrack = createFlippedRecordingTrack();
       const recordingStream = new MediaStream([
-        recordingVideoTrack,
+        ...cameraStream.getVideoTracks(),
         ...recordingAudioStream.getAudioTracks()
       ]);
       const mimeType = selectMimeType();
@@ -325,7 +279,6 @@
           saveStatus.textContent = '刷新或关闭页面前请先保存；项目不会自动上传或保存录像。';
           saveStatus.dataset.kind = 'warning';
           setStatus('本轮录制已完成，等待你回看或保存。', 'ready');
-          releaseFlippedRecordingTrack();
           recorder = null;
           resolve(latestRecording);
         }, { once: true });
