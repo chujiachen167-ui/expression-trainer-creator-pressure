@@ -6,8 +6,11 @@
   <title>Expression Trainer · Creator Pressure</title>
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="vendor/magic-ui/marquee.css">
+  <script src="locales/zh-CN.js"></script>
+  <script src="locales/en-US.js"></script>
+  <script src="i18n.js"></script>
 </head>
-<body class="launcher-page">
+<body class="launcher-page" data-i18n-title="page.launcher.title">
   <header class="product-nav" data-product-shell="header">
     <div class="product-nav-inner">
       <a class="product-wordmark" href="index.html" aria-label="Read Yourself 首页">
@@ -31,6 +34,7 @@
             <div><strong data-qa-copy-added data-qa-copy-key="launcher.shell.account.name">本地访客</strong><small data-qa-copy-added data-qa-copy-key="launcher.shell.account.device">当前设备</small></div>
           </div>
           <p class="product-account-status"><i aria-hidden="true"></i><span data-qa-copy-added data-qa-copy-key="launcher.shell.account.status">参数和训练草稿仅保存在这台设备。</span></p>
+          <label class="product-locale-field" data-qa-copy-ignore><span data-i18n="common.interfaceLanguage">界面语言</span><select data-locale-select aria-label="界面语言"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
           <div class="product-account-actions">
             <button type="button" data-open-product-settings="palette"><span data-qa-copy-added data-qa-copy-key="launcher.shell.account.appearance">外观与配色</span><small data-qa-copy-ignore>→</small></button>
             <button type="button" data-open-product-settings="ui"><span data-qa-copy-added data-qa-copy-key="launcher.shell.account.settings">完整设置</span><small data-qa-copy-ignore>→</small></button>
@@ -83,31 +87,31 @@
       </figure>
     </section>
 
-    <div class="chapter-heading" data-qa-copy-ignore><span>CHAPTERS</span><strong>选择今天要承受的压力</strong></div>
+    <div class="chapter-heading" data-qa-copy-ignore><span>CHAPTERS</span><strong data-i18n="launcher.chapter.prompt">选择今天要承受的压力</strong></div>
     <section class="version-grid" id="trainingLayers" aria-label="Creator Pressure 训练层">
       <a class="version-card featured" data-version="v1" href="v1-camera-baseline.html">
         <span class="version-card-meta"><span class="version-index">V1</span><span class="version-status" data-qa-copy-added>推荐起点</span></span>
-        <h2>镜头基线</h2>
-        <p>启用电脑摄像头，训练直视镜头、开场速度、口头禅和表达密度。</p>
-        <span class="card-cta">打开训练层 →</span>
+        <h2 data-i18n="launcher.v1.title">镜头基线</h2>
+        <p data-i18n="launcher.v1.body">启用电脑摄像头，训练直视镜头、开场速度、口头禅和表达密度。</p>
+        <span class="card-cta" data-i18n="launcher.openLayer">打开训练层 →</span>
       </a>
       <a class="version-card" data-version="v2" href="v2-ai-audience.html">
         <span class="version-index">V2</span>
-        <h2>数字观众压力场</h2>
-        <p>加入会等待、追问和质疑的数字观众，让问题在可控压力下暴露。</p>
-        <span class="card-cta">打开训练层 →</span>
+        <h2 data-i18n="launcher.v2.title">数字观众压力场</h2>
+        <p data-i18n="launcher.v2.body">加入会等待、追问和质疑的数字观众，让问题在可控压力下暴露。</p>
+        <span class="card-cta" data-i18n="launcher.openLayer">打开训练层 →</span>
       </a>
       <a class="version-card" data-version="v3" href="v3-creator-studio.html">
         <span class="version-index">V3</span>
-        <h2>自媒体实战房间</h2>
-        <p>只覆盖广告植入、热点观点、直播回应和知识口播，不向通用会议扩张。</p>
-        <span class="card-cta">打开训练层 →</span>
+        <h2 data-i18n="launcher.v3.title">自媒体实战房间</h2>
+        <p data-i18n="launcher.v3.body">只覆盖广告植入、热点观点、直播回应和知识口播，不向通用会议扩张。</p>
+        <span class="card-cta" data-i18n="launcher.openLayer">打开训练层 →</span>
       </a>
     </section>
 
     <aside class="boundary-note">
-      <strong>产品红线</strong>
-      <span>会议室和聊天室只是“观众压力的视觉隐喻”，不是新的业务领域。</span>
+      <strong data-i18n="launcher.boundary.title">产品红线</strong>
+      <span data-i18n="launcher.boundary.body">会议室和聊天室只是“观众压力的视觉隐喻”，不是新的业务领域。</span>
     </aside>
   </main>
   <section class="product-assurance" id="productPrinciples" data-product-shell="footer" aria-label="产品原则">
@@ -133,6 +137,7 @@
     <div class="product-footer-bottom">
       <span data-qa-copy-added data-qa-copy-key="launcher.shell.footer.copyright">© 2026 Read Yourself · Prototype build</span>
       <span data-qa-copy-added data-qa-copy-key="launcher.shell.footer.disclaimer">当前版本不提供账户同步、付费服务或云端存储。</span>
+      <label class="footer-locale-field" data-qa-copy-ignore><span data-i18n="common.interfaceLanguage">界面语言</span><select data-locale-select aria-label="界面语言"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
     </div>
   </footer>
   <svg class="text-effect-defs" aria-hidden="true" focusable="false">

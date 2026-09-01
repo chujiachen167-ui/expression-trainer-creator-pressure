@@ -7,20 +7,24 @@
   <script>try { const entry = JSON.parse(sessionStorage.getItem('expression-trainer.scroll-expand.entry') || 'null'); if (entry?.mode === 'v2') { document.documentElement.classList.add('scroll-expand-entry-pending'); document.documentElement.dataset.scrollExpandMode = entry.mode; document.documentElement.dataset.scrollExpandDirection = entry.direction || 'up'; } } catch (_) {}</script>
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="drift-wall.css">
+  <script src="locales/zh-CN.js"></script>
+  <script src="locales/en-US.js"></script>
+  <script src="i18n.js"></script>
 </head>
-<body class="trainer-page" data-mode="v2">
+<body class="trainer-page" data-mode="v2" data-i18n-title="page.v2.title">
   <header class="topbar">
-    <a class="back-link" href="index.html">← 三版总览</a>
+    <a class="back-link" href="index.html" data-i18n="common.backOverview">← 三版总览</a>
     <span class="brand">Expression Trainer</span>
     <span class="version-pill">V2 数字观众压力场</span>
     <span class="topbar-spacer"></span>
+    <label class="topbar-locale-field" data-qa-copy-ignore><span class="sr-only" data-i18n="common.interfaceLanguage">界面语言</span><select data-locale-select aria-label="界面语言"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
     <span class="timer" id="timer">00:00</span>
-    <button class="ghost-btn" type="button" data-camera-toggle>开启摄像头</button>
+    <button class="ghost-btn" type="button" data-camera-toggle data-i18n="common.openCamera">开启摄像头</button>
   </header>
 
   <main class="workspace">
     <aside class="side-panel left">
-      <h2 class="panel-heading">压力下表达</h2>
+      <h2 class="panel-heading" data-i18n="v2.analysis">压力下表达</h2>
       <div class="metric-list">
         <div class="metric"><span>填充词</span><strong class="bad" id="fillerMetric">0</strong></div>
         <div class="metric"><span>模糊词</span><strong class="warn" id="vagueMetric">0</strong></div>
@@ -45,10 +49,10 @@
     <section class="stage">
       <div class="stage-head">
         <div>
-          <h1>一个真正会反应的观众</h1>
-          <p>压力来自内容追问，而不是装饰性头像。</p>
+          <h1 data-i18n="v2.title">一个真正会反应的观众</h1>
+          <p data-i18n="v2.subtitle">压力来自内容追问，而不是装饰性头像。</p>
         </div>
-        <div class="stage-status" data-stt-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText">等待开始</span><button type="button" data-stt-retry hidden data-qa-copy-ignore>重试</button></div>
+        <div class="stage-status" data-stt-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText" data-i18n="common.waiting">等待开始</span><button type="button" data-stt-retry hidden data-i18n="common.retry">重试</button></div>
       </div>
 
       <div class="room duo-room audience-primary-room">
@@ -70,14 +74,14 @@
         <div class="transcript" id="liveTranscript"></div>
         <div class="loading-row"><span class="spinner"></span><span>正在比较自然状态与压力状态，并生成下一轮动作…</span></div>
         <div class="controls">
-          <button class="primary-btn" type="button" data-session-toggle>开始压力口播</button>
+          <button class="primary-btn" type="button" data-session-toggle data-i18n="v2.start">开始压力口播</button>
           <span class="control-note">数字观众会按当前压力等级，在训练中提出内容相关的约束。</span>
         </div>
       </div>
     </section>
 
     <aside class="side-panel right">
-      <h2 class="panel-heading">观众事件</h2>
+      <h2 class="panel-heading" data-i18n="v2.events">观众事件</h2>
       <section class="interest-panel" data-interest-curve data-qa-copy-ignore aria-label="观众兴趣度原型估算"></section>
       <div class="event-feed" id="eventFeed">
         <div class="event-card"><strong>阿林</strong><div>我不是面试官。我只代表一个随时可能划走的观众。</div></div>

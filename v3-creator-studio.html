@@ -6,8 +6,11 @@
   <title>V3 自媒体实战房间 · Expression Trainer</title>
   <script>try { const entry = JSON.parse(sessionStorage.getItem('expression-trainer.scroll-expand.entry') || 'null'); if (entry?.mode === 'v3') { document.documentElement.classList.add('scroll-expand-entry-pending'); document.documentElement.dataset.scrollExpandMode = entry.mode; document.documentElement.dataset.scrollExpandDirection = entry.direction || 'up'; } } catch (_) {}</script>
   <link rel="stylesheet" href="shared.css">
+  <script src="locales/zh-CN.js"></script>
+  <script src="locales/en-US.js"></script>
+  <script src="i18n.js"></script>
 </head>
-<body class="trainer-page creator-studio-page" data-mode="v3">
+<body class="trainer-page creator-studio-page" data-mode="v3" data-i18n-title="page.v3.title">
   <header class="topbar">
     <div class="product-identity">
       <a class="brand-mark" href="index.html" aria-label="返回三版总览">ET</a>
@@ -15,6 +18,7 @@
     </div>
     <span class="version-pill">V3 STUDIO</span>
     <span class="topbar-spacer"></span>
+    <label class="topbar-locale-field" data-qa-copy-ignore><span class="sr-only" data-i18n="common.interfaceLanguage">界面语言</span><select data-locale-select aria-label="界面语言"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
     <div class="session-clock"><small>本轮时长</small><span class="timer" id="timer">00:00</span></div>
     <button class="ghost-btn setup-btn" type="button" data-open-brief>训练设置</button>
     <button class="ghost-btn camera-btn" type="button" data-camera-toggle><span class="control-indicator"></span>开启摄像头</button>
@@ -23,12 +27,12 @@
   <main class="workspace">
     <aside class="side-panel left">
       <section class="rail-section brief-rail">
-        <div class="panel-title-row"><div><span class="section-kicker">BRIEF</span><h2 class="panel-heading">本轮训练</h2></div><span class="panel-step">01</span></div>
+        <div class="panel-title-row"><div><span class="section-kicker">BRIEF</span><h2 class="panel-heading" data-i18n="v3.training">本轮训练</h2></div><span class="panel-step">01</span></div>
         <div data-brief-anchor></div>
       </section>
 
       <section class="rail-section scenario-section">
-        <div class="panel-title-row"><div><span class="section-kicker">FORMAT</span><h2 class="panel-heading">内容场景</h2></div><span class="panel-step">02</span></div>
+        <div class="panel-title-row"><div><span class="section-kicker">FORMAT</span><h2 class="panel-heading" data-i18n="v3.scenarios">内容场景</h2></div><span class="panel-step">02</span></div>
         <div class="scenario-list">
           <button class="scenario-btn active" data-prompt="请用 45 秒完成一段自然的广告植入：先讲用户问题，再引出产品价值。"><span class="scenario-index">AD</span><span><strong data-scenario-name>广告植入</strong><small>问题 → 价值</small></span></button>
           <button class="scenario-btn" data-prompt="请用 60 秒表达一个热点观点：先给结论，再给两个理由。"><span class="scenario-index">OP</span><span><strong data-scenario-name>热点观点</strong><small>结论 → 理由</small></span></button>
@@ -38,7 +42,7 @@
       </section>
 
       <section class="rail-section signal-section">
-        <div class="panel-title-row"><div><span class="section-kicker">SIGNALS</span><h2 class="panel-heading">实时信号</h2></div><span class="signal-live"><i></i>LIVE</span></div>
+        <div class="panel-title-row"><div><span class="section-kicker">SIGNALS</span><h2 class="panel-heading" data-i18n="v3.signals">实时信号</h2></div><span class="signal-live"><i></i>LIVE</span></div>
         <div class="metric-list">
           <div class="metric"><span>填充词</span><strong class="bad" id="fillerMetric">0</strong></div>
           <div class="metric"><span>模糊词</span><strong class="warn" id="vagueMetric">0</strong></div>
@@ -52,8 +56,8 @@
 
     <section class="stage">
       <div class="stage-head">
-        <div><span class="section-kicker">CAMERA PRACTICE</span><h1>镜头表达实战</h1><p>面对明确受众说话，让压力暴露真正的表达问题。</p></div>
-        <div class="stage-status" data-stt-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText">等待开始</span><button type="button" data-stt-retry hidden data-qa-copy-ignore>重试</button></div>
+        <div><span class="section-kicker">CAMERA PRACTICE</span><h1 data-i18n="v3.title">镜头表达实战</h1><p data-i18n="v3.subtitle">面对明确受众说话，让压力暴露真正的表达问题。</p></div>
+        <div class="stage-status" data-stt-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText" data-i18n="common.waiting">等待开始</span><button type="button" data-stt-retry hidden data-i18n="common.retry">重试</button></div>
       </div>
 
       <div class="room creator-room">
@@ -79,14 +83,14 @@
         <div class="loading-row"><span class="spinner"></span><span>正在定位最影响内容效果的片段，并生成同题重练建议…</span></div>
         <div class="controls">
           <div class="pressure-control"><span>压力</span><div class="pressure-group" aria-label="压力等级"><button class="pressure-btn" data-pressure="low">低</button><button class="pressure-btn active" data-pressure="medium">中</button><button class="pressure-btn" data-pressure="high">高</button></div></div>
-          <button class="primary-btn" type="button" data-session-toggle><span class="record-dot"></span>开始实战训练</button>
+          <button class="primary-btn" type="button" data-session-toggle data-i18n="v3.start">开始实战训练</button>
           <span class="privacy-inline">画面不上传、不保存</span>
         </div>
       </section>
     </section>
 
     <aside class="side-panel right">
-      <div class="panel-title-row"><div><span class="section-kicker">AUDIENCE FEED</span><h2 class="panel-heading">观众现场反应</h2></div><span class="panel-step">03</span></div>
+      <div class="panel-title-row"><div><span class="section-kicker">AUDIENCE FEED</span><h2 class="panel-heading" data-i18n="v3.audienceFeed">观众现场反应</h2></div><span class="panel-step">03</span></div>
       <p class="feed-intro">这里只保留会影响内容效果的信号，避免反馈淹没表达本身。</p>
       <section class="interest-panel" data-interest-curve data-qa-copy-ignore aria-label="观众兴趣度原型估算"></section>
       <div class="event-feed" id="eventFeed" role="log" aria-live="polite" aria-label="观众现场反应"><div class="event-card system"><strong>训练边界</strong><div>只模拟自媒体观众，不加入面试官、考官或企业会议角色。</div></div></div>

@@ -6,20 +6,24 @@
   <title>V1 镜头基线 · Expression Trainer</title>
   <script>try { const entry = JSON.parse(sessionStorage.getItem('expression-trainer.scroll-expand.entry') || 'null'); if (entry?.mode === 'v1') { document.documentElement.classList.add('scroll-expand-entry-pending'); document.documentElement.dataset.scrollExpandMode = entry.mode; document.documentElement.dataset.scrollExpandDirection = entry.direction || 'up'; } } catch (_) {}</script>
   <link rel="stylesheet" href="shared.css">
+  <script src="locales/zh-CN.js"></script>
+  <script src="locales/en-US.js"></script>
+  <script src="i18n.js"></script>
 </head>
-<body class="trainer-page" data-mode="v1">
+<body class="trainer-page" data-mode="v1" data-i18n-title="page.v1.title">
   <header class="topbar">
-    <a class="back-link" href="index.html">← 三版总览</a>
+    <a class="back-link" href="index.html" data-i18n="common.backOverview">← 三版总览</a>
     <span class="brand">Expression Trainer</span>
     <span class="version-pill">V1 镜头基线</span>
     <span class="topbar-spacer"></span>
+    <label class="topbar-locale-field" data-qa-copy-ignore><span class="sr-only" data-i18n="common.interfaceLanguage">界面语言</span><select data-locale-select aria-label="界面语言"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
     <span class="timer" id="timer">00:00</span>
-    <button class="ghost-btn" type="button" data-camera-toggle>开启摄像头</button>
+    <button class="ghost-btn" type="button" data-camera-toggle data-i18n="common.openCamera">开启摄像头</button>
   </header>
 
   <main class="workspace">
     <aside class="side-panel left diagnostic-panel">
-      <h2 class="panel-heading">表达分析</h2>
+      <h2 class="panel-heading" data-i18n="v1.analysis">表达分析</h2>
       <div class="metric-list">
         <div class="metric"><span>笼统词</span><strong class="bad" id="vagueMetric">0</strong></div>
         <div class="metric"><span>填充词</span><strong class="warn" id="fillerMetric">0</strong></div>
@@ -32,10 +36,10 @@
     <section class="stage">
       <div class="stage-head">
         <div>
-          <h1>实时表达诊断</h1>
-          <p>保留原项目的字幕、词库统计和反馈，只在字幕后加入真实镜头。</p>
+          <h1 data-i18n="v1.title">实时表达诊断</h1>
+          <p data-i18n="v1.subtitle">保留原项目的字幕、词库统计和反馈，只在字幕后加入真实镜头。</p>
         </div>
-        <div class="stage-status" data-stt-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText">等待开始</span><button type="button" data-stt-retry hidden data-qa-copy-ignore>重试</button></div>
+        <div class="stage-status" data-stt-state="idle" role="status" aria-live="polite"><span class="status-dot"></span><span id="statusText" data-i18n="common.waiting">等待开始</span><button type="button" data-stt-retry hidden data-i18n="common.retry">重试</button></div>
       </div>
 
       <div class="room camera-room v1-diagnostic-room">
@@ -53,35 +57,35 @@
       <div>
         <div class="loading-row"><span class="spinner"></span><span>正在整理本轮表达证据并生成复盘…</span></div>
         <div class="controls">
-          <button class="primary-btn" type="button" data-session-toggle>开始 60 秒口播</button>
-          <button class="ghost-btn" type="button" data-paste-open>粘贴逐字稿</button>
+          <button class="primary-btn" type="button" data-session-toggle data-i18n="v1.start">开始 60 秒口播</button>
+          <button class="ghost-btn" type="button" data-paste-open data-i18n="v1.paste">粘贴逐字稿</button>
           <button class="ghost-btn" type="button" data-copy-transcript hidden>复制原文</button>
           <button class="ghost-btn" type="button" data-clear-transcript hidden>清空</button>
           <button class="ghost-btn" type="button" data-show-report hidden>生成诊断报告</button>
           <span class="control-note">原型不会假装已经识别你的视线；粉色圆点只是镜头位置提示。</span>
         </div>
         <details class="media-device-panel" data-media-panel>
-          <summary><span>设备与录制</span><small data-device-summary>系统默认设备</small></summary>
+          <summary><span data-i18n="v1.devices">设备与录制</span><small data-device-summary>系统默认设备</small></summary>
           <div class="media-device-body">
-            <label class="media-device-field"><span>摄像头</span><select data-camera-device aria-label="选择摄像头"><option value="">系统默认摄像头</option></select></label>
-            <label class="media-device-field"><span>麦克风</span><select data-microphone-device aria-label="选择麦克风"><option value="">系统默认麦克风</option></select></label>
-            <label class="media-record-toggle"><input type="checkbox" data-record-session><span><strong>同时录制本轮</strong><small>录制画面和声音；实时字幕仍由诊断核心处理。</small></span></label>
-            <button class="ghost-btn media-refresh" type="button" data-media-refresh>检测已连接设备</button>
+            <label class="media-device-field"><span data-i18n="v1.cameraDevice">摄像头</span><select data-camera-device aria-label="选择摄像头"><option value="">系统默认摄像头</option></select></label>
+            <label class="media-device-field"><span data-i18n="v1.microphoneDevice">麦克风</span><select data-microphone-device aria-label="选择麦克风"><option value="">系统默认麦克风</option></select></label>
+            <label class="media-record-toggle"><input type="checkbox" data-record-session><span><strong data-i18n="v1.recordTake">同时录制本轮</strong><small data-i18n="v1.recordTakeHint">录制画面和声音；实时字幕仍由诊断核心处理。</small></span></label>
+            <button class="ghost-btn media-refresh" type="button" data-media-refresh data-i18n="v1.detectDevices">检测已连接设备</button>
             <p class="media-device-status" data-media-status role="status" aria-live="polite">设备名称会在获得摄像头和麦克风权限后显示。</p>
           </div>
         </details>
         <section class="recording-review" data-recording-review hidden aria-labelledby="recordingReviewTitle">
-          <div class="recording-review-copy"><span class="section-kicker">PRACTICE TAKE</span><h2 id="recordingReviewTitle">本轮镜头回看</h2><p data-recording-meta>视频尚未保存到磁盘。</p></div>
+          <div class="recording-review-copy"><span class="section-kicker">PRACTICE TAKE</span><h2 id="recordingReviewTitle" data-i18n="v1.reviewTitle">本轮镜头回看</h2><p data-recording-meta>视频尚未保存到磁盘。</p></div>
           <video controls playsinline preload="metadata" data-recording-preview></video>
-          <div class="recording-review-transcript"><strong>本轮逐字稿</strong><p data-recording-transcript>本轮没有可用逐字稿。</p></div>
-          <div class="recording-review-actions"><button class="primary-btn" type="button" data-recording-save>保存视频到本机</button><button class="ghost-btn" type="button" data-recording-discard>丢弃这次录制</button></div>
+          <div class="recording-review-transcript"><strong data-i18n="v1.reviewTranscript">本轮逐字稿</strong><p data-recording-transcript>本轮没有可用逐字稿。</p></div>
+          <div class="recording-review-actions"><button class="primary-btn" type="button" data-recording-save data-i18n="v1.saveVideo">保存视频到本机</button><button class="ghost-btn" type="button" data-recording-discard data-i18n="v1.discardVideo">丢弃这次录制</button></div>
           <p class="recording-unsaved" data-recording-save-status>刷新或关闭页面前请先保存；项目不会自动上传或保存录像。</p>
         </section>
       </div>
     </section>
 
     <aside class="side-panel right diagnostic-feedback-panel">
-      <h2 class="panel-heading">实时反馈</h2>
+      <h2 class="panel-heading" data-i18n="v1.feedback">实时反馈</h2>
       <p class="feedback-empty" data-feedback-empty>检测到笼统词、填充词、犹豫词或重复表达后，会立即给出修改建议。</p>
       <div class="event-feed diagnostic-feedback" id="eventFeed"></div>
     </aside>

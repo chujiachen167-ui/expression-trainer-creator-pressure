@@ -1,4 +1,5 @@
 (() => {
+  const tr = (key, fallback) => window.CreatorI18n?.t(key, {}, fallback) || fallback;
   const STORAGE_KEY = 'expression-trainer.media-preferences.v1';
   const MIME_TYPES = [
     'video/webm;codecs=vp9,opus',
@@ -159,7 +160,7 @@
     function renderCameraState(active) {
       videoTile.classList.toggle('camera-on', active);
       cameraButton.classList.toggle('active', active);
-      cameraButton.innerHTML = `<span class="control-indicator"></span>${active ? '关闭摄像头' : '开启摄像头'}`;
+      cameraButton.innerHTML = `<span class="control-indicator"></span>${tr(active ? 'common.closeCamera' : 'common.openCamera', active ? '关闭摄像头' : '开启摄像头')}`;
     }
 
     function closeCamera(force = false) {
@@ -362,7 +363,9 @@
         setStatus('正在使用的摄像头已断开，请选择其他设备。', 'warning');
       }
     };
+    const handleLocaleChange = () => renderCameraState(Boolean(cameraStream));
     mediaDevices?.addEventListener?.('devicechange', handleDeviceChange);
+    document.addEventListener('creator:locale-change', handleLocaleChange);
 
     refreshDevices();
     updateSummary();
@@ -383,6 +386,7 @@
         recordingAudioStream?.getTracks().forEach(track => track.stop());
         if (latestRecording?.url) URL.revokeObjectURL(latestRecording.url);
         mediaDevices?.removeEventListener?.('devicechange', handleDeviceChange);
+        document.removeEventListener('creator:locale-change', handleLocaleChange);
       }
     };
   }

@@ -1,4 +1,5 @@
 (() => {
+  const tr = (key, fallback) => window.CreatorI18n?.t(key, {}, fallback) || fallback;
   const mode = document.body.dataset.mode || 'v1';
   const cameraButton = document.querySelector('[data-camera-toggle]');
   const startButton = document.querySelector('[data-session-toggle]');
@@ -428,7 +429,7 @@
       video.srcObject = null;
       videoTile.classList.remove('camera-on');
       cameraButton.classList.remove('active');
-      cameraButton.innerHTML = '<span class="control-indicator"></span>开启摄像头';
+      cameraButton.innerHTML = `<span class="control-indicator"></span>${tr('common.openCamera', '开启摄像头')}`;
       return;
     }
     try {
@@ -436,7 +437,7 @@
       video.srcObject = stream;
       videoTile.classList.add('camera-on');
       cameraButton.classList.add('active');
-      cameraButton.innerHTML = '<span class="control-indicator"></span>关闭摄像头';
+      cameraButton.innerHTML = `<span class="control-indicator"></span>${tr('common.closeCamera', '关闭摄像头')}`;
     } catch (error) {
       addEvent('系统', '摄像头未开启。请检查浏览器权限，或使用 localhost / HTTPS 打开原型。', true);
     }
@@ -453,7 +454,7 @@
     video.srcObject = null;
     videoTile.classList.remove('camera-on');
     cameraButton?.classList.remove('active');
-    if (cameraButton) cameraButton.innerHTML = '<span class="control-indicator"></span>开启摄像头';
+    if (cameraButton) cameraButton.innerHTML = `<span class="control-indicator"></span>${tr('common.openCamera', '开启摄像头')}`;
   }
 
   function applyRecognitionResult(piece, isFinal) {
@@ -791,7 +792,7 @@
     mediaController?.setSessionRunning(true);
     document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: true } }));
     startedAt = Date.now();
-    startButton.textContent = '结束并生成复盘';
+    startButton.textContent = tr('common.stopAndReview', '结束并生成复盘');
     startButton.classList.add('running');
     setStageState('requesting', '正在准备麦克风');
     renderTranscript();
@@ -895,7 +896,7 @@
       loadingRow?.classList.remove('visible');
       setStageState('complete', '本轮完成');
       startButton.disabled = false;
-      startButton.textContent = '再练同一题';
+      startButton.textContent = tr('common.practiceAgain', '再练同一题');
       startButton.classList.remove('running');
       const filler = document.getElementById('fillerMetric')?.textContent || '0';
       const density = document.getElementById('densityMetric')?.textContent || '--';
@@ -1027,6 +1028,13 @@
   });
 
   cameraButton?.addEventListener('click', toggleCamera);
+  document.addEventListener('creator:locale-change', () => {
+    if (cameraButton && !mediaController) {
+      const active = cameraButton.classList.contains('active');
+      cameraButton.innerHTML = `<span class="control-indicator"></span>${tr(active ? 'common.closeCamera' : 'common.openCamera', active ? '关闭摄像头' : '开启摄像头')}`;
+    }
+    if (startButton && sessionRunning) startButton.textContent = tr('common.stopAndReview', '结束并生成复盘');
+  });
   sttRetryButton?.addEventListener('click', () => {
     if (!sessionRunning) return;
     sttRetryButton.disabled = true;

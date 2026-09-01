@@ -244,7 +244,8 @@
     }).map(node => {
       // Newly added static labels must not shift historical copy keys. The
       // recommendation badge previously moved every saved card/footer edit.
-      const index = node.hasAttribute('data-qa-copy-added') ? null : legacyIndex++;
+      const isLocaleControl = Boolean(node.closest('.product-locale-field, .footer-locale-field, .topbar-locale-field'));
+      const index = node.hasAttribute('data-qa-copy-added') || isLocaleControl ? null : legacyIndex++;
       // Freeze legacy keys before runtime modules insert extra controls. Added
       // copy uses a stable selector so it cannot renumber founder-edited text.
       const key = node.dataset.qaCopyKey || (initialCopyScan && index !== null ? `${pageKey}.${node.tagName.toLowerCase()}.${index}` : `${pageKey}.additional.${window.CreatorElementEditor.selectorFor(node)}`);

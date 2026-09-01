@@ -106,6 +106,8 @@ a { color: inherit; text-decoration: none; }
 .product-account-head small { color: var(--muted); font-size: 10px; }
 .product-account-status { display: flex; align-items: flex-start; gap: 9px; margin: 0 0 12px; padding: 11px 0; border-block: 1px solid color-mix(in srgb, var(--line) 70%, transparent); color: var(--muted); font-size: 11px; line-height: 1.55; }
 .product-account-status i { flex: 0 0 auto; width: 7px; height: 7px; margin-top: 5px; border-radius: 50%; background: var(--green); }
+.product-locale-field { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 10px; padding: 9px 7px; color: var(--muted); font-size: 11px; }
+.product-locale-field select, .footer-locale-field select, .topbar-locale-field select { min-height: 32px; padding: 5px 28px 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--text); font: inherit; cursor: pointer; }
 .product-account-actions { display: grid; gap: 2px; }
 .product-account-actions button { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 7px; border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .product-account-actions button:not(:disabled):hover, .product-account-actions button:not(:disabled):focus-visible { background: color-mix(in srgb, var(--text) 6%, transparent); }
@@ -137,6 +139,8 @@ a { color: inherit; text-decoration: none; }
 .product-footer-links a:hover, .product-footer-links a:focus-visible { color: var(--product-footer-text, #f4f1f5); }
 .product-footer-links a:focus-visible { outline: 1px solid var(--pink); outline-offset: 4px; }
 .product-footer-bottom { display: flex; justify-content: space-between; gap: 30px; width: min(var(--qa-canvas-width), calc(100% - 48px)); margin-inline: auto; padding: 22px 0 28px; border-top: 1px solid color-mix(in srgb, var(--product-footer-text, #f4f1f5) 10%, transparent); color: var(--product-footer-muted, #9d98a3); font-size: 9px; letter-spacing: .03em; }
+.footer-locale-field { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; }
+.footer-locale-field select { border-color: color-mix(in srgb, var(--product-footer-text, #f4f1f5) 18%, transparent); background: color-mix(in srgb, var(--product-footer-bg, #111015) 86%, white 14%); color: var(--product-footer-text, #f4f1f5); }
 
 .launcher-hero {
   position: relative;
@@ -489,6 +493,8 @@ html.is-page-transitioning .version-card { pointer-events: none; }
 .brand { font-weight: 850; letter-spacing: -0.02em; }
 .version-pill { padding: 5px 9px; border-radius: 7px; background: color-mix(in srgb, var(--mode-accent) 12%, transparent); color: var(--mode-accent); font-size: 11px; font-weight: 900; }
 .topbar-spacer { flex: 1; }
+.topbar-locale-field { display: inline-flex; align-items: center; }
+.topbar-locale-field select { min-width: 94px; border-color: var(--line); background: color-mix(in srgb, var(--panel-2) 88%, transparent); }
 .timer { min-width: 62px; font-variant-numeric: tabular-nums; color: #d9deee; }
 
 .ghost-btn, .primary-btn, .pressure-btn, .scenario-btn {
