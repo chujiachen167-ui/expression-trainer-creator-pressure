@@ -34,6 +34,12 @@ async function run() {
   input(window, 'components.transcriptCover.cleanColor', '#123456');
   input(window, 'components.warpText.speed', 1.3);
   input(window, 'components.trueFocus.blurAmount', 4);
+  input(window, 'components.logo.width', 180);
+  input(window, 'components.logo.opacity', 0.65);
+  input(window, 'components.logo.color', '#abcdef');
+  input(window, 'components.logoBackground.width', 145);
+  input(window, 'components.logoBackground.opacity', 0.11);
+  input(window, 'components.logoBackground.x', -20);
   doc.querySelector('[data-qa-tab="copy"]').click();
   const title = doc.querySelector('[data-copy-key="launcher.h1.1"]');
   title.value = 'Read My Own Words';
@@ -53,6 +59,7 @@ async function run() {
   window.URL.revokeObjectURL = () => {};
   window.HTMLAnchorElement.prototype.click = function () {};
   doc.querySelector('[data-qa-backup]').click();
+  await tick();
   const text = await new Promise((resolve, reject) => {
     const reader = new window.FileReader();
     reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsText(blob);
@@ -60,6 +67,7 @@ async function run() {
   assert.deepEqual(JSON.parse(text).config, expected, 'JSON backup and project save must include exactly the same parameters');
   window.URL.createObjectURL = () => { throw new Error('test download failure'); };
   doc.querySelector('[data-qa-backup]').click();
+  await tick();
   assert.match(doc.querySelector('[data-qa-save-status]').textContent, /导出失败/);
   assert.deepEqual(JSON.parse(JSON.stringify(window.CreatorQAControls.getState())), expected, 'failed export must preserve the entire draft');
 
@@ -74,11 +82,44 @@ async function run() {
   save.click(); await tick();
   assert.match(doc.querySelector('[data-qa-save-status]').textContent, /已取消/);
 
+  // Run both buttons through the actual directory adapter, not just an IPC stub.
+  const files = new Map([
+    ['package.json', '{"name":"expression-trainer-creator-pressure"}'],
+    ['index.html', '<script src="creator-project-config.js"></script>']
+  ]);
+  let pickerCalls = 0;
+  const fileHandle = filename => ({
+    getFile: async () => ({ text: async () => files.get(filename) }),
+    createWritable: async () => ({ write: async content => files.set(filename, content), close: async () => {} })
+  });
+  window.showDirectoryPicker = async () => {
+    pickerCalls++;
+    return {
+      name: 'test-project', queryPermission: async () => 'granted',
+      getFileHandle: async filename => fileHandle(filename),
+      getDirectoryHandle: async name => ({ getFileHandle: async filename => fileHandle(`${name}/${filename}`) })
+    };
+  };
+  save.click(); await tick();
+  const current = JSON.parse(JSON.stringify(window.CreatorQAControls.getState()));
+  assert.deepEqual(parseProject(files.get('creator-project-config.js')).config, current);
+  assert.match(doc.querySelector('[data-qa-save-status]').textContent, /绑定项目/);
+  assert.match(doc.querySelector('[data-qa-project-status]').textContent, /一致/);
+  doc.querySelector('[data-qa-backup]').click(); await tick();
+  assert.deepEqual(JSON.parse(files.get('docs/creator-pressure-config.json')).config, current);
+  assert.equal(pickerCalls, 1, 'both buttons share the one selected root folder');
+  assert.match(doc.querySelector('[data-qa-save-status]').textContent, /未更新页面配置 JS/);
+
+  let backupWritten;
+  window.api = { saveProjectBackup: async content => { backupWritten = content; return { success: true, path: 'test-project/docs/creator-pressure-config.json' }; } };
+  doc.querySelector('[data-qa-backup]').click(); await tick();
+  assert.deepEqual(JSON.parse(backupWritten).config, current, 'desktop backup includes the exact same full configuration');
+
   // A fresh page with no local draft must reproduce the serialized project.
   const fresh = makePage('index.html', { project: envelope.config });
   assert.deepEqual(JSON.parse(JSON.stringify(fresh.window.CreatorQAControls.getState())), expected);
   assert.equal(fresh.window.document.querySelector('#launcherTitle').textContent, 'Read My Own Words');
   fresh.window.close(); dom.window.close();
-  console.log('Global save: seven-tab access, full-state project/JSON export, cross-page data retention, fresh-page restoration, dirty state and honest picker/cancel status passed.');
+  console.log('Global save: all-tab access including Logo, full-state project/JSON export, cross-page data retention, fresh-page restoration, dirty state and honest picker/cancel status passed.');
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });

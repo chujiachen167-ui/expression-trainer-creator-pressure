@@ -237,6 +237,7 @@
   }
 
   window.addEventListener('resize', positionFocus);
+  document.addEventListener('creator:logo-layout-change', positionFocus);
   document.addEventListener('creator:component-settings-change', event => getSettings(event.detail));
   document.addEventListener('creator:copy-change', () => { mountTrueFocus(); mountWarpText(); });
   reduceMotion?.addEventListener?.('change', () => { renderFocus(); mountWarpText(); });

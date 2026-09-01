@@ -243,3 +243,15 @@ ipcMain.handle('save-project-config', (_event, content) => {
     return { success: false, error: error.message };
   }
 });
+ipcMain.handle('save-project-backup', (_event, content) => {
+  if (app.isPackaged) return { success: false, unsupported: true, error: '打包版不能写入源码项目，请导出备份。' };
+  try {
+    if (typeof content !== 'string' || content.length > 2_000_000) throw new Error('备份内容无效。');
+    const envelope = JSON.parse(content);
+    if (envelope.version !== 1 || !envelope.config || typeof envelope.config !== 'object' || Array.isArray(envelope.config)) throw new Error('备份格式无效。');
+    const targetPath = path.join(__dirname, 'docs', 'creator-pressure-config.json');
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, content, 'utf8');
+    return { success: true, path: targetPath };
+  } catch (error) { return { success: false, error: error.message }; }
+});

@@ -12,7 +12,11 @@ for (const page of ['index.html', 'v1-camera-baseline.html', 'v2-ai-audience.htm
   const { document } = dom.window;
   const state = JSON.parse(JSON.stringify(dom.window.CreatorQAControls.getState()));
   assert.deepEqual(state.theme, settings.theme, `${page}: shared theme must load without a local draft`);
-  assert.deepEqual(state.components, settings.components, `${page}: all component parameters must survive loading`);
+  for (const [name, parameters] of Object.entries(settings.components)) {
+    assert.deepEqual(state.components[name], parameters, `${page}: saved ${name} parameters must survive loading`);
+  }
+  assert.deepEqual(state.components.logo, JSON.parse(JSON.stringify(dom.window.CreatorLogoConfig.normalize(settings.components.logo))), `${page}: absent Logo settings acquire safe defaults`);
+  assert.deepEqual(state.components.logoBackground, JSON.parse(JSON.stringify(dom.window.CreatorLogoConfig.normalizeBackground(settings.components.logoBackground))), `${page}: absent background Logo settings acquire safe defaults`);
   assert.deepEqual(state.copy, settings.copy);
   assert.deepEqual(state.fineTune, settings.fineTune);
   if (page === 'index.html') {

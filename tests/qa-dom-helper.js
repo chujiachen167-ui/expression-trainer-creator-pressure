@@ -36,7 +36,7 @@ function makePage(page = 'index.html', { draft, project = {}, extraScripts = [],
   // palette/copy. Shipped-config integration passes that file in as `project`.
   window.CreatorProjectConfig = { version: 1, savedAt: null, config: project };
   if (draft) window.localStorage.setItem(storageKey, JSON.stringify(draft));
-  for (const script of ['vertical-marquee-config.js', 'qa-element-editor.js', 'control-panel.js', ...extraScripts]) window.eval(read(script));
+  for (const script of ['brand-logo.js', 'product-shell.js', 'vertical-marquee-config.js', 'qa-element-editor.js', 'config-file-store.js', 'control-panel.js', ...extraScripts]) window.eval(read(script));
   return dom;
 }
 function input(window, path, value) {

@@ -21,6 +21,9 @@
       prompt: { x: 0, y: 0, width: 0, height: 0 }, transcript: { x: 0, y: 0, width: 0, height: 0 }, controls: { x: 0, y: 0, width: 0, height: 0 }
     },
     components: {
+      logo: window.CreatorLogoConfig.defaults,
+      logoBackground: window.CreatorLogoConfig.backgroundDefaults,
+      productShell: window.CreatorProductShell?.defaults || { enabled: true, headerEnabled: true, accountEnabled: true, footerEnabled: true, footerBackground: '#111015', footerText: '#f4f1f5', footerMuted: '#9d98a3' },
       driftWall: {
         columns: 5, tileWidth: 200, tileHeight: 132, gap: 18, radius: 14,
         tilt: 16, turn: -14, roll: 0, perspective: 1200, depth: 120,
@@ -58,6 +61,9 @@
   const migrateConfig = incoming => {
     const config = clone(incoming || {});
     if (config.components?.transcriptCover) config.components.transcriptCover = window.CreatorMarqueeConfig.migrate(config.components.transcriptCover);
+    if (config.components?.logo) config.components.logo = window.CreatorLogoConfig.normalize(config.components.logo);
+    if (config.components?.logoBackground) config.components.logoBackground = window.CreatorLogoConfig.normalizeBackground(config.components.logoBackground);
+    if (config.components?.productShell && window.CreatorProductShell) config.components.productShell = window.CreatorProductShell.normalize(config.components.productShell);
     return config;
   };
   let projectEnvelope = window.CreatorProjectConfig && typeof window.CreatorProjectConfig === 'object'
@@ -77,7 +83,7 @@
   const featureLabel = { v1: 'V1 镜头基线', v2: 'V2 数字观众', v3: 'V3 实战房间', camera: '摄像头', audience: '数字观众', pressure: '压力事件', transcript: '实时转写', metrics: '表达指标', feedback: '反馈流' };
   const elementLabel = { header: '顶栏', left: '左侧面板', stage: '中心舞台', right: '右侧面板', room: '训练窗口', camera: '镜头窗口', prompt: document.body.dataset.mode === 'v1' ? '选题块' : '任务提示', transcript: '转写区', controls: '控制区' };
   const version = document.body.dataset.mode;
-  const pageKey = version || 'launcher';
+  const pageKey = version || document.body.dataset.pageKey || 'launcher';
   let elementEditor;
   let initialCopyScan = true;
   const copySelector = 'h1, h2, h3, h4, h5, p, span, strong, small, a, button';
@@ -89,6 +95,9 @@
     const keys = path.split('.');
     const final = keys.pop();
     keys.reduce((obj, key) => obj[key], state)[final] = value;
+    if (path.startsWith('components.logo.')) state.components.logo = window.CreatorLogoConfig.normalize(state.components.logo);
+    if (path.startsWith('components.logoBackground.')) state.components.logoBackground = window.CreatorLogoConfig.normalizeBackground(state.components.logoBackground);
+    if (path.startsWith('components.productShell.') && window.CreatorProductShell) state.components.productShell = window.CreatorProductShell.normalize(state.components.productShell);
     if (path.startsWith('theme.') && path !== 'theme.palette') state.theme.palette = 'custom';
     if (path === 'components.transcriptCover.pauseOnHover') state.components.transcriptCover.hoverPauseConfigured = true;
     if (path === 'components.transcriptCover.highlightStyle') state.components.transcriptCover.randomMarksVersion = 1;
@@ -130,9 +139,15 @@
       acceptProjectEnvelope(envelope);
       return { persisted: true, mode: 'desktop', path: result.path, savedAt: envelope.savedAt };
     }
+    if (window.CreatorConfigFiles?.info().supported) {
+      const result = await window.CreatorConfigFiles.write('project', content);
+      acceptProjectEnvelope(envelope);
+      return { ...result, savedAt: envelope.savedAt };
+    }
     if (typeof window.showSaveFilePicker === 'function') {
       try {
         const handle = await window.showSaveFilePicker({
+          id: 'creator-project-js',
           suggestedName: 'creator-project-config.js',
           types: [{ description: 'Expression Trainer 项目配置', accept: { 'text/javascript': ['.js'] } }]
         });
@@ -143,16 +158,30 @@
         return { persisted: true, mode: 'picker', path: handle.name, savedAt: envelope.savedAt };
       } catch (error) {
         if (error?.name === 'AbortError') return { canceled: true };
+        throw error;
       }
     }
     download(content, 'creator-project-config.js', 'text/javascript;charset=utf-8');
     return { persisted: false, mode: 'download', savedAt: envelope.savedAt };
   }
-  const downloadBackup = () => {
+  const downloadBackup = async () => {
     const envelope = makeProjectEnvelope();
+    const content = JSON.stringify(envelope, null, 2);
+    if (typeof window.api?.saveProjectBackup === 'function') {
+      const result = await window.api.saveProjectBackup(content);
+      if (result?.success) return { persisted: true, mode: 'desktop', path: result.path };
+      if (!result?.unsupported) throw new Error(result?.error || '桌面端未能写入 JSON 备份');
+    }
+    if (window.CreatorConfigFiles?.info().supported) return window.CreatorConfigFiles.write('backup', content);
+    if (typeof window.showSaveFilePicker === 'function') {
+      const handle = await window.showSaveFilePicker({ id: 'creator-project-json', suggestedName: 'creator-pressure-config.json', types: [{ description: '完整参数备份', accept: { 'application/json': ['.json'] } }] });
+      const writable = await handle.createWritable();
+      await writable.write(content); await writable.close();
+      return { persisted: true, mode: 'picker', path: handle.name };
+    }
     const stamp = envelope.savedAt.replace(/[:.]/g, '-');
-    download(JSON.stringify(envelope, null, 2), `creator-pressure-config-${stamp}.json`, 'application/json;charset=utf-8');
-    return envelope.savedAt;
+    download(content, `creator-pressure-config-${stamp}.json`, 'application/json;charset=utf-8');
+    return { persisted: false, mode: 'download' };
   };
   const featureEnabled = name => state.flags[name] !== false;
   const alphaColor = (color, alpha) => {
@@ -254,6 +283,8 @@
     panel.querySelectorAll('[data-path]').forEach(input => {
       let value = getByPath(input.dataset.path);
       if (state.components.transcriptCover.followTheme && /^components\.transcriptCover\.(rawColor|cleanColor|emphasisColor)$/.test(input.dataset.path)) value = state.theme.text;
+      if (input.dataset.path === 'components.logo.color' && state.components.logo.followTheme) value = state.theme[state.components.logo.themeColor];
+      if (input.dataset.path === 'components.logoBackground.color' && state.components.logoBackground.followTheme) value = state.theme[state.components.logoBackground.themeColor];
       if (input.type === 'checkbox') input.checked = Boolean(value); else input.value = value;
       const output = panel.querySelector(`[data-output="${input.dataset.path}"]`); if (output) output.value = value;
     });
@@ -274,6 +305,7 @@
         <button type="button" class="qa-tab" data-qa-tab="scroll-expand" role="tab" aria-selected="false">页面过渡</button>
         <button type="button" class="qa-tab" data-qa-tab="vertical-marquee" role="tab" aria-selected="false">Vertical Marquee</button>
         <button type="button" class="qa-tab" data-qa-tab="text-effects" role="tab" aria-selected="false">文字动效</button>
+        <button type="button" class="qa-tab" data-qa-tab="logo" role="tab" aria-selected="false">Logo</button>
       </div>
       <div class="qa-scroll">
         <div class="qa-page" data-qa-page="palette" hidden>
@@ -283,6 +315,7 @@
           <section data-qa-fine-ui></section>
           <section><h2>版本与能力开关</h2><p class="qa-hint">关闭版本会从总览隐藏；关闭能力会同步停止其 UI 与训练行为。</p><div class="qa-switches">${Object.entries(featureLabel).map(([key, label]) => `<label class="qa-switch"><span>${label}</span><input type="checkbox" data-flag="${key}"><i></i></label>`).join('')}</div></section>
           <section><h2>全局视觉</h2><div class="qa-colors">${colorField('页面背景', 'theme.bg')}${colorField('基础面板', 'theme.panel')}${colorField('抬升面板', 'theme.panelRaised')}${colorField('输入与控件', 'theme.control')}${colorField('常规边框', 'theme.border')}${colorField('悬停边框', 'theme.borderStrong')}</div></section>
+          <section><h2>商品化外壳</h2><p class="qa-hint">管理起始页顶部导航、本地账户入口和深色页脚。账户只是本地预览，不模拟注册、订阅或云同步。</p><div class="qa-switches qa-component-switches">${toggleField('启用商品化外壳', 'components.productShell.enabled')}${toggleField('显示顶部导航', 'components.productShell.headerEnabled')}${toggleField('显示本地账户入口', 'components.productShell.accountEnabled')}${toggleField('显示产品原则与页脚', 'components.productShell.footerEnabled')}</div><div class="qa-colors">${colorField('页脚背景', 'components.productShell.footerBackground')}${colorField('页脚主文字', 'components.productShell.footerText')}${colorField('页脚次级文字', 'components.productShell.footerMuted')}</div><p class="qa-hint">所有新增标题、栏目和说明文字都在“文案”页中编辑。</p></section>
           <section><h2>文字与状态色</h2><div class="qa-colors">${colorField('主文字', 'theme.text')}${colorField('次级文字', 'theme.muted')}${colorField('品牌强调', 'theme.accent')}${colorField('信息提示', 'theme.info')}${colorField('成功状态', 'theme.success')}${colorField('警告状态', 'theme.warning')}${colorField('错误状态', 'theme.danger')}</div></section>
           <section><h2>V3 Studio 色板</h2><p class="qa-hint">只作用于 V3 实战房间，覆盖主要表面、控件、文字和边界层级。</p><div class="qa-colors">${colorField('Studio 背景', 'theme.studioBg')}${colorField('Studio 基础面板', 'theme.studioPanel')}${colorField('Studio 抬升面板', 'theme.studioPanelRaised')}${colorField('Studio 输入控件', 'theme.studioControl')}${colorField('Studio 正文', 'theme.studioText')}${colorField('Studio 次级文字', 'theme.studioMuted')}${colorField('Studio 边界', 'theme.studioLine')}${colorField('Studio 强边界', 'theme.studioLineStrong')}</div><label class="qa-select"><span>字体</span><select data-path="theme.font"><option value="Inter, Microsoft YaHei, PingFang SC, system-ui, sans-serif">现代无衬线</option><option value="Microsoft YaHei, PingFang SC, sans-serif">中文优先</option><option value="Georgia, STFangsong, serif">衬线</option><option value="ui-monospace, Consolas, monospace">等宽</option></select></label>${numberField('全局字号', 'theme.fontSize', 12, 24)}</section>
           <section><h2>主布局尺寸</h2>${numberField('画布最大宽度', 'layout.canvasWidth', 960, 1920, 10)}${numberField('左栏宽度', 'layout.leftWidth', 160, 420, 5)}${numberField('右栏宽度', 'layout.rightWidth', 180, 460, 5)}${numberField('训练窗口高度', 'layout.roomHeight', 320, 900, 10)}</section>
@@ -293,7 +326,7 @@
         <div class="qa-page" data-qa-page="copy" hidden>
           <section data-qa-fine-copy></section>
           <section class="qa-copy-section"><h2>本页文案库</h2><p class="qa-hint">输入时自动保存浏览器草稿，普通刷新不会丢。完成验收后，再把整套配置写入项目。</p><label class="qa-copy-field"><span>浏览器标签标题</span><input data-copy-document-title></label><div class="qa-copy-list" data-copy-list></div></section>
-          <section><h2>恢复项目版本</h2><p class="qa-hint">保存入口已统一到调控板底部，保存范围包含全部七个分页，不仅是文案。</p>
+          <section><h2>恢复项目版本</h2><p class="qa-hint">保存入口已统一到调控板底部，保存范围包含所有分页，不仅是文案。</p>
             <button type="button" class="qa-project-restore" data-qa-restore-project>放弃浏览器草稿，恢复项目版本</button>
           </section>
         </div>
@@ -348,8 +381,48 @@
           <section><h2>滚动句子</h2><p class="qa-hint">编辑格式为每组两行：第一行普通句，第二行优化句；组间空一行。页面会在同一个位置悬停换句，不会同时显示两行。用 [[双括号]] 标出问题词或优化关键词。最多 20 组，每行 220 字。内容是可编辑示例，不是实时 AI 生成。</p>
             <label class="qa-copy-field"><span>句子内容</span><textarea data-path="components.transcriptCover.examples" rows="8" maxlength="9200" spellcheck="false"></textarea></label>
             <p class="qa-hint" data-marquee-example-status role="status"></p>
-            <p class="qa-hint">使用底部“保存全部参数到项目”，会将这里的句子与其他六个分页的参数一起保存。</p>
+            <p class="qa-hint">使用底部“保存全部参数到项目”，会将这里的句子与其他分页的参数一起保存。</p>
           </section>
+        </div>
+        <div class="qa-page" data-qa-page="logo" hidden>
+          <section><h2>Read Yourself · Logo</h2><p class="qa-hint">上方管理标题小标志，下方管理背景大图。两套参数独立，可同时显示，也可只保留一种；点击区域标题展开或收起。</p></section>
+          <details class="qa-logo-group" data-qa-logo-group="small"><summary>01 · 小 Logo · 标题上方</summary><p class="qa-hint">保留你已经调好的小 Logo 参数。</p><div class="qa-logo-controls">
+            <div class="qa-switches">${toggleField('显示 Logo', 'components.logo.enabled')}${toggleField('颜色跟随主题', 'components.logo.followTheme')}</div>
+            <label class="qa-select"><span>跟随哪个主题色</span><select data-path="components.logo.themeColor"><option value="text">主题文字色</option><option value="accent">主题强调色</option><option value="info">主题交互色</option></select></label>
+            <div class="qa-colors">${colorField('Logo 独立颜色', 'components.logo.color')}</div>
+            <p class="qa-hint">手动选色会切换为独立颜色；重新开启“颜色跟随主题”即可恢复联动。白色镂空会透出页面背景。</p>
+            ${numberField('不透明度（0–1）', 'components.logo.opacity', 0, 1, 0.05)}
+            ${numberField('宽度（px）', 'components.logo.width', 40, 320, 2)}
+            <p class="qa-hint">高度等比变化，窄屏自动限制宽度。0 不透明度保留位置；关闭“显示 Logo”则收起空位。</p>
+            <label class="qa-select"><span>水平对齐</span><select data-path="components.logo.align"><option value="left">左对齐</option><option value="center">居中</option><option value="right">右对齐</option></select></label>
+            ${numberField('与主标题间距', 'components.logo.gap', 0, 80, 2)}${numberField('X 偏移（px）', 'components.logo.x', -160, 160, 2)}${numberField('Y 偏移（px）', 'components.logo.y', -160, 160, 2)}
+            <p class="qa-hint">偏移不会推开其他内容，较大偏移可能造成重叠。</p>
+            <div class="qa-actions"><button type="button" data-qa-logo-reset>恢复 Logo 默认参数</button></div>
+          </div></details>
+          <details class="qa-logo-group" data-qa-logo-group="background" open><summary>02 · 背景大 Logo · 左侧背景层</summary><p class="qa-hint">只在左侧衬托标题；动效跟随整个起始页的鼠标，不改变小 Logo。</p><div class="qa-logo-controls">
+            <label class="qa-select"><span>切换跟随动效</span><select data-path="components.logoBackground.motionMode"><option value="camera">动效 1 · 瞳孔相机在眼眶内跟随</option><option value="lens">动效 2 · 镜头内圈跟随鼠标</option><option value="combined">动效 3 · 相机与镜头同时跟随</option><option value="off">关闭跟随 · 保留随机眨眼</option></select></label>
+            <p class="qa-hint" data-logo-motion-description></p>
+            ${numberField('跟随柔和度（ms）', 'components.logoBackground.motionResponse', 60, 500, 10)}
+            <div data-logo-motion-options="camera">${numberField('相机水平位移幅度', 'components.logoBackground.cameraTravel', 0, 80, 1)}${numberField('纵向位移比例', 'components.logoBackground.cameraVerticalRatio', 0, 1, 0.01)}${numberField('移动时相机缩放', 'components.logoBackground.cameraScale', 0.72, 1, 0.01)}</div>
+            <div data-logo-motion-options="lens">${numberField('镜头位移幅度', 'components.logoBackground.lensTravel', 0, 18, 1)}</div>
+            <p class="qa-hint">相机始终正对用户，只在眼眶内移动；纵向空间较窄，因此会依据缩放值自动限制，避免碰到上下眼睑。柔和度越高，跟随越缓。</p>
+            <div class="qa-switches">${toggleField('启用随机眨眼', 'components.logoBackground.blinkEnabled')}</div>
+            ${numberField('最短等待（秒）', 'components.logoBackground.blinkMinDelay', 1.5, 30, 0.5)}${numberField('最长等待（秒）', 'components.logoBackground.blinkMaxDelay', 2, 45, 0.5)}${numberField('眨眼时长（ms）', 'components.logoBackground.blinkDuration', 100, 600, 10)}${numberField('闭合程度', 'components.logoBackground.blinkDepth', 0.35, 1, 0.05)}
+            <div class="qa-actions"><button type="button" data-qa-logo-blink-preview>立即预览眨眼</button></div>
+            <p class="qa-hint">随机计时从每次眨眼结束后重新开始；“立即预览”不改变开关状态。系统开启“减少动态效果”时，跟随与眨眼都会保持静态。</p>
+            <div class="qa-actions"><button type="button" data-qa-logo-motion-reset>仅恢复动效参数</button></div>
+            <div class="qa-switches">${toggleField('显示背景大 Logo', 'components.logoBackground.enabled')}${toggleField('背景颜色跟随主题', 'components.logoBackground.followTheme')}</div>
+            <label class="qa-select"><span>背景跟随哪个主题色</span><select data-path="components.logoBackground.themeColor"><option value="text">主题文字色</option><option value="accent">主题强调色</option><option value="info">主题交互色</option></select></label>
+            <div class="qa-colors">${colorField('背景 Logo 独立颜色', 'components.logoBackground.color')}</div>
+            <p class="qa-hint">手动选色会解除背景的主题联动，不改变小 Logo。</p>
+            ${numberField('背景不透明度', 'components.logoBackground.opacity', 0, 1, 0.01)}
+            ${numberField('宽度（左区 %）', 'components.logoBackground.width', 40, 200, 1)}
+            ${numberField('X 位置（%）', 'components.logoBackground.x', -100, 100, 1)}
+            ${numberField('Y 位置（%）', 'components.logoBackground.y', -100, 100, 1)}
+            <p class="qa-hint">大小等比缩放；X/Y 相对于左侧背景区，0 是左／上边缘。超出的部分会裁切，不会撑大页面。若移出视野，可用下面的按钮恢复。</p>
+            <div class="qa-actions"><button type="button" data-qa-background-logo-reset>恢复背景 Logo 默认参数</button></div>
+            <p class="qa-hint">两套 Logo 参数、跟随方式与眨眼参数都会随底部“保存全部参数到项目”一起保存。不调用摄像头，也不会记录鼠标轨迹。</p>
+          </div></details>
         </div>
         <div class="qa-page" data-qa-page="text-effects" hidden>
           <section><h2>React Bits · True Focus</h2><p class="qa-hint">只作用于首页 Read Yourself 主标题。编辑文字仍在“文案”页；这里控制焦点框和自动聚焦节奏。</p>
@@ -365,9 +438,10 @@
         </div>
       </div>
       <footer class="qa-global-save" aria-label="全部参数保存">
+        <details class="qa-save-location"><summary>保存位置 <span data-qa-location-name>尚未绑定项目文件夹</span></summary><p data-qa-location-paths>JS → 项目根目录 / creator-project-config.js<br>JSON → 项目根目录 / docs / creator-pressure-config.json</p><p data-qa-location-note>首次选择项目根文件夹，此后直接覆盖对应文件。JSON 只备份；页面读取 JS。保存不会自动提交 GitHub。</p><button type="button" data-qa-bind-directory>选择项目文件夹</button></details>
         <div class="qa-save-state" role="status" aria-live="polite"><i aria-hidden="true"></i><div><strong data-qa-save-status>已载入当前配置</strong><small data-qa-project-status></small></div></div>
         <div class="qa-actions qa-save-actions"><button type="button" class="qa-primary-action" data-qa-save-project>保存全部参数到项目</button><button type="button" data-qa-backup>导出全部参数 JSON</button></div>
-        <p class="qa-save-scope">包含七个分页，以及此地址下已编辑的起始页、V1／V2／V3 文案与元素样式。图片保存引用，不打包外部图片。账号密钥、录音与设备连接配置不导出。</p>
+        <p class="qa-save-scope">包含所有分页（含 Logo），以及此地址下已编辑的起始页、V1／V2／V3 文案与元素样式。图片保存引用，不打包外部图片。账号密钥、录音与设备连接配置不导出。</p>
       </footer>`;
     document.body.append(trigger, panel);
 
@@ -440,7 +514,13 @@
     const titleKey = `${pageKey}.document-title`;
     const refreshJson = () => { panel.querySelector('.qa-json').value = JSON.stringify(state, null, 2); };
     const refreshPalettes = () => panel.querySelectorAll('[data-qa-palette]').forEach(button => button.classList.toggle('active', button.dataset.qaPalette === state.theme.palette));
-    const sync = () => { apply(); save(); refreshInputs(panel); refreshJson(); refreshMarqueeEditor(); refreshPalettes(); };
+    const sync = () => { apply(); save(); refreshInputs(panel); refreshJson(); refreshMarqueeEditor(); refreshPalettes(); refreshLogoMotion(); };
+    const refreshLogoMotion = () => {
+      const mode = state.components.logoBackground.motionMode;
+      panel.querySelectorAll('[data-logo-motion-options]').forEach(node => { node.hidden = mode === 'off' || mode !== 'combined' && node.dataset.logoMotionOptions !== mode; });
+      panel.querySelector('[data-path="components.logoBackground.motionResponse"]').disabled = mode === 'off';
+      panel.querySelector('[data-logo-motion-description]').textContent = (version ? '请到起始页预览；这里的修改也会保存。' : '') + ({ camera: '动效 1：外轮廓固定，相机保持正面并在眼眶内追随鼠标。', lens: '动效 2：外轮廓、相机外壳和镜头外圈固定，只有内圈移动。', combined: '动效 3：相机在眼眶内移动，同时镜头内圈继续朝鼠标偏移。', off: '关闭鼠标跟随；若随机眨眼已开启，上下唇仍会按间隔闭合。' })[mode];
+    };
     const refreshMarqueeEditor = () => {
       const pairs = window.CreatorMarqueeConfig.parseExamples(state.components.transcriptCover.examples);
       panel.querySelector('[data-marquee-example-status]').textContent = pairs
@@ -453,6 +533,37 @@
       saveStatus.textContent = message;
       panel.querySelector('.qa-save-state').dataset.state = status;
     };
+    const bindButton = panel.querySelector('[data-qa-bind-directory]');
+    const refreshLocation = () => {
+      const info = window.CreatorConfigFiles?.info();
+      const desktop = typeof window.api?.saveProjectConfig === 'function';
+      panel.querySelector('[data-qa-location-name]').textContent = desktop ? '桌面开发版 · 当前项目' : info?.name || '尚未绑定项目文件夹';
+      bindButton.hidden = desktop || !info?.supported;
+      bindButton.textContent = info?.name ? '更换项目文件夹' : '选择项目文件夹';
+      panel.querySelector('[data-qa-location-note]').textContent = desktop
+        ? '桌面开发版直接写入当前项目。JSON 只备份；页面读取 JS。保存不会自动提交 GitHub。'
+        : !info?.supported ? '此浏览器不支持绑定目录，将使用另存为或下载。请手动替换根目录 JS；JSON 不参与页面加载。'
+        : info.name ? `${info.remembered ? '已记住目录；浏览器可能要求重新授权。' : '仅本次页面记住目录；浏览器未能持久保存授权位置。'}再次保存会覆盖对应文件。JSON 只备份；页面读取 JS。`
+        : '首次选择项目根文件夹，此后直接覆盖对应文件。JSON 只备份；页面读取 JS。保存不会自动提交 GitHub。';
+    };
+    document.addEventListener('creator:save-location-change', refreshLocation);
+    refreshLocation();
+    window.CreatorConfigFiles?.ready.then(refreshLocation);
+    let savingFile = false;
+    const fileAction = async action => {
+      if (savingFile) return;
+      savingFile = true;
+      const buttons = panel.querySelectorAll('[data-qa-bind-directory], [data-qa-save-project], [data-qa-backup]');
+      buttons.forEach(button => { button.disabled = true; });
+      try { await action(); }
+      finally { savingFile = false; buttons.forEach(button => { button.disabled = false; }); refreshLocation(); }
+    };
+    bindButton.addEventListener('click', () => fileAction(async () => {
+      try {
+        await window.CreatorConfigFiles.bind();
+        setSaveStatus('已绑定目录，尚未写入文件；点击保存或导出即可', 'draft');
+      } catch (error) { setSaveStatus(error.name === 'AbortError' ? '已取消选择，原目录与草稿保留' : error.message, error.name === 'AbortError' ? 'draft' : 'error'); }
+    }));
     const updateProjectStatus = () => {
       const changed = JSON.stringify(state) !== JSON.stringify(merge(defaults, migrateConfig(projectEnvelope.config)));
       projectStatus.textContent = !projectEnvelope.savedAt ? '当前项目文件尚未保存配置 · 未同步 GitHub'
@@ -521,6 +632,12 @@
       if (!target.dataset.path) return;
       const previous = getByPath(target.dataset.path);
       const value = target.type === 'checkbox' ? target.checked : typeof previous === 'number' ? Number(target.value) : target.value;
+      const logoKey = target.dataset.path.split('.')[1];
+      if (['logo', 'logoBackground'].includes(logoKey) && (target.dataset.path.endsWith('.color') || (target.dataset.path.endsWith('.followTheme') && !value))) {
+        const logo = state.components[logoKey];
+        if (logo.followTheme) logo.color = state.theme[logo.themeColor];
+        logo.followTheme = false;
+      }
       const marqueeColor = ['rawColor', 'cleanColor', 'emphasisColor'].some(key => target.dataset.path === `components.transcriptCover.${key}`);
       if (state.components.transcriptCover.followTheme && (marqueeColor || (target.dataset.path === 'components.transcriptCover.followTheme' && !value))) {
         for (const key of ['rawColor', 'cleanColor', 'emphasisColor']) state.components.transcriptCover[key] = state.theme.text;
@@ -539,23 +656,26 @@
       panel.querySelector('[data-qa-copy]').textContent = '已复制'; setTimeout(() => { panel.querySelector('[data-qa-copy]').textContent = '复制 JSON'; }, 1300);
     });
     panel.querySelector('[data-qa-reset]').addEventListener('click', () => { state = clone(defaults); sync(); renderElementFields(); renderCopyFields(); });
-    panel.querySelector('[data-qa-save-project]').addEventListener('click', async event => {
+    panel.querySelector('[data-qa-save-project]').addEventListener('click', event => fileAction(async () => {
       const button = event.currentTarget;
       button.disabled = true; button.textContent = '正在保存…';
       try {
         const result = await saveToProject();
         if (result?.canceled) setSaveStatus('已取消，没有改动项目文件', 'draft');
         else if (result.persisted) {
-          setSaveStatus(result.mode === 'desktop' ? '全部参数已写入当前项目 · 尚未提交 GitHub' : '全部参数已保存到所选文件；请确认已替换项目根目录同名文件', result.mode === 'desktop' ? 'project' : 'warning');
+          const projectSaved = ['desktop', 'directory'].includes(result.mode);
+          setSaveStatus(projectSaved ? `全部参数已写入${result.mode === 'directory' ? '绑定' : '当前'}项目 · 尚未提交 GitHub` : '全部参数已保存到所选文件；请确认已替换项目根目录同名文件', projectSaved ? 'project' : 'warning');
           updateProjectStatus();
         } else setSaveStatus('已下载项目配置；请把它放到项目根目录并覆盖同名文件', 'warning');
-      } catch (error) { setSaveStatus(`写入项目失败：${error.message}`, 'error'); }
+      } catch (error) { setSaveStatus(error.name === 'AbortError' ? '已取消，没有改动项目文件' : `写入项目失败：${error.message}。浏览器草稿仍保留。`, error.name === 'AbortError' ? 'draft' : 'error'); }
       finally { button.disabled = false; button.textContent = '保存全部参数到项目'; }
-    });
-    panel.querySelector('[data-qa-backup]').addEventListener('click', () => {
-      try { downloadBackup(); setSaveStatus('已发起全部参数 JSON 下载 · 尚未写入项目或提交 GitHub', 'warning'); }
-      catch (error) { setSaveStatus(`导出失败：${error.message}。浏览器草稿未被删除，请重试。`, 'error'); }
-    });
+    }));
+    panel.querySelector('[data-qa-backup]').addEventListener('click', () => fileAction(async () => {
+      try {
+        const result = await downloadBackup();
+        setSaveStatus(result.persisted ? `JSON 备份已保存：${result.path}。未更新页面配置 JS。` : '已发起全部参数 JSON 下载 · 尚未写入项目或提交 GitHub', result.persisted ? 'draft' : 'warning');
+      } catch (error) { setSaveStatus(error.name === 'AbortError' ? '已取消导出，浏览器草稿保留' : `导出失败：${error.message}。浏览器草稿未被删除，请重试。`, error.name === 'AbortError' ? 'draft' : 'error'); }
+    }));
     panel.querySelector('[data-qa-restore-project]').addEventListener('click', () => {
       if (!window.confirm('确定放弃当前浏览器草稿，恢复为项目文件里的配置吗？')) return;
       state = merge(defaults, migrateConfig(projectEnvelope.config));
@@ -563,13 +683,20 @@
       setSaveStatus('已恢复项目版本，并同步为当前浏览器草稿', 'project');
     });
 
+    panel.querySelector('[data-qa-logo-reset]').addEventListener('click', () => { state.components.logo = clone(window.CreatorLogoConfig.defaults); sync(); });
+    panel.querySelector('[data-qa-background-logo-reset]').addEventListener('click', () => { state.components.logoBackground = clone(window.CreatorLogoConfig.backgroundDefaults); sync(); });
+    panel.querySelector('[data-qa-logo-motion-reset]').addEventListener('click', () => {
+      for (const key of ['motionMode', 'motionResponse', 'cameraTravel', 'cameraVerticalRatio', 'cameraScale', 'lensTravel', 'blinkEnabled', 'blinkMinDelay', 'blinkMaxDelay', 'blinkDuration', 'blinkDepth']) state.components.logoBackground[key] = window.CreatorLogoConfig.backgroundDefaults[key];
+      sync();
+    });
+    panel.querySelector('[data-qa-logo-blink-preview]').addEventListener('click', () => document.dispatchEvent(new CustomEvent('creator:logo-blink-preview')));
     window.CreatorQAControls.updateMarquee = patch => { Object.assign(state.components.transcriptCover, patch); sync(); };
     elementEditor = window.CreatorElementEditor.mount(panel, {
       read: () => ({ styles: clone(state.fineTune[pageKey] || {}), copy: clone(state.extraCopy[pageKey] || {}) }),
       commit: (kind, config) => { state[kind === 'styles' ? 'fineTune' : 'extraCopy'][pageKey] = config; save(); refreshJson(); }
     });
     window.CreatorQAControls.inspectElements = () => elementEditor.inventory();
-    renderElementFields(); renderCopyFields(); refreshJson(); refreshAvatarProvider(); refreshInputs(panel); refreshMarqueeEditor(); refreshPalettes(); updateProjectStatus();
+    renderElementFields(); renderCopyFields(); refreshJson(); refreshAvatarProvider(); refreshInputs(panel); refreshMarqueeEditor(); refreshPalettes(); refreshLogoMotion(); updateProjectStatus();
   }
 
   window.CreatorQAControls = { featureEnabled, getState: () => clone(state), refreshCopyLibrary: applyCopy, reset: () => { state = clone(defaults); apply(); save(); } };
