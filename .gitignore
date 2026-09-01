@@ -7,3 +7,7 @@ custom-prompt.json
 # Pretrained model weights are local runtime assets with separate licensing.
 models/sherpa-onnx-streaming-paraformer-bilingual-zh-en/
 models/*.tar.bz2
+
+# Consent-sensitive benchmark recordings and generated reports stay local.
+benchmarks/stt/corpus/
+benchmarks/stt/results/

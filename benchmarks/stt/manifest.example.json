@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "options": {
+    "chunkSize": 2048
+  },
+  "cases": [
+    {
+      "id": "mandarin-clean-01",
+      "audio": "corpus/mandarin-clean-01.wav",
+      "reference": "把人工逐字校对后的标准答案写在这里。",
+      "language": "zh-CN",
+      "tags": ["clean", "camera-intro"]
+    },
+    {
+      "id": "code-switch-01",
+      "audio": "corpus/code-switch-01.wav",
+      "reference": "今天我想分享三个 content hooks，先从最直接的一个开始。",
+      "language": "zh-en",
+      "tags": ["code-switch", "creator-terms"]
+    }
+  ]
+}
