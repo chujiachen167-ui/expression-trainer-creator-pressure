@@ -1,5 +1,7 @@
 # Expression Trainer · Creator Pressure
 
+![Read Yourself 起始页](docs/screenshots/read-yourself-launcher.jpg)
+
 面向自媒体新手的镜头表达与可控压力训练桌面应用。项目继承 [fxy2311-youyou/expression-trainer](https://github.com/fxy2311-youyou/expression-trainer) 的 Electron、Sherpa-ONNX 离线转写、中文表达词库、多模型配置、实时反馈和完整报告能力，再增加摄像头、数字观众及自媒体实战训练层。
 
 它不是 MCN 运营后台或视频课程库。产品希望为自媒体新手提供一条可重复的练习路径：选题、面对镜头完成一次表达、查看同步诊断、回看自己的状态、同题重练并比较前后变化。下一阶段边界见 [`docs/roadmap/2026-09-next-stage.md`](docs/roadmap/2026-09-next-stage.md)。

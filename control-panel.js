@@ -1,6 +1,5 @@
 (() => {
-  if (document.body.dataset.environment === 'production') return;
-
+  const production = document.body.dataset.environment === 'production';
   const storageKey = 'expression-trainer.creator-qa.v1';
   const panelPositionKey = 'expression-trainer.creator-qa.panel-position.v1';
   const defaults = {
@@ -70,7 +69,9 @@
     ? clone(window.CreatorProjectConfig)
     : { version: 1, savedAt: null, config: {} };
   let state = merge(defaults, migrateConfig(projectEnvelope.config));
-  try { state = merge(state, migrateConfig(JSON.parse(localStorage.getItem(storageKey)))); } catch (_) { /* Keep the project configuration. */ }
+  if (!production) {
+    try { state = merge(state, migrateConfig(JSON.parse(localStorage.getItem(storageKey)))); } catch (_) { /* Keep the project configuration. */ }
+  }
 
   const selectors = {
     header: '.topbar', left: '.side-panel.left', stage: '.stage', right: '.side-panel.right', room: '.room',
@@ -702,5 +703,5 @@
 
   window.CreatorQAControls = { featureEnabled, getState: () => clone(state), refreshCopyLibrary: applyCopy, reset: () => { state = clone(defaults); apply(); save(); } };
   apply();
-  addPanel();
+  if (!production) addPanel();
 })();
