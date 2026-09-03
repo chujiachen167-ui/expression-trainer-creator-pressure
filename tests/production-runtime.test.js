@@ -30,4 +30,15 @@ for (const page of ['v1-camera-baseline.html', 'v2-ai-audience.html', 'v3-creato
   view.window.close();
 }
 
-console.log('Production runtime: shipped theme and copy apply, local drafts are ignored, QA panel stays off.');
+const v1 = makePage('v1-camera-baseline.html', {
+  production: true,
+  project: {
+    ...project,
+    fineTune: { v1: { '[id="timer"]': { self: { color: '#00ff55' } } } }
+  }
+});
+assert(!v1.window.document.querySelector('.qa-panel'));
+assert.match(v1.window.document.querySelector('style[data-qa-editor-owned]').textContent, /\[id="timer"\] \{color:#00ff55!important\}/);
+v1.window.close();
+
+console.log('Production runtime: shipped theme, copy and fine-tune colors apply, local drafts are ignored, QA panel stays off.');

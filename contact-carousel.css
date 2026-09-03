@@ -9,7 +9,10 @@
 }
 
 .contact-main { width: min(var(--qa-canvas-width), calc(100% - 48px)); margin-inline: auto; padding: clamp(62px, 9vw, 130px) 0 clamp(76px, 10vw, 140px); }
-.contact-intro { display: grid; grid-template-columns: minmax(0, .74fr) minmax(360px, 1fr); align-items: end; gap: clamp(44px, 10vw, 150px); }
+.contact-intro { display: grid; grid-template-columns: minmax(0, .74fr) minmax(0, 1fr); align-items: end; gap: clamp(44px, 10vw, 150px); }
+@media (min-width: 761px) {
+  .contact-intro { grid-template-columns: minmax(0, .74fr) minmax(360px, 1fr); }
+}
 .contact-eyebrow { margin: 0 0 18px; color: var(--pink); font-size: 10px; font-weight: 850; letter-spacing: .18em; }
 .contact-intro h1 { max-width: 10ch; margin: 0; color: var(--contact-ink); font-size: clamp(48px, 8vw, 112px); line-height: .94; letter-spacing: -.075em; }
 .contact-intro-copy { max-width: 42ch; margin: 0 0 10px; color: var(--contact-muted); font-size: clamp(15px, 1.5vw, 19px); line-height: 1.7; }

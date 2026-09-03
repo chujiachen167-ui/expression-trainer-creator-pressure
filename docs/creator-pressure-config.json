@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "savedAt": "2026-08-31T15:22:23.826Z",
+  "savedAt": "2026-09-03T10:29:18.721Z",
   "config": {
     "flags": {
       "v1": true,
@@ -123,7 +123,7 @@
         "width": 100,
         "x": 0,
         "y": 0,
-        "motionMode": "camera",
+        "motionMode": "combined",
         "motionResponse": 160,
         "cameraTravel": 50,
         "cameraVerticalRatio": 1,
@@ -132,7 +132,7 @@
         "blinkEnabled": true,
         "blinkMinDelay": 4.5,
         "blinkMaxDelay": 9,
-        "blinkDuration": 190,
+        "blinkDuration": 300,
         "blinkDepth": 1
       },
       "productShell": {
@@ -248,7 +248,8 @@
       "launcher.p.13": "为专业人士打造的严苛自媒体口播训练，你还可以变得更好，准备好了吗？",
       "launcher.span.14": "前往训练 →",
       "launcher.span.16": "第一次练习？从 V1 开始。能自然面对镜头后进入 V2；当你能在观众压力下保持清晰，再进入 V3。",
-      "launcher.strong.15": "新手指引"
+      "launcher.strong.15": "新手指引",
+      "launcher.document-title": "Expression Trainer · Creator Pressure · Read Yourself"
     },
     "fineTune": {
       "launcher": {
@@ -295,6 +296,18 @@
             "font-size": "21",
             "color": "#ffffff"
           }
+        },
+        "[id=\"trainingLayers\"] > a:nth-of-type(1) > p:nth-of-type(1)": {
+          "self": {
+            "max-width": "1000",
+            "y": "-25"
+          }
+        },
+        "[id=\"trainingLayers\"] > a:nth-of-type(1) > h2:nth-of-type(1)": {
+          "self": {
+            "x": "0",
+            "y": "-25"
+          }
         }
       },
       "v2": {
@@ -339,6 +352,19 @@
           "self": {
             "color": "#000000"
           }
+        },
+        "[id=\"timer\"]": {
+          "self": {
+            "color": "#00ff55"
+          }
+        },
+        "body > main:nth-of-type(1) > aside:nth-of-type(1) > h2:nth-of-type(1)": {
+          "self": {
+            "color": "#ff5cd3"
+          }
+        },
+        "body > main:nth-of-type(1) > aside:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(4)": {
+          "self": {}
         }
       }
     },

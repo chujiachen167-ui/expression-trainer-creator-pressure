@@ -61,6 +61,24 @@
     lastError: ''
   };
   let lastSTTStatusRender = 0;
+  let browserAudioGate = null;
+  const profanityTerms = ['他妈的', '操你妈', '去你妈', '傻逼', '傻屌', '卧槽', '我操', '你妈的', '草泥马', '去死'];
+  const inWeChat = /MicroMessenger/i.test(navigator.userAgent || '');
+  function sanitizeSpeech(text) {
+    let value = String(text || '').replace(/[*＊]{1,}/g, '');
+    profanityTerms.forEach(term => { value = value.split(term).join(''); });
+    return value;
+  }
+  function releaseBrowserAudio() {
+    browserAudioGate?.getTracks().forEach(track => track.stop());
+    browserAudioGate = null;
+  }
+  async function ensureBrowserAudio() {
+    if (window.api?.initASR) return;
+    if (browserAudioGate?.getTracks().some(track => track.readyState === 'live')) return;
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('当前环境不支持麦克风');
+    browserAudioGate = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  }
   const mediaController = mode === 'v1' && window.CreatorMediaCapture
     ? window.CreatorMediaCapture.create({ video, videoTile, cameraButton })
     : null;
@@ -458,10 +476,11 @@
   }
 
   function applyRecognitionResult(piece, isFinal) {
+    const clean = sanitizeSpeech(piece);
     if (isFinal) {
-      transcript += piece;
+      transcript += clean;
       interim = '';
-    } else interim = piece;
+    } else interim = clean;
     renderTranscript();
     updateMetrics();
     if (isFinal) requestCoreAiFeedback();
@@ -604,7 +623,7 @@
     instance.onresult = event => {
       interim = '';
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const piece = event.results[i][0].transcript;
+        const piece = sanitizeSpeech(event.results[i][0].transcript);
         if (event.results[i].isFinal) { transcript += piece; requestCoreAiFeedback(); }
         else interim += piece;
       }
@@ -804,9 +823,19 @@
     if (featureEnabled('transcript') || featureEnabled('metrics')) {
       recognition = recognition || setupRecognition();
       if (recognition) {
-        Promise.resolve(recognition.start()).catch(error => addEvent('语音识别', error.message, true));
+        try {
+          await ensureBrowserAudio();
+          await Promise.resolve(recognition.start());
+        } catch (error) {
+          const denied = error?.name === 'NotAllowedError' || error?.name === 'SecurityError';
+          addEvent('语音识别', inWeChat
+            ? '微信里网页经常拿不到麦克风。请用系统自带的 Safari、Chrome 或 Edge 打开本页再练。'
+            : (denied ? '麦克风权限被拒绝。请在浏览器设置里允许后重试。' : (error.message || '麦克风未能开启')), true);
+        }
       } else {
-        addEvent('系统', '当前浏览器不支持 Web Speech API，仍可体验摄像头和压力流程。建议使用 Chrome 或 Edge。', true);
+        addEvent('系统', inWeChat
+          ? '微信内置浏览器不能稳定做网页转写。请用系统浏览器打开。'
+          : '当前浏览器不支持 Web Speech API，仍可体验摄像头和压力流程。建议使用 Chrome 或 Edge。', true);
       }
     }
     if (mode !== 'v1') schedulePressure();
@@ -882,6 +911,7 @@
     if (recognition) {
       try { await Promise.resolve(recognition.stop()); } catch (_) { /* already stopped */ }
     }
+    releaseBrowserAudio();
     if (mediaController?.isRecording()) {
       try {
         await mediaController.stopSessionRecording({ transcript, prompt: promptText.textContent });
@@ -1044,8 +1074,12 @@
     setStageState('requesting', '正在重新连接');
     try { recognition?.stop?.(); } catch (_) { /* Ignore a stale recognizer. */ }
     recognition = setupRecognition();
-    Promise.resolve(recognition?.start?.())
-      .catch(error => updateSTTDiagnostics({ state: 'error', lastError: error.message }, true))
+    ensureBrowserAudio()
+      .then(() => Promise.resolve(recognition?.start?.()))
+      .catch(error => {
+        updateSTTDiagnostics({ state: error?.name === 'NotAllowedError' ? 'permission-denied' : 'error', lastError: error.message }, true);
+        if (inWeChat) addEvent('语音识别', '微信里网页经常拿不到麦克风。请用系统浏览器打开本页。', true);
+      })
       .finally(() => { sttRetryButton.disabled = false; });
   });
   startButton?.addEventListener('click', () => {

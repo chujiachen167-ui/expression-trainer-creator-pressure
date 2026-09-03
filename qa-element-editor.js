@@ -54,10 +54,50 @@
     node.childNodes.forEach((child, slot) => { if (child.nodeType === 3 && child.data.trim()) fields.push({ type: 'text', slot, source: child.data, label: '显示文字' }); });
     return fields;
   }
+  function cssValue(key, value) {
+    if (key === 'content') return `"${quote(value)}"`;
+    const property = properties.find(item => item[0] === key);
+    if (property?.[2] === 'color') return /^(#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})|transparent|currentColor)$/i.test(value) ? value : null;
+    if (property?.[2] === 'number') {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return null;
+      const clamped = Math.min(property[4], Math.max(property[3], number));
+      return `${clamped}${['font-weight', 'line-height', 'opacity', 'z-index'].includes(key) ? '' : 'px'}`;
+    }
+    return choices[key]?.slice(1).some(([choice]) => choice === value) ? value : null;
+  }
+  function compileStyleSheet(styles) {
+    const rules = [];
+    for (const [selector, parts] of Object.entries(styles || {})) {
+      if (/[{};<\n\r]/.test(selector)) continue;
+      try { if (!document.querySelector(selector)) continue; } catch (_) { continue; }
+      for (const [part, values] of Object.entries(parts || {})) {
+        const suffix = { self: '', before: '::before', after: '::after', hover: ':hover', focus: ':focus-visible', active: ':is(.active,[aria-pressed="true"],[aria-selected="true"])', disabled: ':is(:disabled,[aria-disabled="true"])' }[part];
+        if (suffix == null) continue;
+        const declarations = Object.entries(values).filter(([key]) => !['x', 'y'].includes(key)).map(([key, value]) => { const safe = cssValue(key, value); return safe ? `${key}:${safe}!important` : ''; }).filter(Boolean);
+        if (values.x != null || values.y != null) declarations.push(`translate:${cssValue('x', values.x || 0)} ${cssValue('y', values.y || 0)}!important`);
+        if (declarations.length) rules.push(`${selector}${suffix} {${declarations.join(';')}}`);
+      }
+    }
+    return rules.join('\n');
+  }
+  function applyShipped(styles) {
+    let style = document.querySelector('style[data-qa-editor-owned]');
+    if (!style) {
+      style = document.createElement('style');
+      style.dataset.qaEditorOwned = '';
+      document.head.append(style);
+    }
+    const css = compileStyleSheet(styles);
+    if (style.textContent !== css) style.textContent = css;
+  }
   function mount(panel, bridge) {
-    const style = document.createElement('style');
-    style.dataset.qaEditorOwned = '';
-    document.head.append(style);
+    let style = document.querySelector('style[data-qa-editor-owned]');
+    if (!style) {
+      style = document.createElement('style');
+      style.dataset.qaEditorOwned = '';
+      document.head.append(style);
+    }
     let inventory = [];
     let selected;
     let picking = null;
@@ -147,33 +187,8 @@
       if (value === '') delete config[selected.selector][part][key]; else config[selected.selector][part][key] = value;
       bridge.commit('styles', config); applyStyles();
     }
-    function cssValue(key, value) {
-      if (key === 'content') return `"${quote(value)}"`;
-      const property = properties.find(item => item[0] === key);
-      if (property?.[2] === 'color') return /^(#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})|transparent|currentColor)$/i.test(value) ? value : null;
-      if (property?.[2] === 'number') {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return null;
-        const clamped = Math.min(property[4], Math.max(property[3], number));
-        return `${clamped}${['font-weight', 'line-height', 'opacity', 'z-index'].includes(key) ? '' : 'px'}`;
-      }
-      return choices[key]?.slice(1).some(([choice]) => choice === value) ? value : null;
-    }
     function applyStyles() {
-      const rules = [];
-      for (const [selector, parts] of Object.entries(bridge.read().styles)) {
-        // Only locally generated selectors; prevent a saved config injecting CSS.
-        if (/[{};<\n\r]/.test(selector)) continue;
-        try { if (!document.querySelector(selector)) continue; } catch (_) { continue; }
-        for (const [part, values] of Object.entries(parts)) {
-          const suffix = { self: '', before: '::before', after: '::after', hover: ':hover', focus: ':focus-visible', active: ':is(.active,[aria-pressed="true"],[aria-selected="true"])', disabled: ':is(:disabled,[aria-disabled="true"])' }[part];
-          if (suffix == null) continue;
-          const declarations = Object.entries(values).filter(([key]) => !['x', 'y'].includes(key)).map(([key, value]) => { const safe = cssValue(key, value); return safe ? `${key}:${safe}!important` : ''; }).filter(Boolean);
-          if (values.x != null || values.y != null) declarations.push(`translate:${cssValue('x', values.x || 0)} ${cssValue('y', values.y || 0)}!important`);
-          if (declarations.length) rules.push(`${selector}${suffix} {${declarations.join(';')}}`);
-        }
-      }
-      const css = rules.join('\n');
+      const css = compileStyleSheet(bridge.read().styles);
       if (style.textContent !== css) style.textContent = css;
     }
     function valueOf(node, entry) { return entry.type === 'attribute' ? node.getAttribute(entry.slot) : node.childNodes[entry.slot]?.nodeType === 3 ? node.childNodes[entry.slot].data : null; }
@@ -239,5 +254,5 @@
     scan(); applyStyles(); applyCopy(); renderStyles(); renderCopy();
     return { refresh: () => { restoreCopy(); applyStyles(); applyCopy(); renderStyles(); renderCopy(); }, rescan: () => { scan(); renderStyles(); renderCopy(); }, inventory: () => { scan(); return inventory.map(item => ({ selector: item.selector, label: item.label, copyFields: copyFields(item.node).length })); }, selectorFor, copyFields };
   }
-  window.CreatorElementEditor = { mount, selectorFor, copyFields, eligible };
+  window.CreatorElementEditor = { mount, selectorFor, copyFields, eligible, applyShipped };
 })();

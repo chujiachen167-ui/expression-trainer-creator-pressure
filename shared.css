@@ -1130,13 +1130,19 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
 }
 
 @media (max-width: 1100px) {
-  .product-footer-inner { grid-template-columns: 1fr; gap: 48px; }
+  .product-footer-inner { grid-template-columns: minmax(0, 1fr); gap: 48px; }
   .product-footer-links { max-width: 720px; }
   .workspace { grid-template-columns: 210px minmax(0, 1fr); }
   .side-panel.right { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
 }
 
 @media (max-width: 760px) {
+  html, body { overflow-x: hidden; max-width: 100%; }
+  .launcher-page *, .trainer-page *, .contact-page * { translate: none !important; }
+  .topbar { height: auto; min-height: 56px; flex-wrap: wrap; row-gap: 8px; padding: 8px 12px; }
+  .video-tile, .stage, .contact-main, .depth-carousel, .depth-carousel-stage { max-width: 100%; }
+  .launcher-hero { grid-template-columns: minmax(0, 1fr); }
+  .contact-intro { grid-template-columns: minmax(0, 1fr); }
   .launcher-shell { width: 100%; padding-inline: 16px; }
   .product-nav-inner, .product-assurance-inner, .product-footer-inner, .product-footer-bottom { width: calc(100% - 32px); }
   .product-nav-links { display: none; }
@@ -1165,7 +1171,6 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
   .stage { padding: 12px; }
   .duo-room, .creator-room { grid-template-columns: 1fr; }
   .audience-stack { grid-template-columns: repeat(2, 1fr); }
-  .topbar { padding: 0 12px; }
   .brand { font-size: 13px; }
   .media-device-body { grid-template-columns: 1fr; }
   .media-device-field, .media-record-toggle, .media-refresh, .media-device-status { grid-column: 1; grid-row: auto; }

@@ -275,7 +275,11 @@
     document.dispatchEvent(new CustomEvent('creator:component-settings-change', { detail: clone(state.components) }));
   }
 
-  function apply() { applyTheme(); applyFeatures(); applyElements(); applyCopy(); applyComponents(); elementEditor?.refresh(); }
+  function apply() {
+    applyTheme(); applyFeatures(); applyElements(); applyCopy(); applyComponents();
+    window.CreatorElementEditor?.applyShipped?.(state.fineTune[pageKey] || {});
+    elementEditor?.refresh();
+  }
 
   const numberField = (label, path, min, max, step = 1) => `<label class="qa-field"><span>${label}</span><input type="range" data-path="${path}" min="${min}" max="${max}" step="${step}"><output data-output="${path}"></output></label>`;
   const colorField = (label, path) => `<label class="qa-color"><span>${label}</span><input type="color" data-path="${path}"></label>`;
