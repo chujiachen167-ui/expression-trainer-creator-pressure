@@ -18,6 +18,9 @@ try {
   assert.equal(fs.existsSync(path.join(outDir, 'assets/contact/wechat-donglai.png')), true);
   assert.equal(fs.existsSync(path.join(outDir, 'vendor/magic-ui/marquee.js')), true);
   assert.equal(fs.existsSync(path.join(outDir, 'locales/zh-CN.js')), true);
+  assert.equal(fs.existsSync(path.join(outDir, 'v2-session-model.js')), true);
+  assert.equal(fs.existsSync(path.join(outDir, 'v2-interest-panel.js')), true);
+  assert.equal(fs.existsSync(path.join(outDir, 'dev/v2-replay.html')), false);
   assert.equal(fs.existsSync(path.join(outDir, '_headers')), true);
   assert.match(fs.readFileSync(path.join(outDir, '_headers'), 'utf8'), /camera=\(self\)/);
   assert.equal(fs.existsSync(path.join(outDir, 'main.js')), false);

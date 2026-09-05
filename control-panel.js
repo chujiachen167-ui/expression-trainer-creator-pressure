@@ -43,6 +43,13 @@
         enabled: true, blurAmount: 3, animationDuration: 420, pauseBetweenAnimations: 1600,
         borderColor: '#ff2f92', glowColor: '#ff2f92'
       },
+      v2Interest: {
+        lineColor: '#ff2f92', eventColor: '#42e8d6', fontSize: 12, chartHeight: 96, hintDensity: 'low'
+      },
+      v2Judge: {
+        initialScore: 50, scaleMin: 12, scaleMax: 92, cooldownMs: 12000, openingWindowMs: 8000,
+        lowConfidenceDelta: -2, highConfidenceDelta: -8, supportDelta: 4
+      },
       transcriptCover: window.CreatorMarqueeConfig.defaults
     },
     copy: {}, fineTune: {}, extraCopy: {}
@@ -226,6 +233,12 @@
     root.style.setProperty('--qa-font-size', `${state.theme.fontSize}px`); root.style.setProperty('--qa-canvas-width', `${state.layout.canvasWidth}px`);
     root.style.setProperty('--qa-left-width', `${state.layout.leftWidth}px`); root.style.setProperty('--qa-right-width', `${state.layout.rightWidth}px`);
     root.style.setProperty('--qa-room-height', `${state.layout.roomHeight}px`); document.body.style.fontFamily = state.theme.font;
+    if (state.components.v2Interest) {
+      root.style.setProperty('--v2-curve-line', state.components.v2Interest.lineColor);
+      root.style.setProperty('--v2-curve-event', state.components.v2Interest.eventColor);
+      root.style.setProperty('--v2-curve-font', `${state.components.v2Interest.fontSize}px`);
+      root.style.setProperty('--v2-curve-height', `${state.components.v2Interest.chartHeight}px`);
+    }
   }
 
   function applyFeatures() {
@@ -320,6 +333,7 @@
         <button type="button" class="qa-tab" data-qa-tab="vertical-marquee" role="tab" aria-selected="false">Vertical Marquee</button>
         <button type="button" class="qa-tab" data-qa-tab="text-effects" role="tab" aria-selected="false">文字动效</button>
         <button type="button" class="qa-tab" data-qa-tab="logo" role="tab" aria-selected="false">Logo</button>
+        <button type="button" class="qa-tab" data-qa-tab="v2-interest" role="tab" aria-selected="false">V2 曲线复盘</button>
       </div>
       <div class="qa-scroll">
         <div class="qa-page" data-qa-page="palette" hidden>
@@ -460,6 +474,17 @@
             <div class="qa-switches qa-component-switches">${toggleField('启用副标题动效', 'components.warpText.enabled')}${toggleField('指针波纹', 'components.warpText.ripple')}</div>
             <div class="qa-colors">${colorField('副标题颜色', 'components.warpText.color')}</div>
             ${numberField('环境扭曲', 'components.warpText.warpStrength', 0, 0.3, 0.01)}${numberField('噪声尺度', 'components.warpText.warpScale', 0.5, 4, 0.1)}${numberField('自动流动速度', 'components.warpText.speed', 0, 2, 0.05)}${numberField('指针影响范围', 'components.warpText.pointerInfluence', 0.1, 1, 0.05)}${numberField('指针扭曲强度', 'components.warpText.pointerStrength', 0, 1, 0.05)}${numberField('RGB 折射', 'components.warpText.refraction', 0, 0.08, 0.002)}
+          </section>
+        </div>
+        <div class="qa-page" data-qa-page="v2-interest" hidden>
+          <section><h2>V2 曲线与复盘外观</h2><p class="qa-hint">只作用于 V2 右侧模拟兴趣曲线和复盘。调参不会改写已经产生的训练结果。颜色、字号、图表高度和提示密度会立刻反映在面板上。</p>
+            <div class="qa-colors">${colorField('曲线颜色', 'components.v2Interest.lineColor')}${colorField('事件标记颜色', 'components.v2Interest.eventColor')}</div>
+            ${numberField('说明字号', 'components.v2Interest.fontSize', 9, 16)}${numberField('图表高度', 'components.v2Interest.chartHeight', 64, 160, 2)}
+            <label class="qa-select"><span>训练中提示密度</span><select data-path="components.v2Interest.hintDensity"><option value="low">低 · 一条提示</option><option value="medium">中 · 一条提示加事件</option><option value="high">高 · 仍不超过最近事件</option></select></label>
+          </section>
+          <section><h2>V2 规则判断参数（下一轮生效）</h2><p class="qa-hint">这些值写入下一轮配置快照和比较条件，不会改写已经完成的复盘。分数是相对模拟指标，不是留存概率。</p>
+            ${numberField('初始相对兴趣', 'components.v2Judge.initialScore', 12, 80)}${numberField('下限', 'components.v2Judge.scaleMin', 0, 40)}${numberField('上限', 'components.v2Judge.scaleMax', 60, 100)}
+            ${numberField('同类信号冷却（毫秒）', 'components.v2Judge.cooldownMs', 4000, 30000, 500)}${numberField('开场窗口（毫秒）', 'components.v2Judge.openingWindowMs', 3000, 15000, 500)}
           </section>
         </div>
       </div>

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>V2 片段回放（开发测试数据）</title>
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    body { padding: 24px; max-width: 980px; margin: 0 auto; }
+    .dev-banner { margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--yellow); color: var(--yellow); font-size: 13px; }
+    textarea { width: 100%; min-height: 90px; margin: 8px 0; }
+    .dev-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .workspace { min-height: 0; display: block; }
+    .side-panel.right { border: 0; padding: 0; }
+  </style>
+</head>
+<body class="trainer-page" data-mode="v2" data-environment="development">
+  <p class="dev-banner">开发专用回放入口 · 测试数据 · 复用正式 V2 会话与判断接口 · 不会写入用户真实训练会话 · 不得当作 Mac 实机字幕验收通过。</p>
+  <h1>V2 片段回放</h1>
+  <p>按时间注入已准备的字幕片段，检查曲线、原句定位、复盘和同题比较。粘贴全文走 paste 来源，不会生成精确到秒的结论。</p>
+  <label>受众
+    <select id="audience">
+      <option value="fastScroller">快划观众</option>
+      <option value="beginner">零基础观众</option>
+      <option value="skeptic">怀疑型观众</option>
+    </select>
+  </label>
+  <div class="dev-actions">
+    <button type="button" class="primary-btn" id="playTimed">回放不等间隔片段</button>
+    <button type="button" class="ghost-btn" id="playPaste">粘贴全文（无真实时间）</button>
+    <button type="button" class="ghost-btn" id="playSecond">同题第二轮</button>
+    <button type="button" class="ghost-btn" id="playSeek">带可跳转录像</button>
+    <button type="button" class="ghost-btn" id="playFail">模拟转写失败</button>
+  </div>
+  <textarea id="paste">今天其实我觉得这件事可以再看一看。</textarea>
+  <p id="status" role="status"></p>
+  <div class="transcript" id="liveTranscript"></div>
+  <aside class="side-panel right">
+    <section class="v2-interest-panel" data-v2-interest-panel data-qa-copy-ignore aria-label="模拟观众兴趣趋势"></section>
+  </aside>
+  <script src="../locales/zh-CN.js"></script>
+  <script src="../locales/en-US.js"></script>
+  <script src="../i18n.js"></script>
+  <script src="../v2-session-model.js"></script>
+  <script src="../v2-rule-judge.js"></script>
+  <script src="../v2-review.js"></script>
+  <script src="../v2-interest-panel.js"></script>
+  <script>
+    const store = window.CreatorV2Session.createStore({ judge: window.CreatorV2RuleJudge.create() });
+    window.CreatorV2SessionStore = store;
+    store.onChange(detail => document.dispatchEvent(new CustomEvent('creator:v2-session-change', { detail })));
+    const status = document.getElementById('status');
+    const names = { fastScroller: '快划观众', beginner: '零基础观众', skeptic: '怀疑型观众' };
+    function frozen() {
+      const audienceId = document.getElementById('audience').value;
+      return { topic: '向新手讲清手机和相机差异', audienceId, audienceName: names[audienceId], pressure: 'medium', uiLocale: 'zh-CN', recognitionLanguage: 'zh-CN' };
+    }
+    function renderTranscript() {
+      const round = store.getActiveRound();
+      const box = document.getElementById('liveTranscript');
+      box.replaceChildren();
+      (round?.segments || []).forEach(segment => {
+        const span = document.createElement('span');
+        span.className = 'v2-seg';
+        span.dataset.segmentId = segment.segmentId;
+        span.textContent = segment.text + ' ';
+        box.append(span);
+      });
+    }
+    document.addEventListener('creator:v2-session-change', renderTranscript);
+    document.addEventListener('creator:v2-locate-segment', event => {
+      document.querySelectorAll('.v2-seg').forEach(node => {
+        node.classList.toggle('is-located', node.dataset.segmentId === event.detail.segmentId);
+      });
+    });
+    document.getElementById('playTimed').onclick = () => {
+      const origin = Date.now();
+      store.startRound(frozen(), { practiceStartedAt: origin, sessionId: 'replay-timed' });
+      [
+        { text: '有一次我在夜市拍灯。', at: 800 },
+        { text: '很多方面都比较好。', at: 4000 },
+        { text: '适合拍夜景的人，能多保留两档亮部。', at: 11000 }
+      ].forEach(item => {
+        store.ingestTranscript({
+          sessionId: 'replay-timed', text: item.text, isFinal: true, source: 'replay', resultId: 't' + item.at,
+          audioStartedAt: origin + item.at, audioEndedAt: origin + item.at + 700, arrivedAt: origin + item.at + 2500
+        });
+      });
+      store.beginStopping();
+      store.completeRound({ sessionId: 'replay-timed' });
+      status.textContent = '已回放测试数据：不等间隔音频时间，网络延迟未平移发言时间。';
+    };
+    document.getElementById('playPaste').onclick = () => {
+      store.startRound(frozen(), { practiceStartedAt: Date.now(), sessionId: 'replay-paste' });
+      store.ingestTranscript({
+        sessionId: 'replay-paste', text: document.getElementById('paste').value, isFinal: true, source: 'paste', resultId: 'paste'
+      });
+      store.beginStopping();
+      store.completeRound({ sessionId: 'replay-paste' });
+      status.textContent = '粘贴测试数据没有真实时间，不应出现前三秒结论。';
+    };
+    document.getElementById('playSecond').onclick = () => {
+      const origin = Date.now();
+      store.startRound(frozen(), { practiceStartedAt: origin, sessionId: 'replay-b' });
+      store.ingestTranscript({
+        sessionId: 'replay-b', text: '先说结论：入门相机适合拍夜景，手机更适合随手记录。', isFinal: true, source: 'replay',
+        resultId: 'b1', audioStartedAt: origin + 600, audioEndedAt: origin + 1400, arrivedAt: origin + 1600
+      });
+      store.beginStopping();
+      store.completeRound({ sessionId: 'replay-b' });
+      status.textContent = '已加入同题第二轮测试数据，比较引用原句，不会默认第二轮更好。';
+    };
+    document.getElementById('playSeek').onclick = () => {
+      const origin = Date.now();
+      window.CreatorV2Playback = {
+        getRecording() { return { canSeek: true, startedAt: origin + 1000, durationMs: 20000 }; },
+        seek(seconds) { status.textContent = '测试数据已跳转录像到 ' + seconds.toFixed(1) + ' 秒。'; }
+      };
+      store.startRound(frozen(), { practiceStartedAt: origin, sessionId: 'replay-seek' });
+      store.ingestTranscript({
+        sessionId: 'replay-seek', text: '这个方案一定能保证所有人最好的结果。', isFinal: true, source: 'replay',
+        resultId: 'seek1', audioStartedAt: origin + 2500, audioEndedAt: origin + 3300, arrivedAt: origin + 5000
+      });
+      store.beginStopping();
+      store.completeRound({ sessionId: 'replay-seek' });
+      status.textContent = '已准备可跳转测试录像映射。无录像时按钮会回退到逐字稿。';
+    };
+    document.getElementById('playFail').onclick = () => {
+      store.startRound(frozen(), { practiceStartedAt: Date.now(), sessionId: 'replay-fail' });
+      store.setAdapterStatus({ sessionId: 'replay-fail', failed: true, failureReason: 'stt-failed' });
+      store.beginStopping();
+      store.completeRound({ sessionId: 'replay-fail' });
+      status.textContent = '转写失败测试数据：不生成用户表现评分。';
+    };
+  </script>
+</body>
+</html>

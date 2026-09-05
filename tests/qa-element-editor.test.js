@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { makePage, input, read, storageKey } = require('./qa-dom-helper');
 const tick = () => new Promise(resolve => setImmediate(resolve));
-const runtimeScripts = ['expression-analysis.js', 'v1-controls.js', 'v1-topic-picker.js', 'audience-templates.js', 'avatar-provider.js', 'avatar-selector.js', 'interest-curve.js', 'stt-audio.js', 'app.js'];
+const runtimeScripts = ['expression-analysis.js', 'v1-controls.js', 'v1-topic-picker.js', 'audience-templates.js', 'avatar-provider.js', 'avatar-selector.js', 'v2-session-model.js', 'v2-rule-judge.js', 'v2-review.js', 'v2-interest-panel.js', 'interest-curve.js', 'stt-audio.js', 'app.js'];
 function select(window, node, area = 'ui') {
   window.document.querySelector(`[data-qa-fine-${area}] [data-qa-rescan]`).click();
   const picker = window.document.querySelector(`[data-qa-fine-${area}] [data-qa-target]`);

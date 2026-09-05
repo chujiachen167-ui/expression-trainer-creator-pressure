@@ -21,7 +21,7 @@ const main = fs.readFileSync(path.join(root, 'main.js'), 'utf8');
 const preload = fs.readFileSync(path.join(root, 'preload.js'), 'utf8');
 assert(controls.includes("localStorage.setItem(storageKey"), 'edits should keep an automatic browser draft');
 assert(controls.includes('saveToProject'), 'control panel should provide a project-save action');
-assert(controls.includes("theme: {\n      bg:"), 'control panel should keep a versioned color-token palette');
+assert(/theme:\s*\{\s*bg:/.test(controls), 'control panel should keep a versioned color-token palette');
 assert(controls.includes("colorField('Studio 背景'"), 'V3 studio colors should be configurable from the control panel');
 assert(controls.includes("colorField('Studio 输入控件'"), 'V3 controls should not retain an unconfigurable hard-coded surface');
 assert(controls.includes("colorField('Studio 强边界'"), 'V3 borders should be configurable from the control panel');

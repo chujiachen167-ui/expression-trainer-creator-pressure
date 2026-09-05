@@ -96,6 +96,20 @@
   const mediaController = mode === 'v1' && window.CreatorMediaCapture
     ? window.CreatorMediaCapture.create({ video, videoTile, cameraButton })
     : null;
+  const v2Enabled = mode === 'v2' && window.CreatorV2Session && window.CreatorV2RuleJudge;
+  const v2Store = v2Enabled
+    ? window.CreatorV2Session.createStore({ judge: window.CreatorV2RuleJudge.create(), now: () => Date.now() })
+    : null;
+  let v2PendingPressure = pressure;
+  let v2UtteranceStartedAt = null;
+  let v2LastAvatarAt = 0;
+  let v2SherpaAudioMs = 0;
+  if (v2Store) {
+    window.CreatorV2SessionStore = v2Store;
+    v2Store.onChange(detail => {
+      document.dispatchEvent(new CustomEvent('creator:v2-session-change', { detail }));
+    });
+  }
 
   function featureEnabled(name) {
     return window.CreatorQAControls ? window.CreatorQAControls.featureEnabled(name) : true;
@@ -248,6 +262,10 @@
     };
     templateSelect.addEventListener('change', updateSummary);
     section.querySelector('[data-audience-apply]').addEventListener('click', async () => {
+      if (mode === 'v2' && sessionRunning) {
+        addEvent('系统', '受众设置将从下一轮生效，本轮比较条件保持冻结。', true, '', { key: 'v2-audience-next' });
+        return;
+      }
       await applyAudienceConfiguration(true);
       section._closeSheet?.();
     });
@@ -431,8 +449,72 @@
     }, 120);
   }
 
+  function noteV2SttFailure(message) {
+    const round = v2Store?.getActiveRound();
+    if (!round) return;
+    const hasFinal = (round.segments || []).some(item => item.status === 'final' && String(item.text || '').trim());
+    if (!hasFinal) v2Store.setAdapterStatus({ sessionId: round.sessionId, failed: true, failureReason: message || 'stt-failed' });
+  }
+
+  function ingestV2Transcript(text, isFinal, meta = {}) {
+    if (!v2Store) return;
+    const round = v2Store.getActiveRound();
+    if (!round || (round.status !== 'running' && round.status !== 'waiting-final')) return;
+    v2Store.ingestTranscript({
+      sessionId: round.sessionId,
+      text,
+      isFinal,
+      source: meta.source || sttDiagnostics.engine || 'unknown',
+      resultId: meta.resultId,
+      audioStartedAt: meta.audioStartedAt,
+      audioEndedAt: meta.audioEndedAt,
+      estimatedStartedAt: meta.estimatedStartedAt,
+      estimatedEndedAt: meta.estimatedEndedAt,
+      arrivedAt: meta.arrivedAt || Date.now(),
+      wordTimings: meta.wordTimings
+    });
+  }
+
+  function renderV2Transcript() {
+    const round = v2Store.getActiveRound();
+    const selectedId = v2Store.snapshot().selectedEventId;
+    const selectedEvent = round?.events?.find(event => event.eventId === selectedId);
+    transcriptBox.replaceChildren();
+    const segments = (round?.segments || []).filter(item => item.status === 'final' || item.status === 'interim');
+    if (!segments.length && !interim) {
+      transcriptBox.innerHTML = '<span class="placeholder">开始后，实时转写会出现在这里。系统不会把数字人提示混进你的正文。</span>';
+      return;
+    }
+    segments.forEach(segment => {
+      const span = document.createElement('span');
+      span.className = `v2-seg${segment.status === 'interim' ? ' interim' : ''}`;
+      span.dataset.segmentId = segment.segmentId;
+      span.tabIndex = 0;
+      if (selectedEvent?.segmentId === segment.segmentId) span.classList.add('is-located');
+      const match = selectedEvent?.evidence?.match;
+      const body = segment.text || '';
+      if (match && body.includes(match)) {
+        const index = body.indexOf(match);
+        span.append(body.slice(0, index));
+        const mark = document.createElement('mark');
+        mark.textContent = match;
+        span.append(mark, body.slice(index + match.length));
+      } else span.textContent = body;
+      span.addEventListener('click', () => {
+        const event = (round.events || []).find(item => item.segmentId === segment.segmentId);
+        if (event) v2Store.selectEvent(event.eventId);
+      });
+      transcriptBox.append(span, ' ');
+    });
+    transcriptBox.scrollTop = transcriptBox.scrollHeight;
+  }
+
   function renderTranscript() {
     if (!featureEnabled('transcript')) return;
+    if (mode === 'v2' && v2Store) {
+      renderV2Transcript();
+      return;
+    }
     if (!transcript && !interim) {
       transcriptBox.innerHTML = `<span class="placeholder">${mode === 'v1' ? '开启摄像头并开始说话，实时字幕会叠加在画面上。' : '开始后，实时转写会出现在这里。系统不会把数字人提示混进你的正文。'}</span>`;
       return;
@@ -497,12 +579,13 @@
     if (cameraButton) cameraButton.innerHTML = `<span class="control-indicator"></span>${tr('common.openCamera', '开启摄像头')}`;
   }
 
-  function applyRecognitionResult(piece, isFinal) {
+  function applyRecognitionResult(piece, isFinal, meta = {}) {
     const clean = sanitizeSpeech(piece);
     if (isFinal) {
       transcript += clean;
       interim = '';
     } else interim = clean;
+    ingestV2Transcript(isFinal ? clean : interim, isFinal, meta);
     renderTranscript();
     updateMetrics();
     if (isFinal) requestCoreAiFeedback();
@@ -557,7 +640,16 @@
             samples => window.api.feedAudio(samples),
             {
               onResult: result => {
-                if (result?.text) applyRecognitionResult(result.text, result.isFinal);
+                if (!result?.text) return;
+                const round = v2Store?.getActiveRound();
+                const audioEndedAt = startedAt ? startedAt + v2SherpaAudioMs : Date.now();
+                applyRecognitionResult(result.text, result.isFinal, {
+                  source: 'sherpa',
+                  resultId: round ? `sherpa:${round.sessionId}:${Math.round(v2SherpaAudioMs)}` : undefined,
+                  audioStartedAt: audioEndedAt - 128,
+                  audioEndedAt,
+                  arrivedAt: Date.now()
+                });
               },
               onError: error => {
                 updateSTTDiagnostics({ state: 'error', lastError: error.message }, true);
@@ -572,6 +664,7 @@
               event.inputBuffer.getChannelData(0),
               inputSampleRate
             );
+            v2SherpaAudioMs += samples.length / 16;
             audioQueue.enqueue(samples);
           };
           source.connect(processor);
@@ -633,10 +726,15 @@
     const service = window.CreatorWebSTT.create({
       getStream: () => browserAudioGate,
       getLanguage: () => mode === 'v1' ? v1Language().sttLang : 'zh-CN',
-      onResult: text => applyRecognitionResult(sanitizeSpeech(text), true),
-      onStatus: status => updateSTTDiagnostics(status, true),
+      onResult: (text, isFinal, meta) => applyRecognitionResult(sanitizeSpeech(text), isFinal !== false, meta || { source: 'web-stt', arrivedAt: Date.now() }),
+      onStatus: status => {
+        updateSTTDiagnostics(status, true);
+        const round = v2Store?.getActiveRound();
+        if (round && status.queued != null) v2Store.setAdapterStatus({ sessionId: round.sessionId, pendingCount: status.queued });
+      },
       onError: error => {
         addEvent('网页转写', error.message || '网页转写服务暂不可用。', true, 'Cloudflare Whisper');
+        noteV2SttFailure(error.message);
       }
     });
     try {
@@ -688,10 +786,32 @@
     };
     instance.onresult = event => {
       interim = '';
+      const round = v2Store?.getActiveRound();
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         const piece = sanitizeSpeech(event.results[i][0].transcript);
-        if (event.results[i].isFinal) { transcript += piece; requestCoreAiFeedback(); }
-        else interim += piece;
+        const resultId = round ? `web-speech:${round.sessionId}:${i}` : `web-speech:${i}`;
+        if (event.results[i].isFinal) {
+          transcript += piece;
+          ingestV2Transcript(piece, true, {
+            source: 'web-speech',
+            resultId,
+            estimatedStartedAt: v2UtteranceStartedAt,
+            estimatedEndedAt: Date.now(),
+            arrivedAt: Date.now()
+          });
+          v2UtteranceStartedAt = null;
+          requestCoreAiFeedback();
+        } else {
+          if (!v2UtteranceStartedAt) v2UtteranceStartedAt = Date.now();
+          interim += piece;
+        }
+      }
+      if (interim) {
+        ingestV2Transcript(interim, false, {
+          source: 'web-speech',
+          estimatedStartedAt: v2UtteranceStartedAt,
+          arrivedAt: Date.now()
+        });
       }
       renderTranscript();
       updateMetrics();
@@ -729,7 +849,10 @@
         state: ignored ? 'paused' : permissionDenied ? 'permission-denied' : 'error',
         lastError: ignored ? '' : event.error
       }, true);
-      if (!ignored) addEvent('系统', browserRecognitionMessage(event), true, '浏览器语音识别');
+      if (!ignored) {
+        addEvent('系统', browserRecognitionMessage(event), true, '浏览器语音识别');
+        noteV2SttFailure(event.error);
+      }
     };
     updateSTTDiagnostics({ engine: 'web-speech', state: 'ready', lastError: '' }, true);
     return instance;
@@ -818,6 +941,39 @@
 
   function fireAudienceReaction(preview = false) {
     if (!featureEnabled('pressure') || !featureEnabled('audience') || !currentTemplate || !currentProfiles.length) return;
+    if (v2Store && preview) {
+      const profile = currentProfiles[0];
+      const scratch = window.CreatorV2RuleJudge.judge({
+        round: {
+          frozen: { audienceId: profile.id, audienceName: profile.name, judge: window.CreatorV2Session.defaultJudgeConfig(), uiLocale: window.CreatorI18n?.getLocale?.() || 'zh-CN' },
+          segments: [{ segmentId: 'preview', status: 'final', text: `${transcript}${interim}` }],
+          events: [],
+          hasScore: false
+        },
+        segment: { segmentId: 'preview', status: 'final', text: `${transcript}${interim}`, timePrecision: 'none', source: 'preview' },
+        previousEvents: [],
+        locale: window.CreatorI18n?.getLocale?.() || 'zh-CN'
+      });
+      const event = scratch.events?.[0];
+      const text = event?.suggestion || '当前没有足够依据生成追问。试听不会写入本轮训练记录。';
+      addEvent(profile.name, text, false, '试听 · 未写入训练会话');
+      if (audienceSetup) audienceSetup.querySelector('[data-provider-status]').textContent = `已试听：${profile.name}。演示数据未写入真实会话。`;
+      return;
+    }
+    if (v2Store && !preview) {
+      const round = v2Store.getActiveRound();
+      if (!round || round.status !== 'running') return;
+      const unused = (round.events || []).find(event => !(round.usedEventIds || []).includes(event.eventId) && event.confidence !== 'insufficient');
+      if (!unused) return;
+      const cooldown = round.frozen?.judge?.cooldownMs || 12000;
+      if (Date.now() - v2LastAvatarAt < cooldown) return;
+      v2Store.markEventUsed(unused.eventId);
+      v2LastAvatarAt = Date.now();
+      addEvent(unused.audienceName || unused.audienceId, unused.suggestion, false, unused.explanation);
+      reactAudience(unused.suggestion, unused.audienceId);
+      avatarProvider?.speak(0, unused.suggestion).catch(error => addEvent('数字形象', `播报失败：${error.message}`, true));
+      return;
+    }
     const profileIndex = eventIndex % currentProfiles.length;
     const profile = currentProfiles[profileIndex];
     const elapsedSeconds = sessionRunning ? Math.floor((Date.now() - startedAt) / 1000) : 12;
@@ -878,8 +1034,25 @@
     }
     sessionRunning = true;
     mediaController?.setSessionRunning(true);
-    document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: true } }));
     startedAt = Date.now();
+    v2SherpaAudioMs = 0;
+    v2UtteranceStartedAt = null;
+    v2LastAvatarAt = 0;
+    if (v2Store) {
+      pressure = v2PendingPressure;
+      const audience = currentProfiles[0];
+      v2Store.startRound({
+        topic: promptText.textContent,
+        templateId: currentTemplate?.id || null,
+        audienceId: audience?.id,
+        audienceName: audience?.name,
+        pressure,
+        recognitionLanguage: mode === 'v1' ? v1Language().sttLang : 'zh-CN',
+        uiLocale: window.CreatorI18n?.getLocale?.() || 'zh-CN',
+        judge: window.CreatorQAControls?.getState?.().components?.v2Judge
+      }, { practiceStartedAt: startedAt });
+    }
+    document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: true, sessionId: v2Store?.getActiveRound()?.sessionId || null } }));
     startButton.textContent = tr('common.stopAndReview', '结束并生成复盘');
     startButton.classList.add('running');
     setStageState('requesting', '正在准备麦克风');
@@ -972,9 +1145,11 @@
   }
 
   async function stopSession() {
+    const stoppingId = v2Store?.getActiveRound()?.sessionId || null;
     sessionRunning = false;
     clearInterval(timerHandle);
     clearInterval(pressureHandle);
+    if (v2Store) v2Store.beginStopping();
     if (recognition) {
       try { await Promise.resolve(recognition.stop()); } catch (_) { /* already stopped */ }
     }
@@ -987,7 +1162,21 @@
       }
     }
     mediaController?.setSessionRunning(false);
-    document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: false } }));
+    if (v2Store && stoppingId) {
+      const deadline = Date.now() + 4000;
+      while (Date.now() < deadline) {
+        const round = v2Store.getActiveRound();
+        if (!round || round.sessionId !== stoppingId) break;
+        if ((round.pendingCount || 0) === 0 && !round.openSegmentId) break;
+        await new Promise(resolve => setTimeout(resolve, 40));
+      }
+      const round = v2Store.getActiveRound();
+      v2Store.completeRound({
+        sessionId: stoppingId,
+        queuePending: Boolean(round && round.sessionId === stoppingId && (round.pendingCount || 0) > 0)
+      });
+    }
+    document.dispatchEvent(new CustomEvent('creator:session-state', { detail: { running: false, sessionId: stoppingId } }));
     avatarProvider?.interrupt();
     startButton.disabled = true;
     setStageState('processing', '生成复盘');
@@ -1006,6 +1195,9 @@
           const empty = document.querySelector('[data-feedback-empty]');
           if (empty) empty.hidden = true;
           addEvent('本轮诊断', `笼统词 ${analysis.vague.length} 次、填充词 ${analysis.fillers.length} 次、犹豫词 ${analysis.hedges.length} 次、重复表达 ${analysis.repeats.length} 处，表达密度 ${analysis.density}%。`, true, '诊断依据来自本轮逐字稿');
+        } else if (v2Store) {
+          const review = window.CreatorV2Review?.buildReview(v2Store.getActiveRound(), window.CreatorI18n?.getLocale?.() || 'zh-CN');
+          addEvent('本轮复盘', review?.nextAction || '下一轮只练一个动作。', true, review?.opening?.explanation || (currentTemplate ? `受众模板：${currentTemplate.name}` : ''));
         } else {
           addEvent('本轮复盘', `口头禅 ${filler} 次，表达净度 ${density}。下一轮只练一个动作：前十秒先说结论。`, true, currentTemplate ? `受众模板：${currentTemplate.name}` : '镜头基线');
         }
@@ -1014,13 +1206,23 @@
         populateReportPanel();
         if (mode === 'v1') showTranscriptActions(); else openReport();
       }
-    }, 1500);
+    }, v2Store ? 200 : 1500);
   }
 
   document.querySelectorAll('.pressure-btn').forEach(button => {
     button.addEventListener('click', () => {
-      pressure = button.dataset.pressure;
+      const nextPressure = button.dataset.pressure;
       document.querySelectorAll('.pressure-btn').forEach(item => item.classList.toggle('active', item === button));
+      if (mode === 'v2') {
+        v2PendingPressure = nextPressure;
+        if (sessionRunning) {
+          addEvent('系统', '压力等级将从下一轮生效，本轮判断条件保持冻结。', true, '', { key: 'v2-pressure-next' });
+          return;
+        }
+        pressure = nextPressure;
+        return;
+      }
+      pressure = nextPressure;
       if (sessionRunning) schedulePressure();
     });
   });
@@ -1171,8 +1373,15 @@
   window.api?.onSettingsUpdated?.(() => refreshDesktopRuntime());
   mountAudienceSetup();
   if (audienceSetup && mode !== 'v2') applyAudienceConfiguration(true);
-  window.addEventListener('beforeunload', () => {
+  document.addEventListener('creator:v2-locate-segment', () => {
+    if (mode === 'v2') renderTranscript();
+  });
+  window.addEventListener('beforeunload', event => {
     avatarProvider?.disconnect();
     mediaController?.dispose();
+    if (v2Store?.snapshot()?.unsaved) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
   });
 })();

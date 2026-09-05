@@ -54,6 +54,9 @@
     let pending = 0;
     let terminalError = null;
     let segmentTimer = null;
+    let recordingStartedAt = 0;
+    let chunkIndex = 0;
+    let lastChunkEndedAt = 0;
 
     const reportStatus = patch => onStatus?.({ engine: 'web-stt', ...patch });
     const reportError = error => {
@@ -61,6 +64,9 @@
       running = false;
       if (segmentTimer) clearTimeout(segmentTimer);
       segmentTimer = null;
+      if (recorder?.state !== 'inactive') {
+        try { recorder.stop(); } catch (_) { /* The recorder may already be stopping. */ }
+      }
       reportStatus({ state: 'error', lastError: terminalError.code || terminalError.message });
       onError?.(terminalError);
     };
@@ -72,7 +78,7 @@
       return status;
     }
 
-    async function uploadChunk(blob) {
+    async function uploadChunk(blob, chunkMeta) {
       if (!blob?.size || terminalError) return;
       pending += 1;
       reportStatus({ state: 'running', queued: pending, lastError: '' });
@@ -83,7 +89,16 @@
           body: blob
         });
         const text = String(result.text || '').trim();
-        if (text) onResult?.(text, true);
+        if (text) {
+          onResult?.(text, true, {
+            source: 'web-stt',
+            resultId: `web-stt:${recordingStartedAt}:${chunkMeta.chunkIndex}`,
+            audioStartedAt: chunkMeta.audioStartedAt,
+            audioEndedAt: chunkMeta.audioEndedAt,
+            arrivedAt: Date.now(),
+            chunkIndex: chunkMeta.chunkIndex
+          });
+        }
       } catch (error) {
         reportError(error);
       } finally {
@@ -92,14 +107,15 @@
       }
     }
 
-    function enqueue(blob) {
-      uploadChain = uploadChain.then(() => uploadChunk(blob));
+    function enqueue(blob, chunkMeta) {
+      uploadChain = uploadChain.then(() => uploadChunk(blob, chunkMeta));
       return uploadChain;
     }
 
     function startSegment(stream, mimeType) {
       if (!running || terminalError) return;
       const chunks = [];
+      const audioStartedAt = lastChunkEndedAt || Date.now();
       try {
         recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       } catch (_) {
@@ -111,9 +127,13 @@
       recorder.onstop = () => {
         if (segmentTimer) clearTimeout(segmentTimer);
         segmentTimer = null;
+        const audioEndedAt = Date.now();
+        lastChunkEndedAt = audioEndedAt;
         const blob = new Blob(chunks, { type: recorder?.mimeType || mimeType || 'application/octet-stream' });
         recorder = null;
-        if (blob.size && !terminalError) enqueue(blob);
+        const meta = { chunkIndex, audioStartedAt, audioEndedAt };
+        chunkIndex += 1;
+        if (blob.size && !terminalError) enqueue(blob, meta);
         // Restarting the recorder makes every upload a complete, independently
         // decodable file. MediaRecorder timeslices can omit container headers.
         if (running && !terminalError) startSegment(stream, mimeType);
@@ -133,6 +153,9 @@
           throw new WebSTTError('麦克风尚未就绪，无法开始网页转写。', 'microphone-unavailable');
         }
         terminalError = null;
+        recordingStartedAt = Date.now();
+        lastChunkEndedAt = recordingStartedAt;
+        chunkIndex = 0;
         const mimeType = preferredMimeType();
         running = true;
         startSegment(stream, mimeType);

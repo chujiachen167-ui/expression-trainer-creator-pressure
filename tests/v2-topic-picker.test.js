@@ -7,7 +7,7 @@ function mount({ topic } = {}) {
   const dom = makePage('v2-ai-audience.html');
   const w = dom.window;
   if (topic) w.localStorage.setItem(topicKey, JSON.stringify(topic));
-  for (const file of ['audience-templates.js', 'avatar-provider.js', 'avatar-selector.js', 'app.js', 'v2-topic-picker.js']) w.eval(read(file));
+  for (const file of ['audience-templates.js', 'avatar-provider.js', 'avatar-selector.js', 'v2-session-model.js', 'v2-rule-judge.js', 'v2-review.js', 'v2-interest-panel.js', 'app.js', 'v2-topic-picker.js']) w.eval(read(file));
   return dom;
 }
 
