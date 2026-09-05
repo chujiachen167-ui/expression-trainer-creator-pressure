@@ -39,6 +39,7 @@ const rootFiles = [
   'v1-topic-picker.js',
   'audience-templates.js',
   'avatar-provider.js',
+  'web-stt.js',
   'stt-audio.js',
   'media-capture.js',
   'app.js',

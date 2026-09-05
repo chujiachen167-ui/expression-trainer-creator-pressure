@@ -22,6 +22,9 @@ async function run() {
   assert.equal(parseExamples('a\nb\nc'), null);
   assert.equal(normalize({ repeat: 999, scrollDuration: -1, rawColor: 'url(bad)' }).repeat, 6);
   assert.equal(normalize({ scrollDuration: -1 }).scrollDuration, 12000);
+  assert.equal(normalize({ width: 999, x: -999, y: 999 }).width, 125);
+  assert.equal(normalize({ width: 999, x: -999, y: 999 }).x, -240);
+  assert.equal(normalize({ width: 999, x: -999, y: 999 }).y, 240);
   assert.equal(normalize({ rawColor: 'url(bad)' }).rawColor, defaults.rawColor);
   assert.equal(normalize({ playbackMode: 'broken' }).playbackMode, 'autoplay');
   assert.equal(defaults.pauseOnHover, true);
@@ -55,6 +58,9 @@ async function run() {
   assert.equal(stream.style.getPropertyValue('--duration'), '26000ms');
   assert.equal(cover.style.getPropertyValue('--transcript-raw-color'), '#654321');
   assert.equal(cover.style.getPropertyValue('--transcript-issue-color'), '#123456');
+  assert.equal(cover.style.getPropertyValue('--transcript-width'), '100%');
+  assert.equal(cover.style.getPropertyValue('--transcript-x'), '0px');
+  assert.equal(cover.style.getPropertyValue('--transcript-y'), '0px');
   assert.equal(window.getComputedStyle(cover).backgroundColor, 'rgba(0, 0, 0, 0)');
   assert(!read('shared.css').includes('.transcript-cover::before'));
   assert.match(read('vendor/magic-ui/marquee.css'), /translateY\(calc\(-100% - var\(--gap\)\)\)/);
@@ -71,11 +77,17 @@ async function run() {
   input(window, 'components.transcriptCover.scrollDuration', 18000);
   input(window, 'components.transcriptCover.repeat', 2);
   input(window, 'components.transcriptCover.gap', 48);
+  input(window, 'components.transcriptCover.width', 116);
+  input(window, 'components.transcriptCover.x', 18);
+  input(window, 'components.transcriptCover.y', -12);
   assert.equal(stream.children.length, 2);
   assert.equal(stream.dataset.reverse, 'true');
   assert.equal(stream.dataset.pauseOnHover, 'false');
   assert.equal(stream.style.getPropertyValue('--duration'), '18000ms');
   assert.equal(stream.style.getPropertyValue('--gap'), '48px');
+  assert.equal(cover.style.getPropertyValue('--transcript-width'), '116%');
+  assert.equal(cover.style.getPropertyValue('--transcript-x'), '18px');
+  assert.equal(cover.style.getPropertyValue('--transcript-y'), '-12px');
   assert.equal(doc.querySelector('[data-path="components.transcriptCover.paused"]'), null, 'manual pause must not remain in the QA page');
   const palette = doc.querySelector('[data-qa-palette="slate-cyan"]');
   palette.click();

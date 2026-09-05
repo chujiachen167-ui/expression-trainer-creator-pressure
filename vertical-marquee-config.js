@@ -20,7 +20,10 @@
     // Project owner explicitly chose automatic playback; system/static modes
     // remain available per component, without changing OS preferences.
     playbackMode: 'autoplay',
-    repeat: 4, gap: 38, height: 420, fadeSize: 8, edgeOpacity: 0,
+    repeat: 4, gap: 38,
+    // Width and offsets alter the visual frame only. They deliberately do not
+    // take up more grid space, so moving the reading area cannot push V1–V3.
+    width: 100, x: 0, y: 0, height: 420, fadeSize: 8, edgeOpacity: 0,
     followTheme: true, rawColor: '#a9a3b3', cleanColor: '#f4f1f7',
     issueColor: '#df9765', highlightColor: '#df9765', emphasisColor: '#f4f1f7',
     highlightStyle: 'random', randomMarksVersion: 1, highlightOpacity: 0.16, rawFontSize: 17,
@@ -33,7 +36,7 @@
     const settings = { ...defaults, ...source };
     const clamp = (key, min, max) => { const value = Number(settings[key]); settings[key] = Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : defaults[key]; };
     for (const key of ['enabled', 'reverse', 'pauseOnHover', 'paused', 'followTheme']) settings[key] = typeof settings[key] === 'boolean' ? settings[key] : defaults[key];
-    for (const [key, min, max] of [['scrollDuration', 12000, 120000], ['repeat', 2, 6], ['gap', 12, 96], ['height', 260, 640], ['fadeSize', 0, 24], ['edgeOpacity', 0, 1], ['highlightOpacity', 0, 0.5], ['rawFontSize', 14, 24], ['cleanFontSize', 18, 36], ['cleanWeight', 600, 900], ['hoverSwapDuration', 220, 1200], ['gooeyBlur', 0, 14]]) clamp(key, min, max);
+    for (const [key, min, max] of [['scrollDuration', 12000, 120000], ['repeat', 2, 6], ['gap', 12, 96], ['width', 60, 125], ['x', -240, 240], ['y', -240, 240], ['height', 260, 640], ['fadeSize', 0, 24], ['edgeOpacity', 0, 1], ['highlightOpacity', 0, 0.5], ['rawFontSize', 14, 24], ['cleanFontSize', 18, 36], ['cleanWeight', 600, 900], ['hoverSwapDuration', 220, 1200], ['gooeyBlur', 0, 14]]) clamp(key, min, max);
     settings.repeat = Math.round(settings.repeat);
     if (!['autoplay', 'system', 'static'].includes(settings.playbackMode)) settings.playbackMode = defaults.playbackMode;
     for (const key of ['rawColor', 'cleanColor', 'issueColor', 'highlightColor', 'emphasisColor', 'gooeyColor']) if (!/^[\da-f]{6}$/i.test(String(settings[key]).replace('#', '')) || !String(settings[key]).startsWith('#')) settings[key] = defaults[key];

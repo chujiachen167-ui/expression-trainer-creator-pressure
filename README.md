@@ -62,6 +62,8 @@ npm start
 
 直接打开 `index.html`，或用静态服务器访问本目录。浏览器模式用于快速验收 UI、摄像头、受众模板和场景流程；它会降级使用 Web Speech API 与本地 JavaScript 词库，不能替代桌面端的离线诊断核心。为避免浏览器反复请求麦克风权限，每轮只启动一次 Web Speech；服务提前结束时会明确提示，不会自动无限重启。
 
+面向公开网站的跨浏览器字幕可选用同域 Cloudflare Pages Function：启用后，网页每约 3 秒向 Cloudflare Workers AI Whisper 发送一个纯音频分段并得到字幕，解决 macOS 浏览器“麦克风正常、字幕不出现”的 Web Speech 差异。该通道默认**关闭**，启用前必须完成隐私说明、成本与访问控制评估；配置方法和人工验收见 [docs/stt/web-stt-cloudflare.md](docs/stt/web-stt-cloudflare.md)。
+
 ## 开发与验证
 
 ```powershell
@@ -139,6 +141,7 @@ npm run smoke
 
 - 默认不录制、不上传摄像头画面。
 - Electron 语音转写在本机执行；只有明确配置并启用大模型时，文字内容才会发送给相应服务商。
+- 网页 Whisper 转写默认关闭；若项目所有者按 `docs/stt/web-stt-cloudflare.md` 明确启用，音频分段会发送给 Cloudflare Workers AI，仅用于返回字幕，不包含摄像头画面。
 - 当前不使用视觉模型判断视线，也不进行颜值、人格、情绪或可信度评分。
 - 设置仍沿用上游的本地 JSON 存储方式；正式发布前应迁移 API Key 至 Electron `safeStorage` 或系统凭据库。
 

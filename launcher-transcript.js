@@ -30,6 +30,9 @@
     style.setProperty('--transcript-issue-color', settings.issueColor);
     style.setProperty('--transcript-highlight-color', settings.highlightColor);
     style.setProperty('--transcript-highlight-opacity', `${settings.highlightOpacity * 100}%`);
+    style.setProperty('--transcript-width', `${settings.width}%`);
+    style.setProperty('--transcript-x', `${settings.x}px`);
+    style.setProperty('--transcript-y', `${settings.y}px`);
     style.setProperty('--transcript-height', `${settings.height}px`);
     style.setProperty('--transcript-fade-size', `${settings.fadeSize}%`);
     style.setProperty('--transcript-edge-opacity', settings.edgeOpacity);

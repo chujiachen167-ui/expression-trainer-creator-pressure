@@ -62,6 +62,7 @@
   };
   let lastSTTStatusRender = 0;
   let browserAudioGate = null;
+  let webSttIssue = null;
   const profanityTerms = ['他妈的', '操你妈', '去你妈', '傻逼', '傻屌', '卧槽', '我操', '你妈的', '草泥马', '去死'];
   const inWeChat = /MicroMessenger/i.test(navigator.userAgent || '');
   function sanitizeSpeech(text) {
@@ -78,6 +79,19 @@
     if (browserAudioGate?.getTracks().some(track => track.readyState === 'live')) return;
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('当前环境不支持麦克风');
     browserAudioGate = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  }
+  function hasBrowserAudioPermission() {
+    return Boolean(browserAudioGate?.getAudioTracks?.().some(track => track.readyState === 'live'));
+  }
+  function browserRecognitionMessage(error) {
+    const code = error?.error || error?.name || '';
+    if (code === 'not-allowed' || code === 'service-not-allowed') {
+      return hasBrowserAudioPermission()
+        ? '麦克风已经可用，但当前浏览器拒绝了网页语音识别服务，因此不会生成字幕。请改用桌面版；网页端需要接入独立 STT 服务后才能稳定支持此环境。'
+        : '麦克风权限被拒绝。请在浏览器的网站设置中允许麦克风后再试。';
+    }
+    if (code === 'audio-capture') return '浏览器无法采集麦克风音频。请检查系统的麦克风隐私权限和当前输入设备。';
+    return error?.message || '浏览器语音识别暂不可用。';
   }
   const mediaController = mode === 'v1' && window.CreatorMediaCapture
     ? window.CreatorMediaCapture.create({ video, videoTile, cameraButton })
@@ -109,7 +123,7 @@
     document.dispatchEvent(new CustomEvent('creator:stt-state', { detail: { ...sttDiagnostics } }));
     if (['error', 'permission-denied', 'unsupported'].includes(sttDiagnostics.state)) {
       const message = sttDiagnostics.state === 'permission-denied'
-        ? '麦克风权限被拒绝'
+        ? (hasBrowserAudioPermission() ? '浏览器转写服务不可用' : '麦克风权限被拒绝')
         : sttDiagnostics.state === 'unsupported' ? '当前环境不支持转写' : '语音识别需要重试';
       setStageState(sttDiagnostics.state, message, { retry: sttDiagnostics.state !== 'unsupported' });
     } else if (sessionRunning) {
@@ -151,6 +165,13 @@
       node.textContent = '浏览器 Web Speech · ' + label + ' · ' + state + (sttDiagnostics.lastError ? ' · ' + sttDiagnostics.lastError : '');
       return;
     }
+    if (sttDiagnostics.engine === 'web-stt') {
+      const state = sttDiagnostics.state === 'running'
+        ? '每约 3 秒生成一次字幕'
+        : sttDiagnostics.state === 'stopped' ? '已停止' : '正在准备';
+      node.textContent = '网页 Whisper · ' + state + (sttDiagnostics.lastError ? ' · ' + sttDiagnostics.lastError : '');
+      return;
+    }
     node.textContent = sttDiagnostics.engine === 'unsupported'
       ? '当前环境不支持语音识别'
       : '正在检测语音识别引擎…';
@@ -161,7 +182,8 @@
       desktopRuntime = null;
       document.body.classList.remove('desktop-runtime');
       const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      updateSTTDiagnostics({ engine: Recognition ? 'web-speech' : 'unsupported', state: Recognition ? 'ready' : 'unsupported' }, true);
+      const canUseWebSTT = Boolean(window.CreatorWebSTT?.isSupported?.());
+      updateSTTDiagnostics({ engine: canUseWebSTT ? 'web-stt' : Recognition ? 'web-speech' : 'unsupported', state: canUseWebSTT || Recognition ? 'ready' : 'unsupported' }, true);
       return null;
     }
     try { desktopRuntime = await window.api.getRuntimeStatus(); } catch (_) { desktopRuntime = null; }
@@ -585,13 +607,57 @@
     return instance;
   }
 
-  function setupRecognition() {
+  function createWebTranscriptionRecognition(service) {
+    const instance = {
+      _manualStop: false,
+      async start() {
+        this._manualStop = false;
+        updateSTTDiagnostics({
+          engine: 'web-stt',
+          state: 'requesting',
+          starts: sttDiagnostics.starts + 1,
+          lastError: ''
+        }, true);
+        await service.start();
+      },
+      async stop() {
+        this._manualStop = true;
+        await service.stop();
+      }
+    };
+    return instance;
+  }
+
+  async function createWebTranscriptionService() {
+    if (!window.CreatorWebSTT?.isSupported?.()) return null;
+    const service = window.CreatorWebSTT.create({
+      getStream: () => browserAudioGate,
+      getLanguage: () => mode === 'v1' ? v1Language().sttLang : 'zh-CN',
+      onResult: text => applyRecognitionResult(sanitizeSpeech(text), true),
+      onStatus: status => updateSTTDiagnostics(status, true),
+      onError: error => {
+        addEvent('网页转写', error.message || '网页转写服务暂不可用。', true, 'Cloudflare Whisper');
+      }
+    });
+    try {
+      await service.probe();
+      webSttIssue = null;
+      return createWebTranscriptionRecognition(service);
+    } catch (error) {
+      webSttIssue = error;
+      return null;
+    }
+  }
+
+  async function setupRecognition() {
     if (window.api?.initASR) {
       const instance = createElectronRecognition();
       instance.onend = () => {};
       instance.onerror = event => addEvent('离线语音识别', event.message || event.error, true, 'Sherpa-ONNX');
       return instance;
     }
+    const webSTT = await createWebTranscriptionService();
+    if (webSTT) return webSTT;
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) return null;
     const instance = new Recognition();
@@ -663,7 +729,7 @@
         state: ignored ? 'paused' : permissionDenied ? 'permission-denied' : 'error',
         lastError: ignored ? '' : event.error
       }, true);
-      if (!ignored) addEvent('系统', '语音识别暂不可用：' + event.error, true);
+      if (!ignored) addEvent('系统', browserRecognitionMessage(event), true, '浏览器语音识别');
     };
     updateSTTDiagnostics({ engine: 'web-speech', state: 'ready', lastError: '' }, true);
     return instance;
@@ -821,21 +887,22 @@
     updateMetrics();
     timerHandle = setInterval(() => { timer.textContent = formatTime(Date.now() - startedAt); }, 250);
     if (featureEnabled('transcript') || featureEnabled('metrics')) {
-      recognition = recognition || setupRecognition();
+      recognition = recognition || await setupRecognition();
       if (recognition) {
         try {
           await ensureBrowserAudio();
           await Promise.resolve(recognition.start());
         } catch (error) {
-          const denied = error?.name === 'NotAllowedError' || error?.name === 'SecurityError';
           addEvent('语音识别', inWeChat
             ? '微信里网页经常拿不到麦克风。请用系统自带的 Safari、Chrome 或 Edge 打开本页再练。'
-            : (denied ? '麦克风权限被拒绝。请在浏览器设置里允许后重试。' : (error.message || '麦克风未能开启')), true);
+            : browserRecognitionMessage(error), true);
         }
       } else {
         addEvent('系统', inWeChat
           ? '微信内置浏览器不能稳定做网页转写。请用系统浏览器打开。'
-          : '当前浏览器不支持 Web Speech API，仍可体验摄像头和压力流程。建议使用 Chrome 或 Edge。', true);
+          : webSttIssue?.code === 'not-configured'
+            ? '当前浏览器没有可用的字幕服务。网页端独立转写尚未启用；你仍可完成摄像头和压力训练，或粘贴逐字稿进行诊断。'
+            : '当前浏览器不支持网页字幕。仍可体验摄像头和压力流程，或粘贴逐字稿进行诊断。', true);
       }
     }
     if (mode !== 'v1') schedulePressure();
@@ -1068,19 +1135,22 @@
     }
     if (startButton && sessionRunning) startButton.textContent = tr('common.stopAndReview', '结束并生成复盘');
   });
-  sttRetryButton?.addEventListener('click', () => {
+  sttRetryButton?.addEventListener('click', async () => {
     if (!sessionRunning) return;
     sttRetryButton.disabled = true;
     setStageState('requesting', '正在重新连接');
     try { recognition?.stop?.(); } catch (_) { /* Ignore a stale recognizer. */ }
-    recognition = setupRecognition();
-    ensureBrowserAudio()
-      .then(() => Promise.resolve(recognition?.start?.()))
-      .catch(error => {
-        updateSTTDiagnostics({ state: error?.name === 'NotAllowedError' ? 'permission-denied' : 'error', lastError: error.message }, true);
-        if (inWeChat) addEvent('语音识别', '微信里网页经常拿不到麦克风。请用系统浏览器打开本页。', true);
-      })
-      .finally(() => { sttRetryButton.disabled = false; });
+    try {
+      await ensureBrowserAudio();
+      recognition = await setupRecognition();
+      await Promise.resolve(recognition?.start?.());
+    } catch (error) {
+      updateSTTDiagnostics({ state: ['NotAllowedError', 'SecurityError', 'not-allowed', 'service-not-allowed'].includes(error?.name || error?.error) ? 'permission-denied' : 'error', lastError: error.message || error?.error || '' }, true);
+      if (!inWeChat) addEvent('语音识别', browserRecognitionMessage(error), true, '浏览器语音识别');
+      if (inWeChat) addEvent('语音识别', '微信里网页经常拿不到麦克风。请用系统浏览器打开本页。', true);
+    } finally {
+      sttRetryButton.disabled = false;
+    }
   });
   startButton?.addEventListener('click', () => {
     Promise.resolve(sessionRunning ? stopSession() : startSession())

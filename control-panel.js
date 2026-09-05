@@ -364,15 +364,21 @@
             ${numberField('句组间距（px）', 'components.transcriptCover.gap', 12, 96, 2)}
             <p class="qa-hint">默认自动向上循环，不需要滚轮触发；鼠标移入文字区域暂停、移开继续。时长越短越快。“自动循环播放”是本组件的主动播放选择，不受系统减少动态效果影响；如需遵循系统偏好，选择“跟随系统”。重复组数对应官方 repeat，不是句子数量。</p>
           </section>
+          <section><h2>整体版式与字号</h2><p class="qa-hint">这三项只移动或缩放右上角的整块表达流，不会改变起始页的网格高度，也不会把 V1、V2、V3 挤下去。</p>
+            ${numberField('整体宽度（%）', 'components.transcriptCover.width', 60, 125)}
+            ${numberField('整体 X 偏移（px）', 'components.transcriptCover.x', -240, 240, 2)}
+            ${numberField('整体 Y 偏移（px）', 'components.transcriptCover.y', -240, 240, 2)}
+            ${numberField('原句字号（px）', 'components.transcriptCover.rawFontSize', 14, 24)}
+            ${numberField('优化句字号（px）', 'components.transcriptCover.cleanFontSize', 18, 36)}
+            ${numberField('优化句字重', 'components.transcriptCover.cleanWeight', 600, 900, 50)}
+            <p class="qa-hint">“区域高度”仍会影响首屏本身的高度；需要调位置或视觉大小时，优先使用这里的宽度与 X / Y 偏移。</p>
+          </section>
           <section><h2>文字与问题词标记</h2>
             <div class="qa-switches qa-component-switches">${toggleField('字色跟随全局主题', 'components.transcriptCover.followTheme')}</div>
             <div class="qa-colors">${colorField('普通句字色', 'components.transcriptCover.rawColor')}${colorField('优化句字色', 'components.transcriptCover.cleanColor')}${colorField('问题词下划线', 'components.transcriptCover.issueColor')}${colorField('问题词高亮色', 'components.transcriptCover.highlightColor')}${colorField('优化关键词字色', 'components.transcriptCover.emphasisColor')}</div>
             <p class="qa-hint">手动调整字色会切换为独立配色；下划线与虚线框共用问题词色，高亮底色单独调节。随机模式对每处标记独立抽取，可能连续出现同一种。</p>
             <label class="qa-select"><span>问题词样式</span><select data-path="components.transcriptCover.highlightStyle"><option value="random">随机三类</option><option value="underline">细下划线</option><option value="highlight">Highlight</option><option value="box">虚线框</option><option value="both">下划线 + Highlight</option></select></label>
             ${numberField('高亮底色透明度', 'components.transcriptCover.highlightOpacity', 0, 0.5, 0.01)}
-            ${numberField('普通句字号', 'components.transcriptCover.rawFontSize', 14, 24)}
-            ${numberField('优化句字号', 'components.transcriptCover.cleanFontSize', 18, 36)}
-            ${numberField('优化句字重', 'components.transcriptCover.cleanWeight', 600, 900, 50)}
           </section>
           <section><h2>阅读区域</h2>
             ${numberField('区域高度（px）', 'components.transcriptCover.height', 260, 640, 10)}
