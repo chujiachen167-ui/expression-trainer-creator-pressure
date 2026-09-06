@@ -19,9 +19,12 @@ assert(!worker.includes('audio: toBase64(audio)'), 'the Workers AI binding must 
 assert(worker.includes('MAX_AUDIO_BYTES'), 'the public endpoint must impose a request-size bound');
 assert(app.includes('createWebTranscriptionService'), 'the app must prefer the cross-browser web transcription adapter');
 assert(app.includes("webSttIssue?.code === 'not-configured'"), 'unconfigured cloud STT must be explained without blaming microphone permission');
+assert(app.includes('error.requestId'), 'terminal web transcription failures must expose a Cloudflare trace id for diagnosis');
 assert(packager.includes("'web-stt.js'"), 'the web package must ship the browser transcription adapter');
 assert(client.includes('recorder.start();'), 'each upload segment must start as a standalone recording');
 assert(!client.includes('recorder.start(chunkMs)'), 'MediaRecorder timeslices must not be uploaded as independent files');
+assert(client.includes('maxConsecutiveFailures = 3'), 'one transient failed segment must not stop the whole training session');
+assert(worker.includes('MAX_AI_ATTEMPTS = 3'), 'the server must retry transient Workers AI failures');
 
 for (const page of ['v1-camera-baseline.html', 'v2-ai-audience.html', 'v3-creator-studio.html']) {
   assert(read(page).includes('web-stt.js'), `${page} must load the browser transcription adapter`);

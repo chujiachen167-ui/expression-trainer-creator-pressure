@@ -1,6 +1,7 @@
 (() => {
   const endpoint = '/api/transcribe';
   const chunkMs = 3000;
+  const maxConsecutiveFailures = 3;
 
   class WebSTTError extends Error {
     constructor(message, code = 'web-stt-unavailable') {
@@ -27,7 +28,15 @@
   function parseFailure(response, body) {
     const code = body?.code || `http-${response.status}`;
     const message = body?.message || '网页转写服务暂不可用。';
-    return new WebSTTError(message, code);
+    const error = new WebSTTError(message, code);
+    error.status = response.status;
+    error.requestId = body?.requestId || response.headers.get('cf-ray') || '';
+    return error;
+  }
+
+  function isTransient(error) {
+    return ['network', 'transcription-failed', 'http-408', 'http-429', 'http-500', 'http-502', 'http-503', 'http-504']
+      .includes(error?.code);
   }
 
   async function requestJSON(url, options) {
@@ -57,6 +66,8 @@
     let recordingStartedAt = 0;
     let chunkIndex = 0;
     let lastChunkEndedAt = 0;
+    let consecutiveFailures = 0;
+    let transientError = '';
 
     const reportStatus = patch => onStatus?.({ engine: 'web-stt', ...patch });
     const reportError = error => {
@@ -89,6 +100,8 @@
           body: blob
         });
         const text = String(result.text || '').trim();
+        consecutiveFailures = 0;
+        transientError = '';
         if (text) {
           onResult?.(text, true, {
             source: 'web-stt',
@@ -100,10 +113,16 @@
           });
         }
       } catch (error) {
-        reportError(error);
+        if (running && isTransient(error) && consecutiveFailures < maxConsecutiveFailures - 1) {
+          consecutiveFailures += 1;
+          transientError = `${error.code || 'network'} · 自动恢复 ${consecutiveFailures}/${maxConsecutiveFailures}`;
+          reportStatus({ state: 'running', queued: pending, lastError: transientError });
+        } else {
+          reportError(error);
+        }
       } finally {
         pending = Math.max(0, pending - 1);
-        if (!terminalError) reportStatus({ state: running ? 'running' : 'stopped', queued: pending, lastError: '' });
+        if (!terminalError) reportStatus({ state: running ? 'running' : 'stopped', queued: pending, lastError: transientError });
       }
     }
 
@@ -153,6 +172,8 @@
           throw new WebSTTError('麦克风尚未就绪，无法开始网页转写。', 'microphone-unavailable');
         }
         terminalError = null;
+        consecutiveFailures = 0;
+        transientError = '';
         recordingStartedAt = Date.now();
         lastChunkEndedAt = recordingStartedAt;
         chunkIndex = 0;

@@ -30,11 +30,34 @@ const path = require('node:path');
   assert.equal(invocation.model, '@cf/openai/whisper');
   assert.deepEqual(invocation.input, { audio: [0, 17, 128, 255], language: 'zh' });
 
+  let retryAttempts = 0;
+  const retryContext = {
+    request: new Request('https://read-yourself.test/api/transcribe?lang=zh', {
+      method: 'POST',
+      headers: { 'content-type': 'audio/webm;codecs=opus' },
+      body: new Uint8Array([0, 17, 128, 255])
+    }),
+    env: {
+      WEB_STT_ENABLED: 'true',
+      AI: {
+        async run() {
+          retryAttempts += 1;
+          if (retryAttempts < 3) throw new Error('temporary out of capacity');
+          return { text: '恢复成功' };
+        }
+      }
+    }
+  };
+  const retryResponse = await worker.onRequestPost(retryContext);
+  assert.equal(retryResponse.status, 200);
+  assert.deepEqual(await retryResponse.json(), { text: '恢复成功' });
+  assert.equal(retryAttempts, 3, 'transient Workers AI failures should be retried twice');
+
   const unavailable = await worker.onRequestGet({ env: {} });
   assert.equal(unavailable.status, 503);
   assert.equal((await unavailable.json()).code, 'not-configured');
 
-  console.log('Web STT function: raw-byte Whisper input and configuration gate passed.');
+  console.log('Web STT function: raw-byte Whisper input, transient retry and configuration gate passed.');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

@@ -13,6 +13,7 @@ try {
     const html = fs.readFileSync(path.join(outDir, page), 'utf8');
     assert.match(html, /<body data-environment="production"/);
     assert.equal(html.includes('data-environment="production"'), true);
+    assert.match(html, /creator-project-config\.js\?v=[a-f0-9]{12}/, `${page}: production config must use a deployment-specific URL`);
   }
   assert.equal(fs.existsSync(path.join(outDir, 'assets/brand/read-yourself-concentric.png')), true);
   assert.equal(fs.existsSync(path.join(outDir, 'assets/contact/wechat-donglai.png')), true);
@@ -22,7 +23,9 @@ try {
   assert.equal(fs.existsSync(path.join(outDir, 'v2-interest-panel.js')), true);
   assert.equal(fs.existsSync(path.join(outDir, 'dev/v2-replay.html')), false);
   assert.equal(fs.existsSync(path.join(outDir, '_headers')), true);
-  assert.match(fs.readFileSync(path.join(outDir, '_headers'), 'utf8'), /camera=\(self\)/);
+  const headers = fs.readFileSync(path.join(outDir, '_headers'), 'utf8');
+  assert.match(headers, /camera=\(self\)/);
+  assert.match(headers, /max-age=0, must-revalidate/, 'static assets must revalidate instead of retaining stale UI parameters');
   assert.equal(fs.existsSync(path.join(outDir, 'main.js')), false);
   assert.equal(fs.existsSync(path.join(outDir, 'node_modules')), false);
   assert.equal(fs.existsSync(path.join(outDir, 'models')), false);

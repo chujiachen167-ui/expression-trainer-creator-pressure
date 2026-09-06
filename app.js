@@ -733,7 +733,8 @@
         if (round && status.queued != null) v2Store.setAdapterStatus({ sessionId: round.sessionId, pendingCount: status.queued });
       },
       onError: error => {
-        addEvent('网页转写', error.message || '网页转写服务暂不可用。', true, 'Cloudflare Whisper');
+        const trace = error.requestId ? `Cloudflare Whisper · ${error.requestId}` : 'Cloudflare Whisper';
+        addEvent('网页转写', error.message || '网页转写服务暂不可用。', true, trace);
         noteV2SttFailure(error.message);
       }
     });

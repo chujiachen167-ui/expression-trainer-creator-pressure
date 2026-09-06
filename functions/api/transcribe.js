@@ -1,4 +1,6 @@
 const MAX_AUDIO_BYTES = 1_500_000;
+const MAX_AI_ATTEMPTS = 3;
+const RETRY_DELAYS_MS = [150, 450];
 const allowedContentTypes = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/mpeg', 'application/octet-stream'];
 
 function json(body, status = 200) {
@@ -20,6 +22,24 @@ function toAudioBytes(buffer) {
 
 function serviceReady(env) {
   return env.WEB_STT_ENABLED === 'true' && env.AI && typeof env.AI.run === 'function';
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function upstreamStatus(error) {
+  const value = Number(error?.status || error?.cause?.status || 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function shouldRetry(error) {
+  const status = upstreamStatus(error);
+  if ([408, 409, 425, 429].includes(status) || status >= 500) return true;
+  if (status >= 400) return false;
+  return /capacity|timeout|temporar|rate|unavailable|internal|network|fetch/i.test(
+    error instanceof Error ? error.message : String(error || '')
+  ) || status === 0;
 }
 
 export async function onRequestGet(context) {
@@ -50,24 +70,34 @@ export async function onRequestPost(context) {
     return json({ code: 'audio-too-large', message: '单次转写音频为空或过大。' }, 413);
   }
   const language = new URL(context.request.url).searchParams.get('lang') || 'zh';
-  try {
-    const result = await context.env.AI.run('@cf/openai/whisper', {
-      audio: toAudioBytes(audio),
-      language
-    });
-    return json({ text: String(result?.text || '').trim() });
-  } catch (error) {
-    const requestId = context.request.headers.get('cf-ray') || '';
-    console.error('Cloudflare Whisper transcription failed', {
-      requestId,
-      contentType,
-      audioBytes: audio.byteLength,
-      error: error instanceof Error ? error.message : String(error)
-    });
-    return json({
-      code: 'transcription-failed',
-      message: '网页转写暂时失败，请稍后重试。',
-      ...(requestId ? { requestId } : {})
-    }, 502);
+  const audioBytes = toAudioBytes(audio);
+  let lastError = null;
+  let attempts = 0;
+  for (attempts = 1; attempts <= MAX_AI_ATTEMPTS; attempts += 1) {
+    try {
+      const result = await context.env.AI.run('@cf/openai/whisper', {
+        audio: audioBytes,
+        language
+      });
+      return json({ text: String(result?.text || '').trim() });
+    } catch (error) {
+      lastError = error;
+      if (attempts >= MAX_AI_ATTEMPTS || !shouldRetry(error)) break;
+      await wait(RETRY_DELAYS_MS[attempts - 1]);
+    }
   }
+  const requestId = context.request.headers.get('cf-ray') || '';
+  console.error('Cloudflare Whisper transcription failed', {
+    requestId,
+    contentType,
+    audioBytes: audio.byteLength,
+    attempts,
+    upstreamStatus: upstreamStatus(lastError),
+    error: lastError instanceof Error ? lastError.message : String(lastError)
+  });
+  return json({
+    code: 'transcription-failed',
+    message: '网页转写暂时失败，请稍后重试。',
+    ...(requestId ? { requestId } : {})
+  }, 502);
 }
