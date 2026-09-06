@@ -1,6 +1,9 @@
+import { toSimplifiedChinese } from '../lib/opencc-t2s.js';
+
 const MAX_AUDIO_BYTES = 1_500_000;
 const MAX_AI_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [150, 450];
+const CHUNK_MS = 6000;
 const allowedContentTypes = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/mpeg', 'application/octet-stream'];
 
 function json(body, status = 200) {
@@ -42,6 +45,62 @@ function shouldRetry(error) {
   ) || status === 0;
 }
 
+function normalizedLanguage(value) {
+  return String(value || '').toLowerCase().startsWith('en') ? 'en' : 'zh';
+}
+
+function expressionUnits(text) {
+  return String(text || '').match(/[A-Za-z]+(?:'[A-Za-z]+)?|\d+(?:\.\d+)?|[\u3400-\u9fff]/g) || [];
+}
+
+function removeHallucinationLoops(text) {
+  let removed = false;
+  const cleaned = String(text || '').replace(
+    /(^|[\s,，。！？!?:;、.\-])([A-Za-z]+|\d+(?:\.\d+)?|[\u3400-\u9fff])(?:\s*[\-,，。！？!?:;、.]*\s*\2){5,}/giu,
+    (_, prefix) => {
+      removed = true;
+      return prefix;
+    }
+  );
+  return { text: cleaned.replace(/(?:\s*[\-,，。！？!?:;、.]){2,}/g, ' ').trim(), removed };
+}
+
+function normalizeTranscript(input, language) {
+  let text = String(input || '').replace(/\s+/g, ' ').trim();
+  const changes = [];
+  if (language === 'zh') {
+    const simplified = toSimplifiedChinese(text);
+    if (simplified !== text) changes.push('simplified-chinese');
+    text = simplified;
+    const withoutUnexpectedScripts = text.replace(/[\u3040-\u30ff\u31f0-\u31ff\uac00-\ud7af\u0400-\u04ff]+/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+    if (withoutUnexpectedScripts !== text) changes.push('unexpected-script');
+    text = withoutUnexpectedScripts;
+  }
+  const loopResult = removeHallucinationLoops(text);
+  if (loopResult.removed) changes.push('repetition-loop');
+  text = loopResult.text;
+  if (changes.includes('repetition-loop') && expressionUnits(text).length < 5) text = '';
+  return { text, filtered: changes.length > 0, filters: changes };
+}
+
+function transcriptionOptions(audio, language) {
+  return {
+    audio,
+    task: 'transcribe',
+    language,
+    vad_filter: true,
+    initial_prompt: language === 'zh'
+      ? '普通话为主，可夹杂英文的自媒体口播。逐字转写，中文一律使用简体中文。不要补写未说出的内容，不要把静音、呼吸声或环境噪声转成字幕。'
+      : 'Creator speech in English. Transcribe only what is spoken. Do not turn silence, breathing, or background noise into words.',
+    condition_on_previous_text: false,
+    no_speech_threshold: 0.55,
+    compression_ratio_threshold: 2.2,
+    log_prob_threshold: -0.8,
+    hallucination_silence_threshold: 1
+  };
+}
+
 export async function onRequestGet(context) {
   if (!serviceReady(context.env)) {
     return json({
@@ -50,7 +109,7 @@ export async function onRequestGet(context) {
       message: '网页转写服务尚未启用。'
     }, 503);
   }
-  return json({ available: true, engine: 'cloudflare-whisper', chunkMs: 3000 });
+  return json({ available: true, engine: 'cloudflare-whisper-large-v3-turbo', chunkMs: CHUNK_MS });
 }
 
 export async function onRequestPost(context) {
@@ -69,17 +128,14 @@ export async function onRequestPost(context) {
   if (!audio.byteLength || audio.byteLength > MAX_AUDIO_BYTES) {
     return json({ code: 'audio-too-large', message: '单次转写音频为空或过大。' }, 413);
   }
-  const language = new URL(context.request.url).searchParams.get('lang') || 'zh';
+  const language = normalizedLanguage(new URL(context.request.url).searchParams.get('lang'));
   const audioBytes = toAudioBytes(audio);
   let lastError = null;
   let attempts = 0;
   for (attempts = 1; attempts <= MAX_AI_ATTEMPTS; attempts += 1) {
     try {
-      const result = await context.env.AI.run('@cf/openai/whisper', {
-        audio: audioBytes,
-        language
-      });
-      return json({ text: String(result?.text || '').trim() });
+      const result = await context.env.AI.run('@cf/openai/whisper-large-v3-turbo', transcriptionOptions(audioBytes, language));
+      return json(normalizeTranscript(result?.text, language));
     } catch (error) {
       lastError = error;
       if (attempts >= MAX_AI_ATTEMPTS || !shouldRetry(error)) break;

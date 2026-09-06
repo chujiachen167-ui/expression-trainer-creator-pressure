@@ -13,7 +13,10 @@ assert(client.includes("const endpoint = '/api/transcribe'"), 'browser STT must 
 assert(client.includes('audio/mp4'), 'Safari-compatible MediaRecorder output must be considered');
 assert(client.includes('await uploadChain'), 'the final audio fragment must finish uploading before stop resolves');
 assert(worker.includes("env.WEB_STT_ENABLED === 'true'"), 'cloud transcription must stay disabled until an owner enables it');
-assert(worker.includes("'@cf/openai/whisper'"), 'the Pages Function must use the selected multilingual Whisper model');
+assert(worker.includes("'@cf/openai/whisper-large-v3-turbo'"), 'the Pages Function must use the higher-accuracy multilingual Whisper model');
+assert(worker.includes('condition_on_previous_text: false'), 'independent chunks must disable previous-text conditioning to prevent repetition loops');
+assert(worker.includes('vad_filter: true'), 'the server must filter silent regions before transcription');
+assert(worker.includes('toSimplifiedChinese'), 'Chinese web transcripts must be normalized to Simplified Chinese');
 assert(worker.includes('Array.from(new Uint8Array(buffer))'), 'the Workers AI binding must receive raw audio byte values');
 assert(!worker.includes('audio: toBase64(audio)'), 'the Workers AI binding must not receive a base64 string');
 assert(worker.includes('MAX_AUDIO_BYTES'), 'the public endpoint must impose a request-size bound');
@@ -24,7 +27,9 @@ assert(packager.includes("'web-stt.js'"), 'the web package must ship the browser
 assert(client.includes('recorder.start();'), 'each upload segment must start as a standalone recording');
 assert(!client.includes('recorder.start(chunkMs)'), 'MediaRecorder timeslices must not be uploaded as independent files');
 assert(client.includes('maxConsecutiveFailures = 3'), 'one transient failed segment must not stop the whole training session');
+assert(client.includes('fallbackChunkMs = 6000'), 'web chunks need enough context for stable Mandarin recognition');
 assert(worker.includes('MAX_AI_ATTEMPTS = 3'), 'the server must retry transient Workers AI failures');
+assert(app.includes('noiseSuppression: true'), 'web microphone capture must request speech-oriented noise suppression');
 
 for (const page of ['v1-camera-baseline.html', 'v2-ai-audience.html', 'v3-creator-studio.html']) {
   assert(read(page).includes('web-stt.js'), `${page} must load the browser transcription adapter`);

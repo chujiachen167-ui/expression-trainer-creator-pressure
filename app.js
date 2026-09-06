@@ -78,7 +78,14 @@
     if (window.api?.initASR) return;
     if (browserAudioGate?.getTracks().some(track => track.readyState === 'live')) return;
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('当前环境不支持麦克风');
-    browserAudioGate = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    const audio = mediaController?.getAudioConstraints?.() || {
+      channelCount: 1,
+      sampleRate: 16000,
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    };
+    browserAudioGate = await navigator.mediaDevices.getUserMedia({ audio, video: false });
   }
   function hasBrowserAudioPermission() {
     return Boolean(browserAudioGate?.getAudioTracks?.().some(track => track.readyState === 'live'));
@@ -389,10 +396,11 @@
       const currentText = `${transcript}${interim}`;
       const analysis = window.CreatorExpressionAnalysis.analyze(currentText, v1Rules());
       if (featureEnabled('metrics')) {
-        setMetric('fillerMetric', analysis.fillers.length);
-        setMetric('vagueMetric', analysis.vague.length);
-        setMetric('hedgeMetric', analysis.hedges.length);
-        setMetric('densityMetric', analysis.totalChars ? `${analysis.density}%` : '--');
+        const unreliable = analysis.quality?.status === 'unreliable';
+        setMetric('fillerMetric', unreliable ? '--' : analysis.fillers.length);
+        setMetric('vagueMetric', unreliable ? '--' : analysis.vague.length);
+        setMetric('hedgeMetric', unreliable ? '--' : analysis.hedges.length);
+        setMetric('densityMetric', analysis.scoreable ? `${analysis.density}%` : '--');
       }
       renderDiagnosticFeedback(analysis);
       scheduleCoreAnalysis(currentText, analysis);
@@ -422,7 +430,7 @@
   }
 
   function scheduleCoreAnalysis(text, localAnalysis) {
-    if (!window.api?.analyzeText || !text.trim()) return;
+    if (!window.api?.analyzeText || !text.trim() || !localAnalysis.scoreable) return;
     clearTimeout(coreAnalysisTimer);
     const version = ++coreAnalysisVersion;
     coreAnalysisTimer = setTimeout(async () => {
@@ -436,7 +444,9 @@
           hedges: core.hedges.map(item => item.word),
           vague: core.vagueWords.map(item => item.word),
           repeats: localAnalysis.repeats,
-          density: core.density
+          density: core.density,
+          scoreable: true,
+          quality: localAnalysis.quality
         };
         if (featureEnabled('metrics')) {
           setMetric('fillerMetric', normalized.fillers.length);
@@ -1090,12 +1100,17 @@
     const density = document.getElementById('densityMetric')?.textContent || '--';
     const words = document.getElementById('wordMetric')?.textContent || String(analysis?.totalChars || 0);
     const writeReport = (selector, value) => { const node = reportPanel.querySelector(selector); if (node) node.textContent = value; };
-    writeReport('#reportDensity', analysis ? `${analysis.density}%` : density);
-    writeReport('#reportFiller', analysis ? analysis.fillers.length : filler);
-    writeReport('#reportHedge', analysis?.hedges.length ?? 0);
-    writeReport('#reportVague', analysis?.vague.length ?? 0);
+    writeReport('#reportDensity', analysis ? (analysis.scoreable ? `${analysis.density}%` : '--') : density);
+    writeReport('#reportFiller', analysis ? (analysis.scoreable ? analysis.fillers.length : '--') : filler);
+    writeReport('#reportHedge', analysis ? (analysis.scoreable ? analysis.hedges.length : '--') : 0);
+    writeReport('#reportVague', analysis ? (analysis.scoreable ? analysis.vague.length : '--') : 0);
     writeReport('#reportWords', words);
     if (!analysis) return;
+    if (!analysis.scoreable) {
+      writeReport('#reportFocus', '逐字稿质量不足，暂不生成评分');
+      writeReport('#reportReason', analysis.quality?.message || '请重新录制一轮完整、清晰的表达。');
+      return;
+    }
     const priorities = [
       { count: analysis.fillers.length, action: '把口头禅换成一秒停顿', reason: '填充词会占用观众注意力，却不增加信息。' },
       { count: analysis.hedges.length, action: '删除弱化前缀，直接陈述判断', reason: '“我觉得、可能、应该”会削弱观点的可信度。' },
@@ -1118,6 +1133,12 @@
   async function generateCoreReport() {
     const container = reportPanel?.querySelector('[data-core-report]');
     if (!container || !window.api?.getFinalReport || !transcript.trim()) return;
+    const analysis = window.CreatorExpressionAnalysis?.analyze(transcript, v1Rules());
+    if (analysis && !analysis.scoreable) {
+      container.hidden = false;
+      container.textContent = analysis.quality?.message || '逐字稿质量不足，本轮不生成 AI 报告。';
+      return;
+    }
     const runtime = await refreshDesktopRuntime();
     if (!runtime?.llmConfigured) {
       container.hidden = false;
@@ -1126,7 +1147,6 @@
     }
     container.hidden = false;
     container.textContent = '正在调用已配置的大模型生成完整报告…';
-    const analysis = window.CreatorExpressionAnalysis?.analyze(transcript, v1Rules());
     const result = await window.api.getFinalReport({
       fullText: transcript,
       stats: {
@@ -1195,7 +1215,11 @@
           const analysis = window.CreatorExpressionAnalysis.analyze(transcript, v1Rules());
           const empty = document.querySelector('[data-feedback-empty]');
           if (empty) empty.hidden = true;
-          addEvent('本轮诊断', `笼统词 ${analysis.vague.length} 次、填充词 ${analysis.fillers.length} 次、犹豫词 ${analysis.hedges.length} 次、重复表达 ${analysis.repeats.length} 处，表达密度 ${analysis.density}%。`, true, '诊断依据来自本轮逐字稿');
+          if (analysis.scoreable) {
+            addEvent('本轮诊断', `笼统词 ${analysis.vague.length} 次、填充词 ${analysis.fillers.length} 次、犹豫词 ${analysis.hedges.length} 次、重复表达 ${analysis.repeats.length} 处，表达密度 ${analysis.density}%。`, true, '诊断依据来自本轮逐字稿');
+          } else {
+            addEvent('本轮诊断', '逐字稿质量不足，本轮未生成表达密度评分。', true, analysis.quality?.message || '请重新录制一轮完整、清晰的表达。');
+          }
         } else if (v2Store) {
           const review = window.CreatorV2Review?.buildReview(v2Store.getActiveRound(), window.CreatorI18n?.getLocale?.() || 'zh-CN');
           addEvent('本轮复盘', review?.nextAction || '下一轮只练一个动作。', true, review?.opening?.explanation || (currentTemplate ? `受众模板：${currentTemplate.name}` : ''));

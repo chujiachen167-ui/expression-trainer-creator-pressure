@@ -23,6 +23,17 @@ compliance record, not legal advice.
 - License: MIT
 - Use: desktop application runtime and secure renderer/main-process bridge.
 
+### OpenCC dictionaries
+
+- Source: https://github.com/BYVoid/OpenCC
+- Version: `ver.1.3.1`
+- Files: `third_party/opencc-1.3.1/TSCharacters.txt` and `TSPhrases.txt`
+- License: Apache License 2.0; full text retained at `third_party/opencc-1.3.1/LICENSE`.
+- Use: deterministic Traditional-to-Simplified normalization for Chinese browser transcripts.
+- Adaptation: `scripts/build-opencc-t2s.js` converts the official dictionaries into the
+  generated Pages Function module `functions/lib/opencc-t2s.js`; the original dictionary
+  sources remain in the repository for provenance and reproducibility.
+
 ### sherpa-onnx
 
 - Source: https://github.com/k2-fsa/sherpa-onnx

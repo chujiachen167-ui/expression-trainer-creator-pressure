@@ -70,6 +70,49 @@
     const numbers = input.match(/\b\d+(?:\.\d+)?\b/g)?.length || 0;
     return han + latinWords + numbers;
   }
+  function expressionTokens(text) {
+    return String(text || '').toLocaleLowerCase('en-US').match(/[a-z]+(?:'[a-z]+)?|\d+(?:\.\d+)?|[\u3400-\u9fff]/g) || [];
+  }
+  function repeatedTokenProfile(tokens) {
+    let coveredUnits = 0;
+    let maximumRepeats = 0;
+    for (let size = 1; size <= 4; size += 1) {
+      for (let start = 0; start + size * 5 <= tokens.length; start += 1) {
+        const pattern = tokens.slice(start, start + size);
+        let repetitions = 1;
+        while (start + size * (repetitions + 1) <= tokens.length) {
+          const offset = start + size * repetitions;
+          if (!pattern.every((token, index) => token === tokens[offset + index])) break;
+          repetitions += 1;
+        }
+        if (repetitions < 5) continue;
+        coveredUnits = Math.max(coveredUnits, size * repetitions);
+        maximumRepeats = Math.max(maximumRepeats, repetitions);
+      }
+    }
+    return {
+      coveredUnits,
+      maximumRepeats,
+      coverage: tokens.length ? coveredUnits / tokens.length : 0,
+      penaltyUnits: Math.max(0, coveredUnits - 2)
+    };
+  }
+  function transcriptQuality(text, totalChars) {
+    const tokens = expressionTokens(text);
+    const repetition = repeatedTokenProfile(tokens);
+    const unexpectedScriptCount = String(text || '').match(/[\u3040-\u30ff\u31f0-\u31ff\uac00-\ud7af\u0400-\u04ff]/g)?.length || 0;
+    const reasons = [];
+    if (totalChars < 12) reasons.push('too-short');
+    if ((repetition.coveredUnits >= 10 && repetition.coverage >= 0.25) || repetition.maximumRepeats >= 12) reasons.push('repetition-loop');
+    if (unexpectedScriptCount >= 2) reasons.push('unexpected-script');
+    const unreliable = reasons.includes('repetition-loop') || reasons.includes('unexpected-script');
+    const message = unreliable
+      ? '逐字稿含有明显的重复幻觉或异常语种，本轮暂不生成表达评分。请靠近麦克风并重新录一轮。'
+      : reasons.includes('too-short')
+        ? '有效逐字稿太短，本轮暂不生成表达评分；请至少连续表达一句完整观点。'
+        : '逐字稿质量足够，可生成表达诊断。';
+    return { status: unreliable ? 'unreliable' : reasons.length ? 'insufficient' : 'scoreable', reasons, message, repetition, unexpectedScriptCount };
+  }
   function customFillerTerms(options = {}) {
     return String(options.customWords || '')
       .split(/[，,、\s]+/)
@@ -137,10 +180,13 @@
     const hedges = hits.hedge;
     const vague = hits.vague;
     const repeats = repeatedPhrases(input);
-    const penalty = fillers.length * 1.25 + hedges.length * 1.25 + vague.length * 0.75 + repeats.length * 1.5;
     const totalChars = countExpressionUnits(input);
-    const density = totalChars ? Math.max(0, Math.round((1 - penalty / totalChars) * 100)) : 0;
-    return { text: input, totalChars, fillers, hedges, vague, repeats, density };
+    const quality = transcriptQuality(input, totalChars);
+    const scoreable = quality.status === 'scoreable';
+    const penalty = fillers.length * 1.25 + hedges.length * 1.25 + vague.length * 0.75
+      + repeats.length * 1.5 + quality.repetition.penaltyUnits * 0.8;
+    const density = scoreable ? Math.max(0, Math.round((1 - penalty / totalChars) * 100)) : null;
+    return { text: input, totalChars, fillers, hedges, vague, repeats, density, scoreable, quality };
   }
 
   function highlight(text, options = {}) {
@@ -171,6 +217,13 @@
   function suggestions(result) {
     const output = [];
     const english = (result.text.match(/[A-Za-z]/g)?.length || 0) > (result.text.match(/[\u3400-\u9fff]/g)?.length || 0);
+    if (!result.scoreable) {
+      return [{
+        type: 'repeat', key: 'transcript-quality',
+        title: english ? 'Transcript quality' : '逐字稿质量',
+        text: result.quality?.message || (english ? 'Not enough reliable speech to score this round.' : '本轮没有足够可靠的逐字稿，暂不评分。')
+      }];
+    }
     [...new Set(result.vague)].slice(0, 3).forEach(word => {
       const replacements = vagueToPrecise[word] || englishVagueToPrecise[word.toLocaleLowerCase('en-US')] || [];
       output.push({

@@ -3,7 +3,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 (async () => {
-  const source = fs.readFileSync(path.join(__dirname, '../functions/api/transcribe.js'), 'utf8');
+  const converter = fs.readFileSync(path.join(__dirname, '../functions/lib/opencc-t2s.js'), 'utf8')
+    .replace('export function toSimplifiedChinese', 'function toSimplifiedChinese');
+  const workerSource = fs.readFileSync(path.join(__dirname, '../functions/api/transcribe.js'), 'utf8')
+    .replace("import { toSimplifiedChinese } from '../lib/opencc-t2s.js';", '');
+  const source = `${converter}\n${workerSource}`;
   const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
   const worker = await import(moduleUrl);
   let invocation = null;
@@ -13,7 +17,7 @@ const path = require('node:path');
       AI: {
         async run(model, input) {
           invocation = { model, input };
-          return { text: '  测试字幕  ' };
+          return { text: '  我現在正在說中文，這是網頁轉寫測試。  ' };
         }
       }
     },
@@ -26,9 +30,18 @@ const path = require('node:path');
 
   const response = await worker.onRequestPost(context);
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { text: '测试字幕' });
-  assert.equal(invocation.model, '@cf/openai/whisper');
-  assert.deepEqual(invocation.input, { audio: [0, 17, 128, 255], language: 'zh' });
+  assert.deepEqual(await response.json(), {
+    text: '我现在正在说中文，这是网页转写测试。',
+    filtered: true,
+    filters: ['simplified-chinese']
+  });
+  assert.equal(invocation.model, '@cf/openai/whisper-large-v3-turbo');
+  assert.deepEqual(invocation.input.audio, [0, 17, 128, 255]);
+  assert.equal(invocation.input.language, 'zh');
+  assert.equal(invocation.input.task, 'transcribe');
+  assert.equal(invocation.input.vad_filter, true);
+  assert.equal(invocation.input.condition_on_previous_text, false);
+  assert.match(invocation.input.initial_prompt, /简体中文/);
 
   let retryAttempts = 0;
   const retryContext = {
@@ -50,14 +63,32 @@ const path = require('node:path');
   };
   const retryResponse = await worker.onRequestPost(retryContext);
   assert.equal(retryResponse.status, 200);
-  assert.deepEqual(await retryResponse.json(), { text: '恢复成功' });
+  assert.deepEqual(await retryResponse.json(), { text: '恢复成功', filtered: false, filters: [] });
   assert.equal(retryAttempts, 3, 'transient Workers AI failures should be retried twice');
+
+  const loopContext = {
+    request: new Request('https://read-yourself.test/api/transcribe?lang=zh-CN', {
+      method: 'POST',
+      headers: { 'content-type': 'audio/webm' },
+      body: new Uint8Array([1, 2, 3])
+    }),
+    env: {
+      WEB_STT_ENABLED: 'true',
+      AI: { async run() { return { text: `謝謝。건강。${'4-'.repeat(80)}` }; } }
+    }
+  };
+  const loopResponse = await worker.onRequestPost(loopContext);
+  assert.deepEqual(await loopResponse.json(), {
+    text: '',
+    filtered: true,
+    filters: ['simplified-chinese', 'unexpected-script', 'repetition-loop']
+  }, 'Traditional text, unexpected scripts and long repetition loops must not reach the UI');
 
   const unavailable = await worker.onRequestGet({ env: {} });
   assert.equal(unavailable.status, 503);
   assert.equal((await unavailable.json()).code, 'not-configured');
 
-  console.log('Web STT function: raw-byte Whisper input, transient retry and configuration gate passed.');
+  console.log('Web STT function: large-v3-turbo options, Simplified Chinese normalization, hallucination filtering and retry passed.');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

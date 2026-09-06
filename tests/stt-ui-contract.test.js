@@ -5,6 +5,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const controls = fs.readFileSync(path.join(root, 'v1-controls.js'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const analysis = fs.readFileSync(path.join(root, 'expression-analysis.js'), 'utf8');
 const v1 = fs.readFileSync(path.join(root, 'v1-camera-baseline.html'), 'utf8');
 
 assert(controls.includes('data-language="mixed"'), 'mixed Chinese/English mode should exist');
@@ -22,5 +23,8 @@ assert(app.includes('createSerialAudioQueue'), 'Electron recognition should pres
 assert(app.includes('resampleTo16k'), 'Electron recognition should normalize device audio to 16 kHz');
 assert(app.includes('createScriptProcessor(2048'), 'local subtitle audio frames should target roughly 128 ms');
 assert(v1.includes('stt-audio.js?v=0.2.1'), 'V1 should load the STT audio pipeline before app.js');
+assert(app.includes('逐字稿质量不足，暂不生成评分'), 'unreliable transcripts must show a no-score report state');
+assert(app.includes("analysis.scoreable ? `${analysis.density}%` : '--'"), 'live density must stay blank until the transcript is scoreable');
+assert.match(analysis, /density = scoreable \?[^:]+: null/);
 
 console.log('STT UI and lifecycle contract tests passed.');

@@ -1,6 +1,6 @@
 (() => {
   const endpoint = '/api/transcribe';
-  const chunkMs = 3000;
+  const fallbackChunkMs = 6000;
   const maxConsecutiveFailures = 3;
 
   class WebSTTError extends Error {
@@ -68,6 +68,7 @@
     let lastChunkEndedAt = 0;
     let consecutiveFailures = 0;
     let transientError = '';
+    let chunkMs = fallbackChunkMs;
 
     const reportStatus = patch => onStatus?.({ engine: 'web-stt', ...patch });
     const reportError = error => {
@@ -86,6 +87,7 @@
       if (!isSupported()) throw new WebSTTError('当前浏览器不支持网页音频分段转写。', 'unsupported');
       const status = await requestJSON(endpoint, { method: 'GET' });
       if (!status.available) throw new WebSTTError(status.message || '网页转写服务尚未启用。', status.code || 'not-configured');
+      if (Number.isFinite(status.chunkMs) && status.chunkMs >= 3000 && status.chunkMs <= 15000) chunkMs = status.chunkMs;
       return status;
     }
 
@@ -101,7 +103,7 @@
         });
         const text = String(result.text || '').trim();
         consecutiveFailures = 0;
-        transientError = '';
+        transientError = result.filtered && !text ? '已过滤低可信片段' : '';
         if (text) {
           onResult?.(text, true, {
             source: 'web-stt',

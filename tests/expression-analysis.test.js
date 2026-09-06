@@ -39,4 +39,15 @@ const normalFunctionWords = engine.analyze('It works if the camera is ready.');
 assert.equal(normalFunctionWords.fillers.length, 0, 'normal English function words such as it/if are not mislabeled as fillers');
 assert.ok(english.density < 99 && english.density > 0, 'diagnosed English density is based on expression units rather than raw letters');
 
-console.log('Expression analysis contract tests passed for Chinese, English and mixed-language input.');
+const hallucinated = engine.analyze(`我現在正在說中文。건강。${'4-'.repeat(120)}Thank you.`);
+assert.equal(hallucinated.scoreable, false, 'obvious ASR hallucination loops must not be scored');
+assert.equal(hallucinated.density, null, 'unreliable transcripts must not receive a misleading high density');
+assert.ok(hallucinated.quality.reasons.includes('repetition-loop'));
+assert.ok(hallucinated.quality.reasons.includes('unexpected-script'));
+assert.match(engine.suggestions(hallucinated)[0].text, /暂不生成表达评分/);
+
+const tooShort = engine.analyze('测试一下。');
+assert.equal(tooShort.scoreable, false, 'a fragment shorter than a complete thought must not be scored');
+assert.equal(tooShort.quality.status, 'insufficient');
+
+console.log('Expression analysis contract tests passed for valid Chinese/English and unreliable transcript rejection.');
