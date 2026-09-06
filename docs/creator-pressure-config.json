@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "savedAt": "2026-09-05T14:49:56.692Z",
+  "savedAt": "2026-09-06T04:31:09.294Z",
   "config": {
     "flags": {
       "v1": true,
@@ -147,8 +147,8 @@
       "driftWall": {
         "columns": 2,
         "tileWidth": 200,
-        "tileHeight": 136,
-        "gap": 18,
+        "tileHeight": 80,
+        "gap": 20,
         "radius": 14,
         "tilt": 16,
         "turn": -14,
@@ -156,8 +156,8 @@
         "perspective": 1200,
         "depth": 120,
         "speed": 50,
-        "direction": "down",
-        "variance": 0.45,
+        "direction": "up",
+        "variance": 0.7,
         "parallax": 0.6,
         "pauseOnHover": true,
         "lift": 64,
@@ -420,6 +420,9 @@
           "self": {
             "y": "-40"
           }
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > aside:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > article:nth-of-type(3)": {
+          "self": {}
         }
       }
     },
