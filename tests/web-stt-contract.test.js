@@ -14,10 +14,14 @@ assert(client.includes('audio/mp4'), 'Safari-compatible MediaRecorder output mus
 assert(client.includes('await uploadChain'), 'the final audio fragment must finish uploading before stop resolves');
 assert(worker.includes("env.WEB_STT_ENABLED === 'true'"), 'cloud transcription must stay disabled until an owner enables it');
 assert(worker.includes("'@cf/openai/whisper'"), 'the Pages Function must use the selected multilingual Whisper model');
+assert(worker.includes('Array.from(new Uint8Array(buffer))'), 'the Workers AI binding must receive raw audio byte values');
+assert(!worker.includes('audio: toBase64(audio)'), 'the Workers AI binding must not receive a base64 string');
 assert(worker.includes('MAX_AUDIO_BYTES'), 'the public endpoint must impose a request-size bound');
 assert(app.includes('createWebTranscriptionService'), 'the app must prefer the cross-browser web transcription adapter');
 assert(app.includes("webSttIssue?.code === 'not-configured'"), 'unconfigured cloud STT must be explained without blaming microphone permission');
 assert(packager.includes("'web-stt.js'"), 'the web package must ship the browser transcription adapter');
+assert(client.includes('recorder.start();'), 'each upload segment must start as a standalone recording');
+assert(!client.includes('recorder.start(chunkMs)'), 'MediaRecorder timeslices must not be uploaded as independent files');
 
 for (const page of ['v1-camera-baseline.html', 'v2-ai-audience.html', 'v3-creator-studio.html']) {
   assert(read(page).includes('web-stt.js'), `${page} must load the browser transcription adapter`);

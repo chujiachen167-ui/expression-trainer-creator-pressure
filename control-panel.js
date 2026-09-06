@@ -58,7 +58,7 @@
     return result;
   };
   const migrateConfig = incoming => {
-    const config = clone(incoming || {});
+    const config = window.CreatorHomeFusion ? window.CreatorHomeFusion.migrate(incoming) : clone(incoming || {});
     if (config.components?.transcriptCover) config.components.transcriptCover = window.CreatorMarqueeConfig.migrate(config.components.transcriptCover);
     if (config.components?.logo) config.components.logo = window.CreatorLogoConfig.normalize(config.components.logo);
     if (config.components?.logoBackground) config.components.logoBackground = window.CreatorLogoConfig.normalizeBackground(config.components.logoBackground);
@@ -70,7 +70,14 @@
     : { version: 1, savedAt: null, config: {} };
   let state = merge(defaults, migrateConfig(projectEnvelope.config));
   if (!production) {
-    try { state = merge(state, migrateConfig(JSON.parse(localStorage.getItem(storageKey)))); } catch (_) { /* Keep the project configuration. */ }
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const draft = JSON.parse(raw);
+      if (raw && window.CreatorHomeFusion && draft?.components?.homeFusion?.version !== 1 && !localStorage.getItem(`${storageKey}.before-home-fusion`)) {
+        localStorage.setItem(`${storageKey}.before-home-fusion`, raw);
+      }
+      if (draft) state = merge(state, migrateConfig(draft));
+    } catch (_) { /* Keep the project configuration. */ }
   }
 
   const selectors = {
@@ -268,6 +275,7 @@
       if (node.textContent !== value) node.textContent = value;
       node.style.whiteSpace = value.includes('\n') ? 'pre-line' : '';
     });
+    if (window.CreatorHomeFusion) window.CreatorI18n?.apply();
     document.dispatchEvent(new CustomEvent('creator:copy-change', { detail: { pageKey } }));
   }
 
@@ -357,7 +365,10 @@
         </div>
         <div class="qa-page" data-qa-page="vertical-marquee" hidden>
           <section><h2>Magic UI · Vertical Marquee</h2><p class="qa-hint">起始页右上角的纵向表达流。只有句子，没有卡片底色或说明标签。这里修改会实时预览，并自动保存到浏览器。</p>
-            <label class="qa-select"><span>播放模式</span><select data-path="components.transcriptCover.playbackMode"><option value="autoplay">自动循环播放</option><option value="system">跟随系统动态偏好</option><option value="static">静态阅读（手动滚动）</option></select></label>
+            <label class="qa-select"><span>展示方式</span><select data-path="components.transcriptCover.displayMode"><option value="single">单句窗口</option><option value="stream">多句连续流（旧版）</option></select></label>
+            <label class="qa-select"><span>播放模式</span><select data-path="components.transcriptCover.playbackMode"><option value="autoplay">自动循环播放</option><option value="system">跟随系统动态偏好</option><option value="static">手动阅读（滚轮 / 方向键）</option></select></label>
+            <div class="qa-actions"><button type="button" data-marquee-step="-1">上一句（预览）</button><button type="button" data-marquee-step="1">下一句（预览）</button></div>
+            <p class="qa-hint">单句窗口与多句流共用连续匀速滚动。下面的一组循环时长控制速度：数值越大，滚动越慢；重复数与句间距对两种展示都生效。悬停暂停并液化为改写。手动阅读可滚轮或触屏滑动，也可使用面板内的上一句、下一句。</p>
             <div class="qa-switches qa-component-switches">${toggleField('启用表达流', 'components.transcriptCover.enabled')}${toggleField('向下滚动', 'components.transcriptCover.reverse')}${toggleField('鼠标移入暂停', 'components.transcriptCover.pauseOnHover')}</div>
             ${numberField('一组循环时长（毫秒）', 'components.transcriptCover.scrollDuration', 12000, 120000, 1000)}
             ${numberField('重复组数', 'components.transcriptCover.repeat', 2, 6)}
@@ -381,7 +392,8 @@
             ${numberField('高亮底色透明度', 'components.transcriptCover.highlightOpacity', 0, 0.5, 0.01)}
           </section>
           <section><h2>阅读区域</h2>
-            ${numberField('区域高度（px）', 'components.transcriptCover.height', 260, 640, 10)}
+            ${numberField('区域最小高度（px）', 'components.transcriptCover.height', 100, 640, 10)}
+            <p class="qa-hint">单句窗口自动容纳最长的一条原句或改写，避免切换时跳高和截断；调节字号后会重新计算。</p>
             ${numberField('上下渐隐范围（%）', 'components.transcriptCover.fadeSize', 0, 24)}
             ${numberField('边缘文字不透明度', 'components.transcriptCover.edgeOpacity', 0, 1, 0.05)}
             <p class="qa-hint">渐隐仅改变文字透明度，不绘制背景，也不模糊文字。</p>
@@ -391,7 +403,8 @@
             <p class="qa-hint">正常显示口播原句；鼠标悬停或键盘聚焦句组时，原句隐去并显现优化句。三类问题词标记只作用于原句。</p>
           </section>
           <section><h2>滚动句子</h2><p class="qa-hint">编辑格式为每组两行：第一行普通句，第二行优化句；组间空一行。页面会在同一个位置悬停换句，不会同时显示两行。用 [[双括号]] 标出问题词或优化关键词。最多 20 组，每行 220 字。内容是可编辑示例，不是实时 AI 生成。</p>
-            <label class="qa-copy-field"><span>句子内容</span><textarea data-path="components.transcriptCover.examples" rows="8" maxlength="9200" spellcheck="false"></textarea></label>
+            <label class="qa-copy-field"><span>中文句子内容</span><textarea data-path="components.transcriptCover.examples" rows="8" maxlength="9200" spellcheck="false"></textarea></label>
+            <label class="qa-copy-field"><span>英文句子内容（同样每组两行）</span><textarea data-path="components.transcriptCover.examplesEn" rows="8" maxlength="9200" spellcheck="false"></textarea></label>
             <p class="qa-hint" data-marquee-example-status role="status"></p>
             <p class="qa-hint">使用底部“保存全部参数到项目”，会将这里的句子与其他分页的参数一起保存。</p>
           </section>
@@ -439,6 +452,7 @@
         <div class="qa-page" data-qa-page="text-effects" hidden>
           <section><h2>React Bits · True Focus</h2><p class="qa-hint">只作用于首页 Read Yourself 主标题。编辑文字仍在“文案”页；这里控制焦点框和自动聚焦节奏。</p>
             <div class="qa-switches qa-component-switches">${toggleField('启用主标题动效', 'components.trueFocus.enabled')}</div>
+            <label class="qa-select"><span>融合版标题排版</span><select data-path="components.trueFocus.layout"><option value="stacked">两行，跨行聚焦</option><option value="inline">一行，横向聚焦</option></select></label>
             ${numberField('失焦模糊', 'components.trueFocus.blurAmount', 0, 10, 0.5)}${numberField('聚焦移动时长（毫秒）', 'components.trueFocus.animationDuration', 120, 900, 20)}${numberField('两次聚焦停留（毫秒）', 'components.trueFocus.pauseBetweenAnimations', 400, 5000, 100)}
             <div class="qa-colors">${colorField('焦点框颜色', 'components.trueFocus.borderColor')}${colorField('焦点光晕颜色', 'components.trueFocus.glowColor')}</div>
           </section>

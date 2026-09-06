@@ -6,6 +6,7 @@
   let settings = { ...defaults };
   let marquee;
   let renderedExamples;
+  let renderedMode;
   let renderedStyle;
   let filterId = 0;
   const swaps = new Map();
@@ -69,10 +70,12 @@
   }
 
   function renderStream() {
-    const pairs = parseExamples(settings.examples);
+    const english = window.CreatorI18n?.getLocale() === 'en-US';
+    const text = english ? settings.examplesEn : settings.examples;
+    const pairs = parseExamples(text);
     // Keep the last valid preview while the editor is halfway through a pair.
-    const validExamples = pairs ? settings.examples : renderedExamples || defaults.examples;
-    if (validExamples === renderedExamples) return;
+    const validExamples = pairs ? text : renderedExamples || (english ? defaults.examplesEn : defaults.examples);
+    if (validExamples === renderedExamples && renderedMode === settings.displayMode) return;
     const nodes = parseExamples(validExamples).map(([raw, clean]) => {
       const pair = document.createElement('article');
       pair.className = 'transcript-pair';
@@ -90,9 +93,67 @@
     });
     resetSwaps();
     marquee?.destroy();
-    marquee = window.MagicUIMarquee.mount(viewport, nodes);
+    root.dataset.displayMode = settings.displayMode;
+    viewport.classList.remove('magic-marquee');
+    marquee = settings.displayMode === 'single' ? mountSingle(nodes) : window.MagicUIMarquee.mount(viewport, nodes);
     renderedExamples = validExamples;
+    renderedMode = settings.displayMode;
     renderedStyle = null;
+  }
+
+  // Use the original continuous linear marquee, cropped to one sentence slot.
+  function mountSingle(nodes) {
+    const engine = window.MagicUIMarquee.mount(viewport, nodes);
+    let disposed = false, frame = 0, index = 0;
+    function measure() {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (disposed) return;
+        const layers = [...viewport.querySelectorAll('.transcript-swap-layers')];
+        const height = Math.ceil(Math.max(0, ...layers.map(node => node.scrollHeight))) + 28;
+        const value = `${height}px`;
+        if (root.style.getPropertyValue('--single-safe-height') !== value)
+          root.style.setProperty('--single-safe-height', value);
+      });
+    }
+    function step(delta) {
+      index = (index + delta + nodes.length) % nodes.length;
+      const group = viewport.querySelector('.magic-marquee-group');
+      const target = group?.children[index];
+      if (!target) return;
+      if (isStatic()) {
+        viewport.scrollTop = target.offsetTop - group.offsetTop;
+      } else {
+        // Seek the continuous animation, without replacing it with a slide transition.
+        const animations = [...viewport.querySelectorAll('.magic-marquee-group')]
+          .flatMap(node => node.getAnimations?.() || []);
+        const fraction = index / nodes.length;
+        animations.forEach(animation => {
+          animation.currentTime = (settings.reverse ? 1 - fraction : fraction) * settings.scrollDuration;
+        });
+      }
+    }
+    function keydown(event) {
+      if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+      event.preventDefault();
+      step(event.key === 'ArrowDown' ? 1 : -1);
+    }
+    viewport.addEventListener('keydown', keydown);
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    observer?.observe(viewport);
+    document.fonts?.ready.then(() => { if (!disposed) measure(); });
+    return {
+      update(options) { engine.update(options); measure(); },
+      step,
+      destroy() {
+        disposed = true;
+        cancelAnimationFrame(frame);
+        observer?.disconnect();
+        viewport.removeEventListener('keydown', keydown);
+        root.style.removeProperty('--single-safe-height');
+        engine.destroy();
+      }
+    };
   }
 
   // Codrops GooeyTextHoverEffect: blur the shared text group in/out while
@@ -198,11 +259,16 @@
     if (previousRepeat !== viewport.childElementCount) { resetSwaps(); renderedStyle = null; }
     if (renderedStyle !== settings.highlightStyle) styleMarks();
     swaps.forEach(state => reveal(state.pair, state.target === 1, true));
-    viewport.setAttribute('aria-label', staticMode ? '表达精简示例。静态阅读，可使用滚动条。' : settings.pauseOnHover ? '表达精简示例。自动循环；鼠标移入暂停，移开继续。' : '表达精简示例。自动循环。');
+    viewport.setAttribute('aria-label', settings.displayMode === 'single' ? '表达示例，非实时诊断。单句窗口，上下方向键换句，回车查看改写。' : staticMode ? '表达精简示例。静态阅读，可使用滚动条。' : settings.pauseOnHover ? '表达精简示例。自动循环；鼠标移入暂停，移开继续。' : '表达精简示例。自动循环。');
   }
+  document.addEventListener('click', event => {
+    const button = event.target.closest?.('[data-marquee-step]');
+    if (button) marquee?.step?.(Number(button.dataset.marqueeStep));
+  });
   document.addEventListener('creator:component-settings-change', event => {
     readSettings({ components: event.detail });
   });
+  document.addEventListener('creator:locale-change', refresh);
   reducedMotion?.addEventListener?.('change', refresh);
   readSettings();
 })();

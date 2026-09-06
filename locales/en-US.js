@@ -1,6 +1,15 @@
 window.CreatorLocaleCatalogs = window.CreatorLocaleCatalogs || {};
 window.CreatorLocaleCatalogs['en-US'] = {
-  'page.launcher.title': 'Expression Trainer · Creator Pressure',
+  'fusion.nav.training': 'The practice',
+  'fusion.nav.about': 'About',
+  'fusion.account': 'Your account',
+  'fusion.purpose': 'On-camera practice for new creators',
+  'fusion.description': 'Train eye contact, reduce unnecessary words, and make your ideas clearer.',
+  'fusion.start': 'Start with V1',
+  'fusion.explore': 'Explore the practice',
+  'fusion.boundary': 'Digital audiences and interest assessment are still in development. The sentences above are examples, not live analysis or validated audience reactions.',
+  'fusion.footer.title': 'Keep your personality. Make your point.',
+  'page.launcher.title': 'Expression Trainer · Creator Pressure · Read Yourself',
   'page.contact.title': 'Contact and Feedback · Read Yourself',
   'page.v1.title': 'V1 Camera Baseline · Expression Trainer',
   'page.v2.title': 'V2 Digital Audience Pressure · Expression Trainer',

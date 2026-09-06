@@ -20,15 +20,15 @@ for (const page of ['index.html', 'v1-camera-baseline.html', 'v2-ai-audience.htm
   assert.deepEqual(state.copy, settings.copy);
   assert.deepEqual(state.fineTune, settings.fineTune);
   if (page === 'index.html') {
-    for (const [key, value] of Object.entries(settings.copy).filter(([key]) => key.startsWith('launcher.'))) {
-      if (key === 'launcher.document-title') { assert.equal(document.title, value); continue; }
+    for (const [key, value] of Object.entries(settings.copy).filter(([key]) => key.startsWith('launcher.') || key.startsWith('launcher-fusion.'))) {
+      if (key.endsWith('.document-title')) { assert.equal(document.title, value); continue; }
       const node = [...document.querySelectorAll('[data-qa-copy-key]')].find(node => node.dataset.qaCopyKey === key);
       assert(node, `saved copy ${key} must still address a real element`);
       assert.equal(node.textContent, value, `saved copy ${key} must render verbatim`);
     }
     assert.equal(document.querySelector('.version-status').textContent, '推荐起点', 'new badge must not steal a historical card copy key');
     const badgeKey = document.querySelector('.version-status').dataset.qaCopyKey;
-    assert(badgeKey.startsWith('launcher.additional.'), 'new static copy remains separately editable');
+    assert(badgeKey.startsWith('launcher-fusion.additional.'), 'new fusion copy remains separately editable');
   }
   assert.equal(dom.qaErrors.length, 0);
   dom.window.close();

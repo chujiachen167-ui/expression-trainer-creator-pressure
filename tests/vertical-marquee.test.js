@@ -39,7 +39,7 @@ async function run() {
   assert.deepEqual(segments('a[[b]]c'), [{ text: 'a', marked: false }, { text: 'b', marked: true }, { text: 'c', marked: false }]);
 
   const extraScripts = ['vendor/magic-ui/marquee.js', 'launcher-transcript.js'];
-  const dom = makePage('index.html', { extraScripts, draft: { components: { transcriptCover: { scrollDuration: 26000, rawColor: '#654321', labelColor: '#123456' } }, copy: { 'launcher.document-title': 'Founder title' } } });
+  const dom = makePage('index.html', { extraScripts, draft: { components: { transcriptCover: { scrollDuration: 26000, rawColor: '#654321', labelColor: '#123456' } }, copy: { 'launcher-fusion.document-title': 'Founder title' } } });
   const { window } = dom;
   const doc = window.document;
   const stream = doc.querySelector('[data-transcript-stream]');

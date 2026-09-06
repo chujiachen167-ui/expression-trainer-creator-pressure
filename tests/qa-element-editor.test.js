@@ -130,7 +130,7 @@ async function run() {
     }
     select(window, h1);
     const draft = JSON.parse(window.localStorage.getItem(storageKey));
-    assert(draft.fineTune[doc.body.dataset.mode || 'launcher'][selector]);
+    assert(draft.fineTune[doc.body.dataset.mode || doc.body.dataset.pageKey || 'launcher'][selector]);
     const restored = makePage(page, { draft });
     assert(restored.window.document.querySelector('style[data-qa-editor-owned]').textContent.includes('color:#123456!important'));
     restored.window.close();

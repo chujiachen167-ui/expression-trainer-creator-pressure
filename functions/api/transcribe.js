@@ -12,13 +12,10 @@ function json(body, status = 200) {
   });
 }
 
-function toBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let value = '';
-  for (let index = 0; index < bytes.length; index += 0x8000) {
-    value += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-  }
-  return btoa(value);
+function toAudioBytes(buffer) {
+  // Workers AI's binding expects the encoded audio file as byte values.
+  // A base64 string is valid for some REST APIs, but not for AI.run().
+  return Array.from(new Uint8Array(buffer));
 }
 
 function serviceReady(env) {
@@ -55,11 +52,22 @@ export async function onRequestPost(context) {
   const language = new URL(context.request.url).searchParams.get('lang') || 'zh';
   try {
     const result = await context.env.AI.run('@cf/openai/whisper', {
-      audio: toBase64(audio),
+      audio: toAudioBytes(audio),
       language
     });
     return json({ text: String(result?.text || '').trim() });
   } catch (error) {
-    return json({ code: 'transcription-failed', message: '网页转写暂时失败，请稍后重试。' }, 502);
+    const requestId = context.request.headers.get('cf-ray') || '';
+    console.error('Cloudflare Whisper transcription failed', {
+      requestId,
+      contentType,
+      audioBytes: audio.byteLength,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return json({
+      code: 'transcription-failed',
+      message: '网页转写暂时失败，请稍后重试。',
+      ...(requestId ? { requestId } : {})
+    }, 502);
   }
 }

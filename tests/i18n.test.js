@@ -17,7 +17,7 @@ function makeLocalizedPage(page) {
 
 const launcher = makeLocalizedPage('index.html');
 const { window } = launcher;
-const originalChinese = '启用电脑摄像头，训练直视镜头、开场速度、口头禅和表达密度。';
+const originalChinese = '训练直视镜头的能力、减少无效表达、增加表达密度。';
 assert.equal(window.CreatorI18n.getLocale(), 'en-US', 'non-Chinese browser defaults to English');
 assert.equal(window.document.documentElement.lang, 'en-US');
 assert.equal(window.document.querySelector('[data-i18n="launcher.v1.title"]').textContent, 'Camera Baseline');
@@ -27,7 +27,7 @@ window.CreatorI18n.setLocale('zh-CN');
 assert.equal(window.document.documentElement.lang, 'zh-CN');
 assert.equal(window.document.querySelector('[data-i18n="launcher.v1.body"]').textContent, originalChinese,
   'switching back restores the founder-authored Chinese source');
-assert.equal(window.document.title, 'Expression Trainer · Creator Pressure');
+assert.equal(window.document.title, 'Expression Trainer · Creator Pressure · Read Yourself');
 assert.equal(window.localStorage.getItem('read-yourself.interface-locale.v1'), 'zh-CN');
 for (const select of window.document.querySelectorAll('[data-locale-select]')) assert.equal(select.value, 'zh-CN');
 launcher.window.close();

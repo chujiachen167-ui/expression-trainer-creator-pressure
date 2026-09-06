@@ -31,10 +31,10 @@ assert.equal(header.hidden, true, 'header switch removes the product navigation'
 input(window, 'components.productShell.headerEnabled', true);
 input(window, 'components.productShell.footerEnabled', false);
 assert.equal(footer.hidden, true, 'footer switch removes both footer surfaces');
-assert.equal(document.querySelector('.product-assurance').hidden, true);
+assert.equal(document.querySelector('.product-assurance'), null, 'the accepted fusion homepage omits the retired assurance strip');
 
 document.querySelector('[data-qa-tab="copy"]').click();
-assert(document.querySelector('[data-copy-key="launcher.shell.footer.title"]'), 'new shell copy is editable in the copy panel');
+assert(document.querySelector('[data-copy-key="fusion.footer.title"]'), 'fusion footer copy is editable in the copy panel');
 assert.equal([...footer.querySelectorAll('a')].some(link => link.getAttribute('href') === '#'), false, 'footer contains no placeholder destinations');
 assert.equal(dom.qaErrors.length, 0);
 window.close();

@@ -20,6 +20,8 @@ const pages = [
 
 const rootFiles = [
   'shared.css',
+  'home-fusion.css',
+  'home-fusion.js',
   'contact-carousel.css',
   'drift-wall.css',
   'i18n.js',

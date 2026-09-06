@@ -3,27 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Expression Trainer · Creator Pressure</title>
+  <title>Expression Trainer · Creator Pressure · Read Yourself</title>
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="vendor/magic-ui/marquee.css">
+  <link rel="stylesheet" href="home-fusion.css">
   <script src="locales/zh-CN.js"></script>
   <script src="locales/en-US.js"></script>
   <script src="i18n.js"></script>
 </head>
-<body class="launcher-page" data-i18n-title="page.launcher.title">
+<body class="launcher-page home-fusion" data-page-key="launcher-fusion" data-i18n-title="page.launcher.title">
   <header class="product-nav" data-product-shell="header">
     <div class="product-nav-inner">
       <a class="product-wordmark" href="index.html" aria-label="Read Yourself 首页">
-        <span class="product-wordmark-name" data-qa-copy-added data-qa-copy-key="launcher.shell.wordmark">READ YOURSELF</span>
-        <span class="product-wordmark-stage" data-qa-copy-added data-qa-copy-key="launcher.shell.stage">PREVIEW 01</span>
+        <span data-fusion-mark data-qa-copy-ignore></span>
+        <span class="product-wordmark-name" data-qa-copy-added data-qa-copy-key="fusion.wordmark">Read Yourself.</span>
       </a>
       <nav class="product-nav-links" aria-label="首页导航">
-        <a href="#trainingLayers" data-qa-copy-added data-qa-copy-key="launcher.shell.nav.training">训练层</a>
-        <a href="#productPrinciples" data-qa-copy-added data-qa-copy-key="launcher.shell.nav.principles">产品原则</a>
-        <a href="#productFooter" data-qa-copy-added data-qa-copy-key="launcher.shell.nav.about">关于</a>
+        <a href="#trainingLayers" data-qa-copy-added data-qa-copy-key="fusion.nav.training">训练方式</a>
+        <a href="#productFooter" data-qa-copy-added data-qa-copy-key="fusion.nav.about">关于项目</a>
       </nav>
+      <div class="fusion-nav-tools">
+      <div class="fusion-language" data-qa-copy-ignore role="group" aria-label="界面语言"><button type="button" data-fusion-locale="zh-CN" aria-pressed="true">中</button><span aria-hidden="true">/</span><button type="button" data-fusion-locale="en-US" aria-pressed="false">EN</button></div>
       <div class="product-account" data-product-account>
-        <button class="product-account-trigger" type="button" data-account-trigger aria-haspopup="dialog" aria-expanded="false">
+        <button class="product-account-trigger" type="button" data-account-trigger aria-label="个人账户" data-i18n-attr="aria-label:fusion.account" aria-haspopup="dialog" aria-expanded="false">
           <span class="product-avatar" aria-hidden="true" data-qa-copy-ignore>RY</span>
           <span class="product-account-label" data-qa-copy-added data-qa-copy-key="launcher.shell.account.label">本地访客</span>
           <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg>
@@ -43,12 +45,13 @@
           <p class="product-account-note" data-account-note data-qa-copy-added data-qa-copy-key="launcher.shell.account.note">目前没有注册、订阅或云端账户。</p>
         </section>
       </div>
+      </div>
     </div>
   </header>
   <main class="launcher-shell">
     <section class="launcher-hero" aria-labelledby="launcherTitle">
       <div class="launcher-copy">
-        <p class="eyebrow" data-qa-copy-label="首页眉题">EXPRESSION TRAINER / CREATOR PRESSURE</p>
+        <p class="eyebrow" data-qa-copy-key="fusion.eyebrow" data-qa-copy-label="首页眉题">EXPRESSION TRAINER / CREATOR PRESSURE</p>
         <div class="brand-logo" data-brand-logo data-qa-copy-ignore>
           <svg viewBox="60 270 1140 720" aria-hidden="true" focusable="false" data-qa-editor-owned>
             <defs>
@@ -65,12 +68,13 @@
           </svg>
         </div>
         <h1 id="launcherTitle" data-true-focus><span data-true-focus-source data-qa-copy-key="launcher.h1.1">Read Yourself</span></h1>
-        <p class="launcher-lead" data-warp-text>When thoughts become content, would you want to read it first?</p>
+        <p class="launcher-lead" data-warp-text data-qa-copy-key="launcher.p.2">When your ideas become content, would you read it yourself?</p>
+        <div class="fusion-purpose"><p data-qa-copy-key="fusion.purpose">面向自媒体新手的镜头表达训练</p><p data-qa-copy-key="fusion.description">训练直视镜头的能力、减少无效表达、增加表达密度。</p></div>
+        <div class="fusion-actions"><a class="fusion-start" href="v1-camera-baseline.html" data-qa-copy-key="fusion.start">从 V1 开始练习</a><a href="#trainingLayers" data-qa-copy-key="fusion.explore">了解训练方式</a></div>
       </div>
 
-      <aside class="transcript-cover" data-transcript-cover aria-label="原始口播与精炼表达的连续对照" data-qa-copy-ignore>
-        <div class="transcript-stream" data-transcript-stream aria-label="表达精简示例。自动循环；鼠标移入暂停，移开继续。"></div>
-      </aside>
+      <div class="fusion-visual">
+      <p class="fusion-visual-caption" data-qa-copy-key="fusion.visual.caption">READ / SPEAK / REPEAT</p>
       <figure class="brand-background" data-brand-background data-qa-copy-ignore data-qa-editor-owned aria-hidden="true">
         <svg viewBox="60 270 1140 720" focusable="false">
           <defs>
@@ -85,47 +89,43 @@
           <rect width="1254" height="1254" fill="currentColor" mask="url(#background-logo-mask)" />
         </svg>
       </figure>
+      <aside class="transcript-cover" data-transcript-cover aria-label="表达改写示例，非实时诊断" data-qa-copy-ignore>
+        <div class="transcript-stream" data-transcript-stream aria-label="表达精简示例。自动循环；鼠标移入暂停，移开继续。"></div>
+      </aside>
+      </div>
     </section>
 
-    <div class="chapter-heading" data-qa-copy-ignore><span>CHAPTERS</span><strong data-i18n="launcher.chapter.prompt">选择今天要承受的压力</strong></div>
+    <h2 class="chapter-heading" data-qa-copy-key="fusion.practice">THE PRACTICE</h2>
     <section class="version-grid" id="trainingLayers" aria-label="Creator Pressure 训练层">
       <a class="version-card featured" data-version="v1" href="v1-camera-baseline.html">
         <span class="version-card-meta"><span class="version-index">V1</span><span class="version-status" data-qa-copy-added>推荐起点</span></span>
-        <h2 data-i18n="launcher.v1.title">镜头基线</h2>
-        <p data-i18n="launcher.v1.body">启用电脑摄像头，训练直视镜头、开场速度、口头禅和表达密度。</p>
-        <span class="card-cta" data-i18n="launcher.openLayer">打开训练层 →</span>
+        <h2 data-i18n="launcher.v1.title" data-qa-copy-key="launcher.h2.4">镜头表达训练</h2>
+        <p data-i18n="launcher.v1.body" data-qa-copy-key="launcher.p.5">训练直视镜头的能力、减少无效表达、增加表达密度。</p>
+        <span class="card-cta" data-i18n="launcher.openLayer" data-qa-copy-key="launcher.span.6">前往训练 →</span>
       </a>
       <a class="version-card" data-version="v2" href="v2-ai-audience.html">
         <span class="version-index">V2</span>
-        <h2 data-i18n="launcher.v2.title">数字观众压力场</h2>
-        <p data-i18n="launcher.v2.body">加入会等待、追问和质疑的数字观众，让问题在可控压力下暴露。</p>
-        <span class="card-cta" data-i18n="launcher.openLayer">打开训练层 →</span>
+        <h2 data-i18n="launcher.v2.title" data-qa-copy-key="launcher.h2.8">数字观众模拟</h2>
+        <p data-i18n="launcher.v2.body" data-qa-copy-key="launcher.p.9">加入面对面的数字观众，让深层问题在可控压力下暴露。</p>
+        <span class="card-cta" data-i18n="launcher.openLayer" data-qa-copy-key="launcher.span.10">前往训练 →</span>
       </a>
       <a class="version-card" data-version="v3" href="v3-creator-studio.html">
         <span class="version-index">V3</span>
-        <h2 data-i18n="launcher.v3.title">自媒体实战房间</h2>
-        <p data-i18n="launcher.v3.body">只覆盖广告植入、热点观点、直播回应和知识口播，不向通用会议扩张。</p>
-        <span class="card-cta" data-i18n="launcher.openLayer">打开训练层 →</span>
+        <h2 data-i18n="launcher.v3.title" data-qa-copy-key="launcher.h2.12">终级实战演练</h2>
+        <p data-i18n="launcher.v3.body" data-qa-copy-key="launcher.p.13">为专业人士打造的严苛自媒体口播训练，你还可以变得更好，准备好了吗？</p>
+        <span class="card-cta" data-i18n="launcher.openLayer" data-qa-copy-key="launcher.span.14">前往训练 →</span>
       </a>
     </section>
 
     <aside class="boundary-note">
-      <strong data-i18n="launcher.boundary.title">产品红线</strong>
-      <span data-i18n="launcher.boundary.body">会议室和聊天室只是“观众压力的视觉隐喻”，不是新的业务领域。</span>
+      <span data-qa-copy-key="fusion.boundary">数字观众与兴趣度评估仍在完善中；上方句子是表达示例，不是实时诊断或已验证的观众反应。</span>
     </aside>
   </main>
-  <section class="product-assurance" id="productPrinciples" data-product-shell="footer" aria-label="产品原则">
-    <div class="product-assurance-inner">
-      <article><span data-qa-copy-ignore>01</span><div><strong data-qa-copy-added data-qa-copy-key="launcher.shell.principle.local.title">本地优先</strong><p data-qa-copy-added data-qa-copy-key="launcher.shell.principle.local.body">当前草稿与训练参数留在你的设备。</p></div></article>
-      <article><span data-qa-copy-ignore>02</span><div><strong data-qa-copy-added data-qa-copy-key="launcher.shell.principle.vertical.title">垂直训练</strong><p data-qa-copy-added data-qa-copy-key="launcher.shell.principle.vertical.body">只服务自媒体新手的镜头表达。</p></div></article>
-      <article><span data-qa-copy-ignore>03</span><div><strong data-qa-copy-added data-qa-copy-key="launcher.shell.principle.open.title">开源可查</strong><p data-qa-copy-added data-qa-copy-key="launcher.shell.principle.open.body">许可证与第三方来源公开可追溯。</p></div></article>
-    </div>
-  </section>
   <footer class="product-footer" id="productFooter" data-product-shell="footer">
     <div class="product-footer-inner">
       <div class="product-footer-brand">
         <p class="product-footer-kicker" data-qa-copy-added data-qa-copy-key="launcher.shell.footer.kicker">READ YOURSELF</p>
-        <h2 data-qa-copy-added data-qa-copy-key="launcher.shell.footer.title">在发布之前，先听懂自己。</h2>
+        <h2 data-qa-copy-added data-qa-copy-key="fusion.footer.title">保留你的个性。练清楚你的表达。</h2>
         <p data-qa-copy-added data-qa-copy-key="launcher.shell.footer.body">面向自媒体新手的镜头表达训练原型。</p>
       </div>
       <nav class="product-footer-links" aria-label="页脚导航">
@@ -150,6 +150,7 @@
     </defs>
   </svg>
   <script src="creator-project-config.js"></script>
+  <script src="home-fusion.js"></script>
   <script src="brand-logo.js"></script>
   <script src="product-shell.js"></script>
   <script src="launcher-logo-motion.js"></script>

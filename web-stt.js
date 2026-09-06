@@ -53,10 +53,14 @@
     let uploadChain = Promise.resolve();
     let pending = 0;
     let terminalError = null;
+    let segmentTimer = null;
 
     const reportStatus = patch => onStatus?.({ engine: 'web-stt', ...patch });
     const reportError = error => {
       terminalError = error instanceof Error ? error : new WebSTTError(String(error || '网页转写服务暂不可用。'));
+      running = false;
+      if (segmentTimer) clearTimeout(segmentTimer);
+      segmentTimer = null;
       reportStatus({ state: 'error', lastError: terminalError.code || terminalError.message });
       onError?.(terminalError);
     };
@@ -93,6 +97,33 @@
       return uploadChain;
     }
 
+    function startSegment(stream, mimeType) {
+      if (!running || terminalError) return;
+      const chunks = [];
+      try {
+        recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      } catch (_) {
+        reportError(new WebSTTError('当前浏览器无法把麦克风编码为可转写的音频。', 'media-recorder'));
+        return;
+      }
+      recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
+      recorder.onerror = () => reportError(new WebSTTError('网页音频采集意外中断。', 'media-recorder'));
+      recorder.onstop = () => {
+        if (segmentTimer) clearTimeout(segmentTimer);
+        segmentTimer = null;
+        const blob = new Blob(chunks, { type: recorder?.mimeType || mimeType || 'application/octet-stream' });
+        recorder = null;
+        if (blob.size && !terminalError) enqueue(blob);
+        // Restarting the recorder makes every upload a complete, independently
+        // decodable file. MediaRecorder timeslices can omit container headers.
+        if (running && !terminalError) startSegment(stream, mimeType);
+      };
+      recorder.start();
+      segmentTimer = setTimeout(() => {
+        if (recorder?.state !== 'inactive') recorder.stop();
+      }, chunkMs);
+    }
+
     return {
       async probe() { return probe(); },
       async start() {
@@ -103,28 +134,22 @@
         }
         terminalError = null;
         const mimeType = preferredMimeType();
-        try {
-          recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-        } catch (_) {
-          throw new WebSTTError('当前浏览器无法把麦克风编码为可转写的音频。', 'media-recorder');
-        }
-        recorder.ondataavailable = event => { if (event.data?.size) enqueue(event.data); };
-        recorder.onerror = () => reportError(new WebSTTError('网页音频采集意外中断。', 'media-recorder'));
-        recorder.onstop = () => { running = false; };
-        recorder.start(chunkMs);
         running = true;
+        startSegment(stream, mimeType);
+        if (terminalError) throw terminalError;
         reportStatus({ state: 'running', starts: 1, queued: 0, lastError: '' });
       },
       async stop() {
+        running = false;
+        if (segmentTimer) clearTimeout(segmentTimer);
+        segmentTimer = null;
         let stopped = Promise.resolve();
         if (recorder && recorder.state !== 'inactive') {
           stopped = new Promise(resolve => {
             recorder.addEventListener('stop', resolve, { once: true });
           });
-          try { recorder.requestData(); } catch (_) { /* No final partial chunk is available. */ }
           recorder.stop();
         }
-        running = false;
         await stopped;
         await uploadChain.catch(() => {});
         if (!terminalError) reportStatus({ state: 'stopped', queued: 0, lastError: '' });

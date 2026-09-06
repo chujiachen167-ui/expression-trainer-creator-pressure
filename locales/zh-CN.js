@@ -1,6 +1,15 @@
 window.CreatorLocaleCatalogs = window.CreatorLocaleCatalogs || {};
 window.CreatorLocaleCatalogs['zh-CN'] = {
-  'page.launcher.title': 'Expression Trainer · Creator Pressure',
+  'fusion.nav.training': '训练方式',
+  'fusion.nav.about': '关于项目',
+  'fusion.account': '个人账户',
+  'fusion.purpose': '面向自媒体新手的镜头表达训练',
+  'fusion.description': '训练直视镜头的能力、减少无效表达、增加表达密度。',
+  'fusion.start': '从 V1 开始练习',
+  'fusion.explore': '了解训练方式',
+  'fusion.boundary': '数字观众与兴趣度评估仍在完善中；上方句子是表达示例，不是实时诊断或已验证的观众反应。',
+  'fusion.footer.title': '保留你的个性。练清楚你的表达。',
+  'page.launcher.title': 'Expression Trainer · Creator Pressure · Read Yourself',
   'page.contact.title': '联系与反馈 · Read Yourself',
   'page.v1.title': 'V1 镜头基线 · Expression Trainer',
   'page.v2.title': 'V2 数字观众压力场 · Expression Trainer',

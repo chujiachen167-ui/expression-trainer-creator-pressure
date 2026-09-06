@@ -25,6 +25,7 @@
       warpText: { ...defaults.warpText, ...(source.warpText || {}) },
       trueFocus: { ...defaults.trueFocus, ...(source.trueFocus || {}) }
     };
+    if (title) title.dataset.focusLayout = settings.trueFocus.layout === 'stacked' ? 'stacked' : 'inline';
     mountTrueFocus();
     mountWarpText();
   }
@@ -89,6 +90,7 @@
       focusOverlay.setAttribute('data-qa-copy-ignore', '');
       title.parentElement.append(focusOverlay);
     }
+    focusOverlay.dataset.focusLayout = title.dataset.focusLayout || 'inline';
     focusOverlay.replaceChildren();
     focusWords = words.map(word => {
       const node = document.createElement('span');
@@ -237,6 +239,8 @@
   }
 
   window.addEventListener('resize', positionFocus);
+  if (title && typeof ResizeObserver === 'function') new ResizeObserver(positionFocus).observe(title);
+  document.fonts?.ready.then(positionFocus);
   document.addEventListener('creator:logo-layout-change', positionFocus);
   document.addEventListener('creator:component-settings-change', event => getSettings(event.detail));
   document.addEventListener('creator:copy-change', () => { mountTrueFocus(); mountWarpText(); });

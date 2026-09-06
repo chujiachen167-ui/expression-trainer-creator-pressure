@@ -7,12 +7,12 @@ const project = {
     border: '#252938', borderStrong: '#4c5268', text: '#8690df', muted: '#000000',
     accent: '#ff2f92', info: '#42e8d6', success: '#65e49b', warning: '#ffc85a', danger: '#ff5a70'
   },
-  copy: { 'launcher.document-title': '线上预览' }
+  copy: { 'launcher-fusion.document-title': '线上预览' }
 };
 
 const production = makePage('index.html', {
   production: true,
-  draft: { theme: { bg: '#111111' }, copy: { 'launcher.document-title': '浏览器草稿' } },
+  draft: { theme: { bg: '#111111' }, copy: { 'launcher-fusion.document-title': '浏览器草稿' } },
   project
 });
 const { window } = production;
