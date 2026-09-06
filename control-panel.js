@@ -278,6 +278,20 @@
     return items;
   }
 
+  function pruneInvalidHomepageCopy() {
+    if (pageKey !== 'launcher-fusion') return false;
+    const validKeys = new Set(collectCopyTargets().map(item => item.key));
+    validKeys.add('launcher-fusion.document-title');
+    let changed = false;
+    Object.keys(state.copy).forEach(key => {
+      if (!key.startsWith('launcher.') && !key.startsWith('launcher-fusion.')) return;
+      if (validKeys.has(key)) return;
+      delete state.copy[key];
+      changed = true;
+    });
+    return changed;
+  }
+
   function applyCopy() {
     const titleKey = `${pageKey}.document-title`;
     document.title = state.copy[titleKey] ?? document.documentElement.dataset.qaTitleDefault;
@@ -297,6 +311,7 @@
   }
 
   function apply() {
+    pruneInvalidHomepageCopy();
     applyTheme(); applyFeatures(); applyElements(); applyCopy(); applyComponents();
     window.CreatorElementEditor?.applyShipped?.(state.fineTune[pageKey] || {});
     elementEditor?.refresh();

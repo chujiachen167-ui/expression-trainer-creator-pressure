@@ -10,7 +10,7 @@ async function run() {
   const w = dom.window;
   w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
   const key = 'expression-trainer.creator-qa.v1';
-  const oldDraft = { theme: { bg: '#faf0f0' }, copy: { 'launcher.h1.1': 'Read Yourself' }, fineTune: { launcher: { preserved: true } }, components: { warpText: { enabled: true, speed: .23 }, logoBackground: { motionMode: 'combined', blinkDuration: 300 }, transcriptCover: { hoverSwapDuration: 720 } } };
+  const oldDraft = { theme: { bg: '#faf0f0' }, copy: { 'launcher.h1.1': 'Read Yourself', 'launcher.span.16': 'stale copy must not ship', 'launcher.strong.15': 'stale label' }, fineTune: { launcher: { preserved: true } }, components: { warpText: { enabled: true, speed: .23 }, logoBackground: { motionMode: 'combined', blinkDuration: 300 }, transcriptCover: { hoverSwapDuration: 720 } } };
   w.localStorage.setItem(key, JSON.stringify(oldDraft));
   for (const file of ['locales/zh-CN.js', 'locales/en-US.js', 'i18n.js', 'creator-project-config.js', 'home-fusion.js', 'brand-logo.js', 'product-shell.js', 'vertical-marquee-config.js', 'qa-element-editor.js', 'config-file-store.js', 'control-panel.js', 'vendor/magic-ui/marquee.js', 'launcher-transcript.js', 'launcher-text-effects.js']) w.eval(read(file));
   await new Promise(resolve => setTimeout(resolve, 30));
@@ -22,6 +22,8 @@ async function run() {
   assert.equal(state.components.logoBackground.motionMode, 'combined');
   assert.equal(state.components.logoBackground.blinkDuration, 300);
   assert.equal(state.fineTune.launcher.preserved, true);
+  assert.equal(state.copy['launcher.span.16'], undefined, 'homepage saves must discard copy keys with no real element');
+  assert.equal(state.copy['launcher.strong.15'], undefined, 'stale homepage labels must not become UI requirements');
   assert.equal(w.localStorage.getItem(`${key}.before-home-fusion`), JSON.stringify(oldDraft));
   assert(w.document.querySelector('.product-wordmark [data-brand-logo]'));
   assert(w.document.querySelector('.magic-marquee-group'));

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "savedAt": "2026-09-06T04:31:09.294Z",
+  "savedAt": "2026-09-06T10:21:49.793Z",
   "config": {
     "flags": {
       "v1": true,
@@ -145,13 +145,13 @@
         "footerMuted": "#9d98a3"
       },
       "driftWall": {
-        "columns": 2,
+        "columns": 8,
         "tileWidth": 200,
-        "tileHeight": 80,
-        "gap": 20,
-        "radius": 14,
+        "tileHeight": 200,
+        "gap": 10,
+        "radius": 15,
         "tilt": 16,
-        "turn": -14,
+        "turn": -15,
         "roll": 0,
         "perspective": 1200,
         "depth": 120,
@@ -200,6 +200,23 @@
         "glowColor": "#ff2f92",
         "layout": "stacked"
       },
+      "v2Interest": {
+        "lineColor": "#ff2f92",
+        "eventColor": "#42e8d6",
+        "fontSize": 12,
+        "chartHeight": 96,
+        "hintDensity": "low"
+      },
+      "v2Judge": {
+        "initialScore": 50,
+        "scaleMin": 12,
+        "scaleMax": 92,
+        "cooldownMs": 12000,
+        "openingWindowMs": 8000,
+        "lowConfidenceDelta": -2,
+        "highConfidenceDelta": -8,
+        "supportDelta": 4
+      },
       "transcriptCover": {
         "enabled": true,
         "scrollDuration": 26000,
@@ -209,7 +226,7 @@
         "playbackMode": "autoplay",
         "repeat": 4,
         "gap": 36,
-        "displayMode": "single",
+        "displayMode": "stream",
         "cycleMs": 3000,
         "width": 100,
         "x": 0,
