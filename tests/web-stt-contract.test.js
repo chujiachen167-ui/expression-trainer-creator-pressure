@@ -20,15 +20,20 @@ assert(worker.includes('toSimplifiedChinese'), 'Chinese web transcripts must be 
 assert(worker.includes('function toAudioBase64'), 'the large-v3-turbo binding must receive base64-encoded audio');
 assert(worker.includes('offset += 0x8000'), 'audio conversion must avoid one unbounded call-stack expansion');
 assert(worker.includes('MAX_AUDIO_BYTES'), 'the public endpoint must impose a request-size bound');
-assert(app.includes('createWebTranscriptionService'), 'the app must prefer the cross-browser web transcription adapter');
+assert(app.includes('const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition'), 'the app must detect native streaming recognition');
+assert(app.indexOf('const Recognition = window.SpeechRecognition') < app.indexOf('if (!Recognition) return await webSTTPromise'), 'native streaming recognition must stay the primary web path');
+assert(app.includes('switchToWebFallback'), 'cloud transcription must remain available as an automatic fallback');
 assert(app.includes("webSttIssue?.code === 'not-configured'"), 'unconfigured cloud STT must be explained without blaming microphone permission');
 assert(app.includes('error.requestId'), 'terminal web transcription failures must expose a Cloudflare trace id for diagnosis');
 assert(packager.includes("'web-stt.js'"), 'the web package must ship the browser transcription adapter');
 assert(client.includes('recorder.start();'), 'each upload segment must start as a standalone recording');
 assert(!client.includes('recorder.start(chunkMs)'), 'MediaRecorder timeslices must not be uploaded as independent files');
 assert(client.includes('maxConsecutiveFailures = 3'), 'one transient failed segment must not stop the whole training session');
-assert(client.includes('fallbackChunkMs = 6000'), 'web chunks need enough context for stable Mandarin recognition');
+assert(client.includes('fallbackChunkMs = 2200'), 'cloud fallback chunks must keep perceived latency near two seconds');
+assert(client.includes('segmentContainsSpeech'), 'silent chunks must be rejected before upload');
+assert(client.includes('minimumPeakRms'), 'the silence gate must use measured microphone energy');
 assert(worker.includes('MAX_AI_ATTEMPTS = 3'), 'the server must retry transient Workers AI failures');
+assert(worker.includes('中文字幕志愿者'), 'known subtitle-credit hallucinations must be removed');
 assert(app.includes('noiseSuppression: true'), 'web microphone capture must request speech-oriented noise suppression');
 
 for (const page of ['v1-camera-baseline.html', 'v2-ai-audience.html', 'v3-creator-studio.html']) {

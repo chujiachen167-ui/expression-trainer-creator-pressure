@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { loadLexicon, analyzeText } = require('../lib/lexicon');
 const { getASRStatus } = require('../lib/asr');
-const { getRealtimePrompt, getReportPrompt } = require('../lib/prompts');
+const { getRealtimePrompt, getReportPrompt, getOptimizedScriptPrompt } = require('../lib/prompts');
 
 loadLexicon();
 const result = analyzeText('咱就是说，我觉得这个东西可能很好。', { customWords: '咱就是说' });
@@ -17,5 +17,8 @@ const realtime = getRealtimePrompt('测试表达', null, { goals: '先说结论'
 assert(realtime.system.includes('先说结论'));
 const report = getReportPrompt('测试表达', { duration: 10, totalWords: 4, fillers: 0, hedges: 0, vagueWords: 0 });
 assert(report.user.includes('测试表达'));
+const optimized = getOptimizedScriptPrompt('嗯，然后我觉得这个事情很好。');
+assert(optimized.user.includes('这个事情很好'));
+assert(optimized.system.includes('绝不编造'));
 
 console.log('Desktop diagnostic core contract tests passed.');

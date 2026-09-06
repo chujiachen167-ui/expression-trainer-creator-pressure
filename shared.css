@@ -1494,6 +1494,14 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
 .report-focus p { margin: 7px 0 0; color: #777c85; font-size: 9px; }
 .report-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .report-actions .primary-btn { min-width: 138px; }
+.optimized-script { margin-top: 14px; padding: 16px; border: 1px solid rgba(112, 132, 255, 0.25); border-radius: 12px; background: rgba(112, 132, 255, 0.055); }
+.optimized-script-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.optimized-script-head span { color: #8493ff; font-size: 8px; font-weight: 800; letter-spacing: 0.12em; }
+.optimized-script-head h3 { margin: 5px 0 0; font-size: 16px; }
+.optimized-script > p { margin: 8px 0 0; color: #777c85; font-size: 9px; }
+.optimized-script .optimized-script-status { color: #8d9aff; }
+.optimized-script-output { width: 100%; min-height: 180px; margin-top: 12px; resize: vertical; padding: 13px 14px; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: #090b0f; color: #eef1f7; font: 13px/1.75 Inter, "Microsoft YaHei", sans-serif; outline: none; }
+.optimized-script-output:focus { border-color: rgba(112,132,255,.62); box-shadow: 0 0 0 3px rgba(112,132,255,.08); }
 .paste-dialog { width: min(720px, 100%); }
 .paste-transcript-input { width: 100%; min-height: 280px; resize: vertical; padding: 15px 16px; border: 1px solid var(--studio-line-strong, rgba(255,255,255,.14)); border-radius: 12px; background: #090b0f; color: #eef1f7; font: 14px/1.75 Inter, "Microsoft YaHei", sans-serif; outline: none; }
 .paste-transcript-input:focus { border-color: rgba(255,47,146,.65); box-shadow: 0 0 0 3px rgba(255,47,146,.09); }

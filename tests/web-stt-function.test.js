@@ -84,6 +84,24 @@ const path = require('node:path');
     filters: ['simplified-chinese', 'unexpected-script', 'repetition-loop']
   }, 'Traditional text, unexpected scripts and long repetition loops must not reach the UI');
 
+  const subtitleArtifactContext = {
+    request: new Request('https://read-yourself.test/api/transcribe?lang=zh-CN', {
+      method: 'POST',
+      headers: { 'content-type': 'audio/webm' },
+      body: new Uint8Array([1, 2, 3])
+    }),
+    env: {
+      WEB_STT_ENABLED: 'true',
+      AI: { async run() { return { text: '那么，倘若我滔滔不绝地开始长篇大论呢。 中文字幕志愿者 杨栋梁' }; } }
+    }
+  };
+  const subtitleArtifactResponse = await worker.onRequestPost(subtitleArtifactContext);
+  assert.deepEqual(await subtitleArtifactResponse.json(), {
+    text: '那么，倘若我滔滔不绝地开始长篇大论呢。',
+    filtered: true,
+    filters: ['subtitle-artifact']
+  }, 'classic subtitle-credit hallucinations must be removed without deleting the spoken sentence');
+
   const unavailable = await worker.onRequestGet({ env: {} });
   assert.equal(unavailable.status, 503);
   assert.equal((await unavailable.json()).code, 'not-configured');

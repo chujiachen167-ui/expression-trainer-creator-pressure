@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('api', {
   analyzeText: text => ipcRenderer.invoke('analyze-text', text),
   getRealtimeFeedback: text => ipcRenderer.invoke('get-realtime-feedback', text),
   getFinalReport: data => ipcRenderer.invoke('get-final-report', data),
+  getOptimizedScript: data => ipcRenderer.invoke('get-optimized-script', data),
   testLLMConnection: settings => ipcRenderer.invoke('test-llm-connection', settings),
   saveFile: (content, filename) => ipcRenderer.invoke('save-file', content, filename),
   saveRecording: (bytes, filename, mimeType) => ipcRenderer.invoke('save-recording', bytes, filename, mimeType),

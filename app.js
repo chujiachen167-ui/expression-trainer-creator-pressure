@@ -47,6 +47,7 @@
   let lastAiFeedbackLength = 0;
   let aiFeedbackPending = false;
   let aiConfigurationNoticeShown = false;
+  let lastRenderedV1Transcript = null;
   let sttDiagnostics = {
     engine: 'detecting',
     state: 'detecting',
@@ -64,10 +65,16 @@
   let browserAudioGate = null;
   let webSttIssue = null;
   const profanityTerms = ['他妈的', '操你妈', '去你妈', '傻逼', '傻屌', '卧槽', '我操', '你妈的', '草泥马', '去死'];
+  const subtitleArtifactPatterns = [
+    /\s*(?:中文字幕志愿者|字幕志愿者)[：:\s]*[\p{L}\p{N}·.\s-]*$/giu,
+    /\s*字幕由[^。！？!?]{0,80}(?:提供|制作)[。！？!?]?$/giu,
+    /\s*(?:subtitles? by|captions? by|amara\.org)[^。！？!?]*$/giu
+  ];
   const inWeChat = /MicroMessenger/i.test(navigator.userAgent || '');
   function sanitizeSpeech(text) {
     let value = String(text || '').replace(/[*＊]{1,}/g, '');
     profanityTerms.forEach(term => { value = value.split(term).join(''); });
+    subtitleArtifactPatterns.forEach(pattern => { value = value.replace(pattern, ''); });
     return value;
   }
   function releaseBrowserAudio() {
@@ -527,12 +534,24 @@
     }
     if (!transcript && !interim) {
       transcriptBox.innerHTML = `<span class="placeholder">${mode === 'v1' ? '开启摄像头并开始说话，实时字幕会叠加在画面上。' : '开始后，实时转写会出现在这里。系统不会把数字人提示混进你的正文。'}</span>`;
+      lastRenderedV1Transcript = null;
       return;
     }
     if (mode === 'v1' && window.CreatorExpressionAnalysis) {
-      const finalLines = window.CreatorExpressionAnalysis.lines(transcript).slice(-4);
-      transcriptBox.innerHTML = finalLines.map((line, index) => `<div class="stt-line${index < finalLines.length - 1 ? ' old' : ''}">${window.CreatorExpressionAnalysis.highlight(line, v1Rules())}</div>`).join('');
-      if (interim) transcriptBox.insertAdjacentHTML('beforeend', `<div class="stt-line interim">${window.CreatorExpressionAnalysis.highlight(interim, v1Rules())}</div>`);
+      if (lastRenderedV1Transcript !== transcript) {
+        const finalLines = window.CreatorExpressionAnalysis.lines(transcript).slice(-4);
+        transcriptBox.innerHTML = finalLines.map((line, index) => `<div class="stt-line${index < finalLines.length - 1 ? ' old' : ''}">${window.CreatorExpressionAnalysis.highlight(line, v1Rules())}</div>`).join('');
+        lastRenderedV1Transcript = transcript;
+      }
+      let interimLine = transcriptBox.querySelector('.stt-line.interim');
+      if (interim) {
+        if (!interimLine) {
+          interimLine = document.createElement('div');
+          interimLine.className = 'stt-line interim';
+          transcriptBox.append(interimLine);
+        }
+        interimLine.innerHTML = window.CreatorExpressionAnalysis.highlight(interim, v1Rules());
+      } else interimLine?.remove();
       transcriptBox.scrollTop = transcriptBox.scrollHeight;
       document.dispatchEvent(new CustomEvent('creator:transcript-change', { detail: { text: `${transcript}${interim}`, final: !interim } }));
       return;
@@ -590,7 +609,8 @@
   }
 
   function applyRecognitionResult(piece, isFinal, meta = {}) {
-    const clean = sanitizeSpeech(piece);
+    const clean = sanitizeSpeech(piece).trim();
+    if (!clean) return;
     if (isFinal) {
       transcript += clean;
       interim = '';
@@ -765,10 +785,9 @@
       instance.onerror = event => addEvent('离线语音识别', event.message || event.error, true, 'Sherpa-ONNX');
       return instance;
     }
-    const webSTT = await createWebTranscriptionService();
-    if (webSTT) return webSTT;
+    const webSTTPromise = createWebTranscriptionService();
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) return null;
+    if (!Recognition) return await webSTTPromise;
     const instance = new Recognition();
     instance.lang = mode === 'v1' ? v1Language().sttLang : 'zh-CN';
     instance.continuous = true;
@@ -776,8 +795,31 @@
     instance._manualStop = false;
     const browserStart = instance.start.bind(instance);
     const browserStop = instance.stop.bind(instance);
+    let webFallback = null;
+    let fallbackPending = false;
+    async function switchToWebFallback(reason) {
+      if (webFallback) return true;
+      if (fallbackPending || !sessionRunning) return false;
+      fallbackPending = true;
+      try {
+        const candidate = await webSTTPromise;
+        if (!candidate || !sessionRunning) return false;
+        instance._manualStop = true;
+        try { browserStop(); } catch (_) { /* Native recognition may already be closed. */ }
+        webFallback = candidate;
+        await webFallback.start();
+        addEvent('语音识别', '浏览器流式字幕不可用，已自动切换兼容转写。', true, reason || 'Cloudflare Whisper', { key: 'stt-fallback' });
+        return true;
+      } catch (error) {
+        webSttIssue = error;
+        return false;
+      } finally {
+        fallbackPending = false;
+      }
+    }
     instance.start = () => {
       instance._manualStop = false;
+      if (webFallback) return webFallback.start();
       updateSTTDiagnostics({
         engine: 'web-speech',
         state: 'requesting',
@@ -793,6 +835,7 @@
     instance.onstart = () => updateSTTDiagnostics({ engine: 'web-speech', state: 'running', lastError: '' }, true);
     instance.stop = () => {
       instance._manualStop = true;
+      if (webFallback) return webFallback.stop();
       return browserStop();
     };
     instance.onresult = event => {
@@ -828,6 +871,7 @@
       updateMetrics();
     };
     instance.onend = () => {
+      if (webFallback || fallbackPending) return;
       if (instance._terminalState) {
         updateSTTDiagnostics({ state: instance._terminalState, lastError: instance._terminalError || sttDiagnostics.lastError }, true);
         instance._terminalState = '';
@@ -835,23 +879,33 @@
         return;
       }
       const unexpected = sessionRunning && !instance._manualStop;
+      if (unexpected) {
+        switchToWebFallback('Web Speech 提前结束').then(switched => {
+          if (!switched && sessionRunning) {
+            updateSTTDiagnostics({ state: 'paused', lastError: sttDiagnostics.lastError || '识别服务提前结束' }, true);
+            addEvent('系统', '浏览器语音识别已停止，本轮不会自动重新申请麦克风权限。请结束后重新开始训练。', true, 'Web Speech API', { key: 'browser-stt-ended' });
+          }
+        });
+        return;
+      }
       updateSTTDiagnostics({
         state: unexpected ? 'paused' : 'stopped',
         lastError: unexpected ? (sttDiagnostics.lastError || '识别服务提前结束') : sttDiagnostics.lastError
       }, true);
-      if (unexpected) {
-        addEvent(
-          '系统',
-          '浏览器语音识别已停止，本轮不会自动重新申请麦克风权限。请结束后重新开始训练。',
-          true,
-          'Web Speech API',
-          { key: 'browser-stt-ended' }
-        );
-      }
     };
     instance.onerror = event => {
       const ignored = event.error === 'no-speech' || (event.error === 'aborted' && instance._manualStop);
       const permissionDenied = event.error === 'not-allowed' || event.error === 'service-not-allowed';
+      if (!ignored && sessionRunning) {
+        switchToWebFallback(event.error).then(switched => {
+          if (!switched && sessionRunning) {
+            updateSTTDiagnostics({ state: permissionDenied ? 'permission-denied' : 'error', lastError: event.error }, true);
+            addEvent('系统', browserRecognitionMessage(event), true, '浏览器语音识别');
+            noteV2SttFailure(event.error);
+          }
+        });
+        return;
+      }
       if (!ignored) {
         instance._terminalState = permissionDenied ? 'permission-denied' : 'error';
         instance._terminalError = event.error;
@@ -860,10 +914,6 @@
         state: ignored ? 'paused' : permissionDenied ? 'permission-denied' : 'error',
         lastError: ignored ? '' : event.error
       }, true);
-      if (!ignored) {
-        addEvent('系统', browserRecognitionMessage(event), true, '浏览器语音识别');
-        noteV2SttFailure(event.error);
-      }
     };
     updateSTTDiagnostics({ engine: 'web-speech', state: 'ready', lastError: '' }, true);
     return instance;
@@ -1037,7 +1087,7 @@
     lastAiFeedbackLength = 0;
     aiConfigurationNoticeShown = false;
     eventIndex = 0;
-    document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report]').forEach(button => { button.hidden = true; });
+    document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report], [data-show-script]').forEach(button => { button.hidden = true; });
     if (mode === 'v1' && eventFeed) {
       eventFeed.replaceChildren();
       const empty = document.querySelector('[data-feedback-empty]');
@@ -1122,12 +1172,13 @@
     writeReport('#reportReason', focus.reason);
   }
 
-  function openReport() {
+  function openReport({ generateScript = false } = {}) {
     if (!reportPanel) return;
     populateReportPanel();
     reportPanel.hidden = false;
     document.body.classList.add('report-open');
     generateCoreReport();
+    if (generateScript) generateOptimizedScript();
   }
 
   async function generateCoreReport() {
@@ -1160,9 +1211,55 @@
     container.textContent = result.success ? result.report : `完整报告生成失败：${result.error}`;
   }
 
+  async function generateOptimizedScript() {
+    const panel = reportPanel?.querySelector('[data-optimized-script]');
+    const output = panel?.querySelector('[data-script-output]');
+    const status = panel?.querySelector('[data-script-status]');
+    const buttons = document.querySelectorAll('[data-generate-script], [data-show-script]');
+    const copyButton = panel?.querySelector('[data-copy-script]');
+    const source = transcript.trim();
+    if (!panel || !output || !status || !source) return;
+    panel.hidden = false;
+    const analysis = window.CreatorExpressionAnalysis?.analyze(source, v1Rules());
+    if (analysis?.quality?.status === 'unreliable') {
+      status.textContent = '这份逐字稿含明显识别异常，已停止优化，避免把幻觉字幕写进台词稿。';
+      output.value = '';
+      copyButton.hidden = true;
+      return;
+    }
+    buttons.forEach(button => { button.disabled = true; });
+    status.textContent = '正在保留原意并压缩重复内容…';
+    try {
+      let script = '';
+      if (window.api?.getOptimizedScript) {
+        const result = await window.api.getOptimizedScript({ fullText: source });
+        if (!result?.success) throw new Error(result?.error || '桌面台词优化失败');
+        script = result.script;
+      } else {
+        const response = await fetch('/api/optimize-script', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ text: source })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.message || `台词优化失败（${response.status}）`);
+        script = result.script;
+      }
+      output.value = String(script || '').trim();
+      status.textContent = output.value ? '优化完成。请核对事实和语气后再使用。' : '优化服务没有返回可用内容，请重试。';
+      copyButton.hidden = !output.value;
+      if (output.value) output.focus();
+    } catch (error) {
+      status.textContent = `优化失败：${error.message}`;
+      copyButton.hidden = !output.value;
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+    }
+  }
+
   function showTranscriptActions() {
     if (mode !== 'v1' || !transcript.trim()) return;
-    document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report]').forEach(button => { button.hidden = false; });
+    document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report], [data-show-script]').forEach(button => { button.hidden = false; });
   }
 
   async function stopSession() {
@@ -1332,7 +1429,8 @@
     populateReportPanel();
     showTranscriptActions();
   });
-  document.querySelector('[data-show-report]')?.addEventListener('click', openReport);
+  document.querySelector('[data-show-report]')?.addEventListener('click', () => openReport());
+  document.querySelector('[data-show-script]')?.addEventListener('click', () => openReport({ generateScript: true }));
   document.querySelector('[data-copy-transcript]')?.addEventListener('click', async event => {
     if (!transcript.trim()) return;
     await navigator.clipboard.writeText(transcript);
@@ -1351,7 +1449,7 @@
     if (empty) empty.hidden = false;
     renderTranscript();
     updateMetrics();
-    document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report]').forEach(button => { button.hidden = true; });
+    document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report], [data-show-script]').forEach(button => { button.hidden = true; });
   });
 
   cameraButton?.addEventListener('click', toggleCamera);
@@ -1391,6 +1489,15 @@
     reportPanel.hidden = true;
     document.body.classList.remove('report-open');
     if (!sessionRunning) Promise.resolve(startSession()).catch(error => addEvent('系统', error.message, true));
+  });
+  reportPanel?.querySelector('[data-generate-script]')?.addEventListener('click', generateOptimizedScript);
+  reportPanel?.querySelector('[data-copy-script]')?.addEventListener('click', async event => {
+    const output = reportPanel.querySelector('[data-script-output]');
+    if (!output?.value) return;
+    await navigator.clipboard.writeText(output.value);
+    const button = event.currentTarget;
+    button.textContent = '已复制';
+    setTimeout(() => { button.textContent = '复制优化稿'; }, 1200);
   });
   promptText.textContent = mode === 'v1' ? (v1Rules().goal || prompts.v1) : prompts[mode];
   renderTranscript();

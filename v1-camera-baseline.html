@@ -61,6 +61,7 @@
           <button class="ghost-btn" type="button" data-copy-transcript hidden>复制原文</button>
           <button class="ghost-btn" type="button" data-clear-transcript hidden>清空</button>
           <button class="ghost-btn" type="button" data-show-report hidden>生成诊断报告</button>
+          <button class="ghost-btn" type="button" data-show-script hidden>生成优化台词稿</button>
           <span class="control-note">原型不会假装已经识别你的视线；粉色圆点只是镜头位置提示。</span>
         </div>
         <details class="media-device-panel" data-media-panel>
@@ -102,7 +103,13 @@
       </div>
       <div class="report-focus"><span>下一轮优先动作</span><strong id="reportFocus">先完整说完一轮</strong><p id="reportReason">系统会根据出现最多的问题选择一个动作，而不是给出宽松的泛化鼓励。</p></div>
       <pre class="core-ai-report" data-core-report hidden></pre>
-      <div class="report-actions"><button type="button" class="ghost-btn" data-report-close>返回逐字稿</button><button type="button" class="primary-btn" data-report-retry>立即同题重练</button></div>
+      <section class="optimized-script" data-optimized-script hidden aria-labelledby="optimizedScriptTitle">
+        <div class="optimized-script-head"><div><span>OPTIMIZED SCRIPT</span><h3 id="optimizedScriptTitle">优化台词稿</h3></div><button type="button" class="ghost-btn" data-copy-script hidden>复制优化稿</button></div>
+        <p>保留原意和个人语气，删去无效重复；缺少的事实只会标记，不会替你编造。</p>
+        <p class="optimized-script-status" data-script-status role="status" aria-live="polite"></p>
+        <textarea class="optimized-script-output" data-script-output readonly aria-label="生成的优化台词稿"></textarea>
+      </section>
+      <div class="report-actions"><button type="button" class="ghost-btn" data-report-close>返回逐字稿</button><button type="button" class="ghost-btn" data-generate-script>生成优化台词稿</button><button type="button" class="primary-btn" data-report-retry>立即同题重练</button></div>
     </div>
   </section>
   <section class="report-panel" id="pasteTranscriptPanel" hidden aria-labelledby="pasteTitle">

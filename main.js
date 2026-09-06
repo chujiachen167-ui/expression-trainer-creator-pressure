@@ -10,7 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const { initASR, feedAudio, stopRecognition, getASRStatus } = require('./lib/asr');
 const { loadLexicon, analyzeText } = require('./lib/lexicon');
-const { sendFeedback, sendReport, testConnection } = require('./lib/ai-feedback');
+const { sendFeedback, sendReport, sendOptimizedScript, testConnection } = require('./lib/ai-feedback');
 
 app.setName('Expression Trainer · Creator Pressure');
 
@@ -218,6 +218,12 @@ ipcMain.handle('get-final-report', async (_event, payload) => {
   const settings = loadSettings();
   if (!llmConfigured(settings)) return { success: false, error: '请先配置大模型' };
   try { return { success: true, report: await sendReport(payload.fullText, payload.stats, { ...settings, ...currentProviderSettings(settings) }, loadCustomPrompt()) }; }
+  catch (error) { return { success: false, error: error.message }; }
+});
+ipcMain.handle('get-optimized-script', async (_event, payload) => {
+  const settings = loadSettings();
+  if (!llmConfigured(settings)) return { success: false, error: '请先配置大模型' };
+  try { return { success: true, script: await sendOptimizedScript(payload.fullText, { ...settings, ...currentProviderSettings(settings) }, loadCustomPrompt()) }; }
   catch (error) { return { success: false, error: error.message }; }
 });
 ipcMain.handle('save-file', async (_event, content, filename) => {

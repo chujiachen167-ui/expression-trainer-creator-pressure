@@ -3,7 +3,7 @@ import { toSimplifiedChinese } from '../lib/opencc-t2s.js';
 const MAX_AUDIO_BYTES = 1_500_000;
 const MAX_AI_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [150, 450];
-const CHUNK_MS = 6000;
+const CHUNK_MS = 2200;
 const allowedContentTypes = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/mpeg', 'application/octet-stream'];
 
 function json(body, status = 200) {
@@ -82,6 +82,14 @@ function normalizeTranscript(input, language) {
     if (withoutUnexpectedScripts !== text) changes.push('unexpected-script');
     text = withoutUnexpectedScripts;
   }
+  const withoutSubtitleArtifacts = text
+    .replace(/\s*(?:中文字幕志愿者|字幕志愿者)[：:\s]*[\p{L}\p{N}·.\s-]*$/giu, '')
+    .replace(/\s*字幕由[^。！？!?]{0,80}(?:提供|制作)[。！？!?]?$/giu, '')
+    .replace(/\s*(?:subtitles? by|captions? by|amara\.org)[^。！？!?]*$/giu, '')
+    .replace(/\s*请不吝点赞订阅转发打赏支持[^。！？!?]*$/gu, '')
+    .trim();
+  if (withoutSubtitleArtifacts !== text) changes.push('subtitle-artifact');
+  text = withoutSubtitleArtifacts;
   const loopResult = removeHallucinationLoops(text);
   if (loopResult.removed) changes.push('repetition-loop');
   text = loopResult.text;

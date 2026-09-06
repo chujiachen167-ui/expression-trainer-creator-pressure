@@ -1,7 +1,9 @@
 (() => {
   const endpoint = '/api/transcribe';
-  const fallbackChunkMs = 6000;
+  const fallbackChunkMs = 2200;
   const maxConsecutiveFailures = 3;
+  const minimumPeakRms = 0.008;
+  const minimumAverageRms = 0.0025;
 
   class WebSTTError extends Error {
     constructor(message, code = 'web-stt-unavailable') {
@@ -69,6 +71,12 @@
     let consecutiveFailures = 0;
     let transientError = '';
     let chunkMs = fallbackChunkMs;
+    let audioContext = null;
+    let analyser = null;
+    let energyTimer = null;
+    let segmentPeakRms = 0;
+    let segmentRmsTotal = 0;
+    let segmentRmsSamples = 0;
 
     const reportStatus = patch => onStatus?.({ engine: 'web-stt', ...patch });
     const reportError = error => {
@@ -76,6 +84,7 @@
       running = false;
       if (segmentTimer) clearTimeout(segmentTimer);
       segmentTimer = null;
+      stopEnergyMonitor();
       if (recorder?.state !== 'inactive') {
         try { recorder.stop(); } catch (_) { /* The recorder may already be stopping. */ }
       }
@@ -87,8 +96,54 @@
       if (!isSupported()) throw new WebSTTError('当前浏览器不支持网页音频分段转写。', 'unsupported');
       const status = await requestJSON(endpoint, { method: 'GET' });
       if (!status.available) throw new WebSTTError(status.message || '网页转写服务尚未启用。', status.code || 'not-configured');
-      if (Number.isFinite(status.chunkMs) && status.chunkMs >= 3000 && status.chunkMs <= 15000) chunkMs = status.chunkMs;
+      if (Number.isFinite(status.chunkMs) && status.chunkMs >= 1500 && status.chunkMs <= 15000) chunkMs = status.chunkMs;
       return status;
+    }
+
+    function resetSegmentEnergy() {
+      segmentPeakRms = 0;
+      segmentRmsTotal = 0;
+      segmentRmsSamples = 0;
+    }
+
+    async function startEnergyMonitor(stream) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      try {
+        audioContext = new AudioContext();
+        if (audioContext.state === 'suspended') await audioContext.resume();
+        const source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(analyser);
+        const samples = new Float32Array(analyser.fftSize);
+        energyTimer = setInterval(() => {
+          analyser.getFloatTimeDomainData(samples);
+          let squareTotal = 0;
+          for (const sample of samples) squareTotal += sample * sample;
+          const rms = Math.sqrt(squareTotal / samples.length);
+          segmentPeakRms = Math.max(segmentPeakRms, rms);
+          segmentRmsTotal += rms;
+          segmentRmsSamples += 1;
+        }, 100);
+      } catch (_) {
+        stopEnergyMonitor();
+      }
+    }
+
+    function stopEnergyMonitor() {
+      if (energyTimer) clearInterval(energyTimer);
+      energyTimer = null;
+      analyser?.disconnect?.();
+      analyser = null;
+      audioContext?.close?.().catch?.(() => {});
+      audioContext = null;
+      resetSegmentEnergy();
+    }
+
+    function segmentContainsSpeech() {
+      if (!segmentRmsSamples) return true;
+      return segmentPeakRms >= minimumPeakRms || segmentRmsTotal / segmentRmsSamples >= minimumAverageRms;
     }
 
     async function uploadChunk(blob, chunkMeta) {
@@ -137,6 +192,7 @@
       if (!running || terminalError) return;
       const chunks = [];
       const audioStartedAt = lastChunkEndedAt || Date.now();
+      resetSegmentEnergy();
       try {
         recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       } catch (_) {
@@ -150,11 +206,16 @@
         segmentTimer = null;
         const audioEndedAt = Date.now();
         lastChunkEndedAt = audioEndedAt;
+        const containsSpeech = segmentContainsSpeech();
         const blob = new Blob(chunks, { type: recorder?.mimeType || mimeType || 'application/octet-stream' });
         recorder = null;
         const meta = { chunkIndex, audioStartedAt, audioEndedAt };
         chunkIndex += 1;
-        if (blob.size && !terminalError) enqueue(blob, meta);
+        if (blob.size && !terminalError && containsSpeech) enqueue(blob, meta);
+        else if (blob.size && !terminalError) {
+          transientError = '静音片段未上传';
+          reportStatus({ state: running ? 'running' : 'stopped', queued: pending, lastError: transientError });
+        }
         // Restarting the recorder makes every upload a complete, independently
         // decodable file. MediaRecorder timeslices can omit container headers.
         if (running && !terminalError) startSegment(stream, mimeType);
@@ -181,6 +242,7 @@
         chunkIndex = 0;
         const mimeType = preferredMimeType();
         running = true;
+        await startEnergyMonitor(stream);
         startSegment(stream, mimeType);
         if (terminalError) throw terminalError;
         reportStatus({ state: 'running', starts: 1, queued: 0, lastError: '' });
@@ -197,6 +259,7 @@
           recorder.stop();
         }
         await stopped;
+        stopEnergyMonitor();
         await uploadChain.catch(() => {});
         if (!terminalError) reportStatus({ state: 'stopped', queued: 0, lastError: '' });
         recorder = null;
