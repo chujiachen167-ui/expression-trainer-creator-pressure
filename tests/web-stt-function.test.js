@@ -36,7 +36,7 @@ const path = require('node:path');
     filters: ['simplified-chinese']
   });
   assert.equal(invocation.model, '@cf/openai/whisper-large-v3-turbo');
-  assert.deepEqual(invocation.input.audio, [0, 17, 128, 255]);
+  assert.equal(invocation.input.audio, 'ABGA/w==');
   assert.equal(invocation.input.language, 'zh');
   assert.equal(invocation.input.task, 'transcribe');
   assert.equal(invocation.input.vad_filter, true);
@@ -88,7 +88,7 @@ const path = require('node:path');
   assert.equal(unavailable.status, 503);
   assert.equal((await unavailable.json()).code, 'not-configured');
 
-  console.log('Web STT function: large-v3-turbo options, Simplified Chinese normalization, hallucination filtering and retry passed.');
+  console.log('Web STT function: large-v3-turbo base64 input, Simplified Chinese normalization, hallucination filtering and retry passed.');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

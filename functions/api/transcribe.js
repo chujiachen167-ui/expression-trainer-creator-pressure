@@ -17,10 +17,15 @@ function json(body, status = 200) {
   });
 }
 
-function toAudioBytes(buffer) {
-  // Workers AI's binding expects the encoded audio file as byte values.
-  // A base64 string is valid for some REST APIs, but not for AI.run().
-  return Array.from(new Uint8Array(buffer));
+function toAudioBase64(buffer) {
+  // whisper-large-v3-turbo's Workers AI binding expects base64-encoded audio.
+  // Convert in bounded blocks so a browser-sized segment does not overflow the call stack.
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  return btoa(binary);
 }
 
 function serviceReady(env) {
@@ -129,12 +134,12 @@ export async function onRequestPost(context) {
     return json({ code: 'audio-too-large', message: '单次转写音频为空或过大。' }, 413);
   }
   const language = normalizedLanguage(new URL(context.request.url).searchParams.get('lang'));
-  const audioBytes = toAudioBytes(audio);
+  const audioBase64 = toAudioBase64(audio);
   let lastError = null;
   let attempts = 0;
   for (attempts = 1; attempts <= MAX_AI_ATTEMPTS; attempts += 1) {
     try {
-      const result = await context.env.AI.run('@cf/openai/whisper-large-v3-turbo', transcriptionOptions(audioBytes, language));
+      const result = await context.env.AI.run('@cf/openai/whisper-large-v3-turbo', transcriptionOptions(audioBase64, language));
       return json(normalizeTranscript(result?.text, language));
     } catch (error) {
       lastError = error;

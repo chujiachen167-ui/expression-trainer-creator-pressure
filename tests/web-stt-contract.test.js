@@ -17,8 +17,8 @@ assert(worker.includes("'@cf/openai/whisper-large-v3-turbo'"), 'the Pages Functi
 assert(worker.includes('condition_on_previous_text: false'), 'independent chunks must disable previous-text conditioning to prevent repetition loops');
 assert(worker.includes('vad_filter: true'), 'the server must filter silent regions before transcription');
 assert(worker.includes('toSimplifiedChinese'), 'Chinese web transcripts must be normalized to Simplified Chinese');
-assert(worker.includes('Array.from(new Uint8Array(buffer))'), 'the Workers AI binding must receive raw audio byte values');
-assert(!worker.includes('audio: toBase64(audio)'), 'the Workers AI binding must not receive a base64 string');
+assert(worker.includes('function toAudioBase64'), 'the large-v3-turbo binding must receive base64-encoded audio');
+assert(worker.includes('offset += 0x8000'), 'audio conversion must avoid one unbounded call-stack expansion');
 assert(worker.includes('MAX_AUDIO_BYTES'), 'the public endpoint must impose a request-size bound');
 assert(app.includes('createWebTranscriptionService'), 'the app must prefer the cross-browser web transcription adapter');
 assert(app.includes("webSttIssue?.code === 'not-configured'"), 'unconfigured cloud STT must be explained without blaming microphone permission');
