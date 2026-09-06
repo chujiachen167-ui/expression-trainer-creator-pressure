@@ -46,6 +46,10 @@ assert.ok(hallucinated.quality.reasons.includes('repetition-loop'));
 assert.ok(hallucinated.quality.reasons.includes('unexpected-script'));
 assert.match(engine.suggestions(hallucinated)[0].text, /暂不生成表达评分/);
 
+const captionHallucination = engine.analyze('打开我。请不吝点赞订阅转发打赏支持明镜与点点栏目。');
+assert.equal(captionHallucination.scoreable, false, 'known Whisper caption hallucinations must never receive a density score');
+assert.ok(captionHallucination.quality.reasons.includes('known-hallucination'));
+
 const tooShort = engine.analyze('测试一下。');
 assert.equal(tooShort.scoreable, false, 'a fragment shorter than a complete thought must not be scored');
 assert.equal(tooShort.quality.status, 'insufficient');

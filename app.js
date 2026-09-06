@@ -70,10 +70,19 @@
     /\s*字幕由[^。！？!?]{0,80}(?:提供|制作)[。！？!?]?$/giu,
     /\s*(?:subtitles? by|captions? by|amara\.org)[^。！？!?]*$/giu
   ];
+  const highRiskHallucinationPatterns = [
+    /明镜与点点栏目/iu,
+    /优优独播剧场|yoyo\s+television\s+series\s+exclusive/iu,
+    /请不吝[^。！？!?]{0,80}(?:点赞|订阅)[^。！？!?]{0,80}(?:转发|打赏)/iu,
+    /字幕(?:视听|視聴)[^。！？!?]{0,20}(?:谢谢|感謝)/iu,
+    /未经许可[^。！？!?]{0,60}(?:翻唱|使用简体)/iu,
+    /中文一律使用[^。！？!?]{0,40}简体中文|不使用简体中文|不要补写未说出的内容/iu
+  ];
   const inWeChat = /MicroMessenger/i.test(navigator.userAgent || '');
   function sanitizeSpeech(text) {
     let value = String(text || '').replace(/[*＊]{1,}/g, '');
     profanityTerms.forEach(term => { value = value.split(term).join(''); });
+    if (highRiskHallucinationPatterns.some(pattern => pattern.test(value))) return '';
     subtitleArtifactPatterns.forEach(pattern => { value = value.replace(pattern, ''); });
     return value;
   }
@@ -842,7 +851,8 @@
       interim = '';
       const round = v2Store?.getActiveRound();
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const piece = sanitizeSpeech(event.results[i][0].transcript);
+        const piece = sanitizeSpeech(event.results[i][0].transcript).trim();
+        if (!piece) continue;
         const resultId = round ? `web-speech:${round.sessionId}:${i}` : `web-speech:${i}`;
         if (event.results[i].isFinal) {
           transcript += piece;

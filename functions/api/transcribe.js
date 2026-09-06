@@ -70,6 +70,19 @@ function removeHallucinationLoops(text) {
   return { text: cleaned.replace(/(?:\s*[\-,，。！？!?:;、.]){2,}/g, ' ').trim(), removed };
 }
 
+const highRiskHallucinationPatterns = [
+  /明镜与点点栏目/iu,
+  /优优独播剧场|yoyo\s+television\s+series\s+exclusive/iu,
+  /请不吝[^。！？!?]{0,80}(?:点赞|订阅)[^。！？!?]{0,80}(?:转发|打赏)/iu,
+  /字幕(?:视听|視聴)[^。！？!?]{0,20}(?:谢谢|感謝)/iu,
+  /未经许可[^。！？!?]{0,60}(?:翻唱|使用简体)/iu,
+  /中文一律使用[^。！？!?]{0,40}简体中文|不使用简体中文|不要补写未说出的内容/iu
+];
+
+function containsHighRiskHallucination(text) {
+  return highRiskHallucinationPatterns.some(pattern => pattern.test(String(text || '')));
+}
+
 function normalizeTranscript(input, language) {
   let text = String(input || '').replace(/\s+/g, ' ').trim();
   const changes = [];
@@ -81,6 +94,9 @@ function normalizeTranscript(input, language) {
       .replace(/\s+/g, ' ').trim();
     if (withoutUnexpectedScripts !== text) changes.push('unexpected-script');
     text = withoutUnexpectedScripts;
+  }
+  if (containsHighRiskHallucination(text)) {
+    return { text: '', filtered: true, filters: [...changes, 'known-hallucination'] };
   }
   const withoutSubtitleArtifacts = text
     .replace(/\s*(?:中文字幕志愿者|字幕志愿者)[：:\s]*[\p{L}\p{N}·.\s-]*$/giu, '')
@@ -103,14 +119,11 @@ function transcriptionOptions(audio, language) {
     task: 'transcribe',
     language,
     vad_filter: true,
-    initial_prompt: language === 'zh'
-      ? '普通话为主，可夹杂英文的自媒体口播。逐字转写，中文一律使用简体中文。不要补写未说出的内容，不要把静音、呼吸声或环境噪声转成字幕。'
-      : 'Creator speech in English. Transcribe only what is spoken. Do not turn silence, breathing, or background noise into words.',
     condition_on_previous_text: false,
-    no_speech_threshold: 0.55,
-    compression_ratio_threshold: 2.2,
-    log_prob_threshold: -0.8,
-    hallucination_silence_threshold: 1
+    no_speech_threshold: 0.35,
+    compression_ratio_threshold: 2,
+    log_prob_threshold: -0.5,
+    hallucination_silence_threshold: 0.5
   };
 }
 

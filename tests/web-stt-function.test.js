@@ -41,7 +41,8 @@ const path = require('node:path');
   assert.equal(invocation.input.task, 'transcribe');
   assert.equal(invocation.input.vad_filter, true);
   assert.equal(invocation.input.condition_on_previous_text, false);
-  assert.match(invocation.input.initial_prompt, /简体中文/);
+  assert.equal(invocation.input.initial_prompt, undefined, 'low-confidence audio must not echo a decoder prompt into the transcript');
+  assert.equal(invocation.input.no_speech_threshold, 0.35);
 
   let retryAttempts = 0;
   const retryContext = {
@@ -101,6 +102,24 @@ const path = require('node:path');
     filtered: true,
     filters: ['subtitle-artifact']
   }, 'classic subtitle-credit hallucinations must be removed without deleting the spoken sentence');
+
+  const knownHallucinationContext = {
+    request: new Request('https://read-yourself.test/api/transcribe?lang=zh-CN', {
+      method: 'POST',
+      headers: { 'content-type': 'audio/webm' },
+      body: new Uint8Array([1, 2, 3])
+    }),
+    env: {
+      WEB_STT_ENABLED: 'true',
+      AI: { async run() { return { text: '打开我。请不吝点赞订阅转发打赏支持明镜与点点栏目。好可爱。' }; } }
+    }
+  };
+  const knownHallucinationResponse = await worker.onRequestPost(knownHallucinationContext);
+  assert.deepEqual(await knownHallucinationResponse.json(), {
+    text: '',
+    filtered: true,
+    filters: ['known-hallucination']
+  }, 'a chunk containing a confirmed Whisper caption hallucination must be dropped in full');
 
   const unavailable = await worker.onRequestGet({ env: {} });
   assert.equal(unavailable.status, 503);

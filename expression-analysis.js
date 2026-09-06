@@ -101,11 +101,13 @@
     const tokens = expressionTokens(text);
     const repetition = repeatedTokenProfile(tokens);
     const unexpectedScriptCount = String(text || '').match(/[\u3040-\u30ff\u31f0-\u31ff\uac00-\ud7af\u0400-\u04ff]/g)?.length || 0;
+    const knownHallucination = /明镜与点点栏目|优优独播剧场|yoyo\s+television\s+series\s+exclusive|请不吝[^。！？!?]{0,80}(?:点赞|订阅)[^。！？!?]{0,80}(?:转发|打赏)|不要补写未说出的内容/iu.test(String(text || ''));
     const reasons = [];
     if (totalChars < 12) reasons.push('too-short');
     if ((repetition.coveredUnits >= 10 && repetition.coverage >= 0.25) || repetition.maximumRepeats >= 12) reasons.push('repetition-loop');
     if (unexpectedScriptCount >= 2) reasons.push('unexpected-script');
-    const unreliable = reasons.includes('repetition-loop') || reasons.includes('unexpected-script');
+    if (knownHallucination) reasons.push('known-hallucination');
+    const unreliable = reasons.includes('repetition-loop') || reasons.includes('unexpected-script') || reasons.includes('known-hallucination');
     const message = unreliable
       ? '逐字稿含有明显的重复幻觉或异常语种，本轮暂不生成表达评分。请靠近麦克风并重新录一轮。'
       : reasons.includes('too-short')

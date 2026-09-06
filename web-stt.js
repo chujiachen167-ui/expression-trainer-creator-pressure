@@ -2,8 +2,11 @@
   const endpoint = '/api/transcribe';
   const fallbackChunkMs = 2200;
   const maxConsecutiveFailures = 3;
-  const minimumPeakRms = 0.008;
-  const minimumAverageRms = 0.0025;
+  const minimumPeakRms = 0.012;
+  const minimumAverageRms = 0.0035;
+  const voicedFrameRms = 0.006;
+  const minimumVoicedFrameRatio = 0.12;
+  const maxConsecutiveRejectedSegments = 3;
 
   class WebSTTError extends Error {
     constructor(message, code = 'web-stt-unavailable') {
@@ -77,6 +80,8 @@
     let segmentPeakRms = 0;
     let segmentRmsTotal = 0;
     let segmentRmsSamples = 0;
+    let segmentVoicedSamples = 0;
+    let consecutiveRejectedSegments = 0;
 
     const reportStatus = patch => onStatus?.({ engine: 'web-stt', ...patch });
     const reportError = error => {
@@ -104,6 +109,7 @@
       segmentPeakRms = 0;
       segmentRmsTotal = 0;
       segmentRmsSamples = 0;
+      segmentVoicedSamples = 0;
     }
 
     async function startEnergyMonitor(stream) {
@@ -125,6 +131,7 @@
           segmentPeakRms = Math.max(segmentPeakRms, rms);
           segmentRmsTotal += rms;
           segmentRmsSamples += 1;
+          if (rms >= voicedFrameRms) segmentVoicedSamples += 1;
         }, 100);
       } catch (_) {
         stopEnergyMonitor();
@@ -143,7 +150,11 @@
 
     function segmentContainsSpeech() {
       if (!segmentRmsSamples) return true;
-      return segmentPeakRms >= minimumPeakRms || segmentRmsTotal / segmentRmsSamples >= minimumAverageRms;
+      const averageRms = segmentRmsTotal / segmentRmsSamples;
+      const voicedRatio = segmentVoicedSamples / segmentRmsSamples;
+      return segmentPeakRms >= minimumPeakRms
+        && averageRms >= minimumAverageRms
+        && voicedRatio >= minimumVoicedFrameRatio;
     }
 
     async function uploadChunk(blob, chunkMeta) {
@@ -160,6 +171,7 @@
         consecutiveFailures = 0;
         transientError = result.filtered && !text ? '已过滤低可信片段' : '';
         if (text) {
+          consecutiveRejectedSegments = 0;
           onResult?.(text, true, {
             source: 'web-stt',
             resultId: `web-stt:${recordingStartedAt}:${chunkMeta.chunkIndex}`,
@@ -168,6 +180,11 @@
             arrivedAt: Date.now(),
             chunkIndex: chunkMeta.chunkIndex
           });
+        } else if (result.filtered) {
+          consecutiveRejectedSegments += 1;
+          if (consecutiveRejectedSegments >= maxConsecutiveRejectedSegments) {
+            reportError(new WebSTTError('连续检测到模型幻觉，已暂停云端转写。请降低环境噪声后重试。', 'hallucination-burst'));
+          }
         }
       } catch (error) {
         if (running && isTransient(error) && consecutiveFailures < maxConsecutiveFailures - 1) {

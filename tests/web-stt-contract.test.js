@@ -32,8 +32,12 @@ assert(client.includes('maxConsecutiveFailures = 3'), 'one transient failed segm
 assert(client.includes('fallbackChunkMs = 2200'), 'cloud fallback chunks must keep perceived latency near two seconds');
 assert(client.includes('segmentContainsSpeech'), 'silent chunks must be rejected before upload');
 assert(client.includes('minimumPeakRms'), 'the silence gate must use measured microphone energy');
+assert(client.includes('minimumVoicedFrameRatio'), 'one noise spike must not be mistaken for sustained speech');
+assert(client.includes('maxConsecutiveRejectedSegments = 3'), 'repeated model hallucinations must trip a circuit breaker');
 assert(worker.includes('MAX_AI_ATTEMPTS = 3'), 'the server must retry transient Workers AI failures');
 assert(worker.includes('中文字幕志愿者'), 'known subtitle-credit hallucinations must be removed');
+assert(worker.includes('known-hallucination'), 'known Whisper training-caption phrases must drop the entire chunk');
+assert(!worker.includes('initial_prompt:'), 'decoder guidance must not be echoed back into low-confidence transcripts');
 assert(app.includes('noiseSuppression: true'), 'web microphone capture must request speech-oriented noise suppression');
 
 for (const page of ['v1-camera-baseline.html', 'v2-ai-audience.html', 'v3-creator-studio.html']) {
