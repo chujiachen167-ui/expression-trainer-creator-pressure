@@ -9,9 +9,9 @@
 
 主目录：C:\Vibe coding program\expression-trainer-vertical-prototypes
 当前分支：main
-当前提交：ad578a3 Keep the QA panel above the audience picker and ship the latest V2 visuals.
+当前提交：d9f906e Add a coding handoff for the next session.
 远端：https://github.com/chujiachen167-ui/expression-trainer-creator-pressure.git
-origin/main 已与本地 ad578a3 对齐。
+origin/main 已与本地 d9f906e 对齐。补充本文件后工作区会有未提交改动。
 
 先读：
 - docs/handoff/2026-09-08-coding-handoff.md（本文件）
@@ -23,6 +23,7 @@ origin/main 已与本地 ad578a3 对齐。
 独立工作树 C:\Vibe coding program\expression-trainer-v2-execution 停在旧提交 3e485d5，不要在那里继续改；正式代码以主仓库 main 为准。
 不要改首页品牌名、Logo 图形、不要接入新付费服务、不要擅自部署 Cloudflare。
 技术栈保持原生 HTML/CSS/JavaScript + Electron。
+extraCopy 生产应用已修，等 Pages 重建后由 Founder 在网站无痕窗口验收。不要当成“生产故意不用遗漏文案”。
 ```
 
 ## 1. 仓库与运行
@@ -30,8 +31,8 @@ origin/main 已与本地 ad578a3 对齐。
 | 项 | 值 |
 |---|---|
 | 主仓库 | `C:\Vibe coding program\expression-trainer-vertical-prototypes` |
-| 分支 | `main` @ `ad578a3`，已 push |
-| 线上 | `https://read-yourself.com`（Cloudflare Pages）。本轮视觉/V2 已进 GitHub，**不等于已经部署上线** |
+| 分支 | `main` @ `d9f906e`，已 push。本文件补充后本地会脏 |
+| 线上 | `https://read-yourself.com`（Cloudflare Pages）。当前线上仍是 `d9f906e`。extraCopy 生产应用已修，需本次提交进 Pages 后验收 |
 | 独立工作树 | `C:\Vibe coding program\expression-trainer-v2-execution` / `codex/v2-judgment-review` @ `3e485d5`。过期，勿再改 |
 
 启动：
@@ -99,7 +100,7 @@ V1 / V2 / V3 共用诊断底座，不是三个产品。
 ### V2 监看台视觉
 
 - `v2-focus.js` / `v2-focus.css`：左栏暖灰设置、右栏可收起、转写改为舞台下方场记纸带、兴趣图叠在观众画面上。
-- 设计说明：`docs/design/2026-09-08-v2-recording-workspace.md`（文中“未提交”已过期，代码已在 `ad578a3`）。
+- 设计说明：`docs/design/2026-09-08-v2-recording-workspace.md`（文中“未提交”已过期，代码已在 `ad578a3`，现随 `d9f906e` 在线上）。
 - 不改 V1 配色与布局。
 - `v2Focus.visualVersion`：**3**。旧 V2 侧栏色和舞台固定宽度会迁移成分成比例 `v2Stage.audienceShare`。
 
@@ -107,7 +108,7 @@ V1 / V2 / V3 共用诊断底座，不是三个产品。
 
 - 项目配置：`creator-project-config.js`
 - JSON 副本：`docs/creator-pressure-config.json`
-- 最近一次 Founder 保存：`savedAt: 2026-09-08T13:55:02.477Z`，已随 `ad578a3` 提交。
+- 最近一次 Founder 保存：`savedAt: 2026-09-08T13:55:02.477Z`，已随 `ad578a3` 提交。extraCopy 生产应用见第 4 节，等本次提交随 Pages 上线后验收。
 - 观众选择窗不再 `showModal()`，避免盖住调控板。调控板 z-index 420/421，选择窗 400/401。
 - 右栏展开/收起箭头已水平翻转：展开时朝外，收起后朝内。
 
@@ -119,7 +120,12 @@ V1 / V2 / V3 共用诊断底座，不是三个产品。
 
 ## 4. 明确未完成 / 不要冒领
 
-1. **Cloudflare 生产部署**：GitHub `main` 已更新，线上 `read-yourself.com` 是否已构建以 Pages 为准，本交接不假设已上线。
+1. **本机文案上线：extraCopy 生产应用已修，等 Pages 重建后由 Founder 在网站无痕窗口验收。**
+   - 这是遗留缺口，不是“生产故意不用 extraCopy”。约定一直是：生产隐藏调控板、忽略 localStorage 草稿，但**项目 JS 里的文案要上线**。当时只给 `fineTune` 做了 `applyShipped()`，`extraCopy` 只挂在调控板 `mount()` 上。
+   - 对照句：页脚应变为「你从不缺乏面对镜头开口的勇气，就从现在开始！」；右侧「READ / SPEAK / REPEAT」按已保存 extraCopy 为空。V1「设备选择与录制」、V2 被清空的标题/说明同样走 extraCopy。
+   - 叠加原因仍在：Electron / 直接打开源码会叠浏览器草稿 `expression-trainer.creator-qa.v1`。验收请用无痕窗口打开 `https://read-yourself.com`，不要用本机开发窗口当线上。
+   - 「保存到项目」仍不会自动 commit / 部署。本次修的是应用层；推上 GitHub 后等 Pages 资源戳离开 `d9f906e8e9e6` 再看。
+   - `copy` 主表里仍有过期的 `launcher.h2.8` / `launcher.span.6` 等旧首页键，融合首页有效键是 `data-qa-copy-key`（如 `fusion.footer.title`、`launcher.h1.1`）。不要靠改 HTML 默认句绕过 extraCopy，除非 Founder 要把那句升成源码正文。
 2. **Mac 实机字幕验收**：并行，未通过。不能宣传网页字幕在 Mac 上已稳定。
 3. **阶段 2 数字人视频**：统一事件接口已有，实时生成数字人、付费供应商未授权接入。
 4. **Founder 审美验收**：首页 Logo 完整度、V2 监看台是否“好用/高级”，仍由 Founder 看。执行岗不做自动视觉打分。
@@ -155,7 +161,7 @@ V1 / V2 / V3 共用诊断底座，不是三个产品。
 按产品主线，而不是再开平行首页大改：
 
 1. Founder 继续体验 V2：选题、观众选择+调控板、收起箭头、曲线定位原句、同题比较、导出 JSON。
-2. 若线上要同步：单独安排 Cloudflare Pages 部署，核对生产戳和 Whisper 开关仍默认关。
+2. **网站端验收 extraCopy**：本机代码已修，推送后等 Pages 重建。无痕打开 `read-yourself.com` 看页脚和首页右侧说明。Whisper 开关仍默认关。
 3. 阶段 2：用现有判断事件驱动一个观众形象的倾听 / 疑惑 / 兴趣回升，先做本地免费原型。
 4. Mac 字幕验收仍可并行，用 `docs/stt/web-stt-cloudflare.md` 和真实设备记录，不要和 V2 规则开发绑死。
 

@@ -315,6 +315,7 @@
     pruneInvalidHomepageCopy();
     applyTheme(); applyFeatures(); applyElements(); applyCopy(); applyComponents();
     window.CreatorElementEditor?.applyShipped?.(state.fineTune[pageKey] || {});
+    window.CreatorElementEditor?.applyShippedCopy?.(state.extraCopy[pageKey] || {});
     elementEditor?.refresh();
   }
 
@@ -769,6 +770,9 @@
   }
 
   window.CreatorQAControls = { featureEnabled, getState: () => clone(state), refreshCopyLibrary: applyCopy, reset: () => { state = clone(defaults); apply(); save(); } };
+  document.addEventListener('creator:locale-change', () => {
+    window.CreatorElementEditor?.applyShippedCopy?.(state.extraCopy[pageKey] || {});
+  });
   apply();
   if (!production) addPanel();
 })();

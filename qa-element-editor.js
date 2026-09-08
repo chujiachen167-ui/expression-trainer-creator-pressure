@@ -91,6 +91,28 @@
     const css = compileStyleSheet(styles);
     if (style.textContent !== css) style.textContent = css;
   }
+  function copyValue(node, entry) {
+    return entry.type === 'attribute' ? node.getAttribute(entry.slot) : node.childNodes[entry.slot]?.nodeType === 3 ? node.childNodes[entry.slot].data : null;
+  }
+  function setCopyValue(node, entry, value) {
+    if (entry.type === 'attribute') node.setAttribute(entry.slot, value);
+    else if (node.childNodes[entry.slot]?.nodeType === 3) node.childNodes[entry.slot].data = value;
+  }
+  function applyCopyMap(copy) {
+    const applied = [];
+    for (const entry of Object.values(copy || {})) {
+      let node;
+      try { node = document.querySelector(entry.selector); } catch (_) { continue; }
+      if (!node || !copyFields(node).some(field => field.type === entry.type && field.slot === entry.slot)) continue;
+      // State-specific edits apply only to the matching source phrase. Never turn
+      // a runtime "stop" button back into a saved "start" caption.
+      if (copyValue(node, entry) !== entry.source || entry.source === entry.value) continue;
+      setCopyValue(node, entry, String(entry.value));
+      applied.push({ ...entry, node });
+    }
+    return applied;
+  }
+  function applyShippedCopy(copy) { applyCopyMap(copy); }
   function mount(panel, bridge) {
     let style = document.querySelector('style[data-qa-editor-owned]');
     if (!style) {
@@ -191,23 +213,11 @@
       const css = compileStyleSheet(bridge.read().styles);
       if (style.textContent !== css) style.textContent = css;
     }
-    function valueOf(node, entry) { return entry.type === 'attribute' ? node.getAttribute(entry.slot) : node.childNodes[entry.slot]?.nodeType === 3 ? node.childNodes[entry.slot].data : null; }
-    function setValue(node, entry, value) { if (entry.type === 'attribute') node.setAttribute(entry.slot, value); else if (node.childNodes[entry.slot]?.nodeType === 3) node.childNodes[entry.slot].data = value; }
     function restoreCopy() {
-      for (const entry of appliedCopy) if (entry.node.isConnected && valueOf(entry.node, entry) === entry.value) setValue(entry.node, entry, entry.source);
+      for (const entry of appliedCopy) if (entry.node.isConnected && copyValue(entry.node, entry) === entry.value) setCopyValue(entry.node, entry, entry.source);
       appliedCopy = [];
     }
-    function applyCopy() {
-      for (const entry of Object.values(bridge.read().copy)) {
-        let node; try { node = document.querySelector(entry.selector); } catch (_) { continue; }
-        if (!node || !copyFields(node).some(field => field.type === entry.type && field.slot === entry.slot)) continue;
-        // State-specific edits apply only to the matching source phrase. Never turn
-        // a runtime "stop" button back into a saved "start" caption.
-        if (valueOf(node, entry) !== entry.source || entry.source === entry.value) continue;
-        setValue(node, entry, String(entry.value));
-        appliedCopy.push({ ...entry, node });
-      }
-    }
+    function applyCopy() { appliedCopy.push(...applyCopyMap(bridge.read().copy)); }
     function stopPicking() {
       picking = null;
       hovered?.removeAttribute('data-qa-inspect-hover'); hovered = null;
@@ -254,5 +264,5 @@
     scan(); applyStyles(); applyCopy(); renderStyles(); renderCopy();
     return { refresh: () => { restoreCopy(); applyStyles(); applyCopy(); renderStyles(); renderCopy(); }, rescan: () => { scan(); renderStyles(); renderCopy(); }, inventory: () => { scan(); return inventory.map(item => ({ selector: item.selector, label: item.label, copyFields: copyFields(item.node).length })); }, selectorFor, copyFields };
   }
-  window.CreatorElementEditor = { mount, selectorFor, copyFields, eligible, applyShipped };
+  window.CreatorElementEditor = { mount, selectorFor, copyFields, eligible, applyShipped, applyShippedCopy };
 })();

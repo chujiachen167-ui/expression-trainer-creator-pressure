@@ -47,4 +47,49 @@ assert(!v1.window.document.querySelector('.qa-panel'));
 assert.match(v1.window.document.querySelector('style[data-qa-editor-owned]').textContent, /\[id="timer"\] \{color:#00ff55!important\}/);
 v1.window.close();
 
-console.log('Production runtime: shipped theme, copy and fine-tune colors apply, local drafts are ignored, QA panel stays off.');
+const footerSelector = '[id="productFooter"] > div:nth-of-type(1) > div:nth-of-type(1) > h2:nth-of-type(1)';
+const captionSelector = 'body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > p:nth-of-type(1)';
+const extraCopy = {
+  'launcher-fusion': {
+    footer: {
+      selector: footerSelector,
+      type: 'text',
+      slot: 0,
+      source: '保留你的个性。练清楚你的表达。',
+      value: '你从不缺乏面对镜头开口的勇气，就从现在开始！'
+    },
+    caption: {
+      selector: captionSelector,
+      type: 'text',
+      slot: 0,
+      source: 'READ / SPEAK / REPEAT',
+      value: ''
+    }
+  }
+};
+const productionCopy = makePage('index.html', {
+  production: true,
+  draft: {
+    extraCopy: {
+      'launcher-fusion': {
+        footer: {
+          selector: footerSelector,
+          type: 'text',
+          slot: 0,
+          source: '保留你的个性。练清楚你的表达。',
+          value: '草稿不应上线'
+        }
+      }
+    }
+  },
+  project: { ...project, extraCopy }
+});
+assert(!productionCopy.window.document.querySelector('.qa-panel'), 'extraCopy must apply without mounting the QA panel');
+const footer = productionCopy.window.document.querySelector(footerSelector);
+const caption = productionCopy.window.document.querySelector(captionSelector);
+assert.equal(footer.childNodes[0].data, '你从不缺乏面对镜头开口的勇气，就从现在开始！');
+assert.equal(caption.childNodes[0].data, '');
+assert.notEqual(footer.textContent, '草稿不应上线', 'production must ignore extraCopy drafts');
+productionCopy.window.close();
+
+console.log('Production runtime: shipped theme, copy, extraCopy and fine-tune colors apply, local drafts are ignored, QA panel stays off.');

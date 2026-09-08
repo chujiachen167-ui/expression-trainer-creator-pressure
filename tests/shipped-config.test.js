@@ -33,4 +33,30 @@ for (const page of ['index.html', 'v1-camera-baseline.html', 'v2-ai-audience.htm
   assert.equal(dom.qaErrors.length, 0);
   dom.window.close();
 }
-console.log('Shipped config: all four pages load the complete saved settings without drafts; every saved homepage text resolves and renders verbatim.');
+
+const extraCopyPages = {
+  'launcher-fusion': 'index.html',
+  v1: 'v1-camera-baseline.html',
+  v2: 'v2-ai-audience.html',
+  v3: 'v3-creator-studio.html'
+};
+for (const [pageKey, page] of Object.entries(extraCopyPages)) {
+  const entries = settings.extraCopy?.[pageKey];
+  if (!entries || !Object.keys(entries).length) continue;
+  const view = makePage(page, { production: true, project: settings });
+  assert(!view.window.document.querySelector('.qa-panel'), `${page}: production extraCopy must not require the QA panel`);
+  let applied = 0;
+  for (const entry of Object.values(entries)) {
+    const node = view.window.document.querySelector(entry.selector);
+    if (!node) continue;
+    const actual = entry.type === 'attribute' ? node.getAttribute(entry.slot) : node.childNodes[entry.slot]?.data;
+    assert.equal(actual, String(entry.value), `${page}: extraCopy must apply to ${entry.selector}`);
+    applied += 1;
+  }
+  if (pageKey === 'launcher-fusion') {
+    assert.equal(applied, Object.keys(entries).length, 'homepage extraCopy selectors must still match the fusion DOM');
+  }
+  assert.equal(view.qaErrors.length, 0);
+  view.window.close();
+}
+console.log('Shipped config: all four pages load the complete saved settings without drafts; every saved homepage text resolves and renders verbatim; extraCopy applies in production.');
