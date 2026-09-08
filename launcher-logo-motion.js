@@ -9,6 +9,9 @@
   // Camera/lens coordinates refer to the original 1254px PNG. The approved
   // raster remains the fixed outer silhouette. Blink surfaces are traced from
   // its inner edges and morph to one shared seam instead of moving the lips.
+  const viewBox = { x: 0, y: 220, width: 1254, height: 820 };
+  const viewBoxAttr = `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`;
+  const cameraOrigin = `${((634 - viewBox.x) / viewBox.width * 100).toFixed(6)}% ${((650 - viewBox.y) / viewBox.height * 100).toFixed(6)}%`;
   const cameraContour = 'M444 540 L496 478 H704 L745 515 H790 L824 552 V641 A190 182 0 0 1 444 641 Z';
   const blinkSeamY = 625;
   const lidCurves = {
@@ -43,7 +46,7 @@
   const art = document.createElement('div');
   art.className = 'brand-background-art';
   art.dataset.logoArt = '';
-  art.innerHTML = `<div class="brand-background-outline" data-logo-outline><svg viewBox="60 270 1140 720" focusable="false" aria-hidden="true">
+  art.innerHTML = `<div class="brand-background-outline" data-logo-outline><svg viewBox="${viewBoxAttr}" focusable="false" aria-hidden="true">
     <defs>
       <filter id="logo-motion-outline-alpha" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -.2126 -.7152 -.0722 0 1"/><feComponentTransfer><feFuncA type="linear" slope="1.2" intercept="-.1"/></feComponentTransfer></filter>
       <mask id="logo-motion-outline-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1254" height="1254" style="mask-type: alpha"><image width="1254" height="1254" filter="url(#logo-motion-outline-alpha)"/></mask>
@@ -51,7 +54,7 @@
     </defs>
     <rect width="1254" height="1254" fill="currentColor" mask="url(#logo-motion-outline-mask)" clip-path="url(#logo-motion-outline-outside)"/>
   </svg></div>
-  <div class="brand-background-camera" data-logo-camera><svg viewBox="60 270 1140 720" focusable="false">
+  <div class="brand-background-camera" data-logo-camera><svg viewBox="${viewBoxAttr}" focusable="false">
     <defs>
       <filter id="logo-motion-ink" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
         <feColorMatrix type="matrix" values="-.2126 -.7152 -.0722 0 1  -.2126 -.7152 -.0722 0 1  -.2126 -.7152 -.0722 0 1  0 0 0 0 1"/>
@@ -68,7 +71,7 @@
     </defs>
     <rect width="1254" height="1254" fill="currentColor" mask="url(#logo-motion-camera-mask)"/>
   </svg></div>
-  <svg class="brand-background-lids" viewBox="60 270 1140 720" focusable="false" aria-hidden="true">
+  <svg class="brand-background-lids" viewBox="${viewBoxAttr}" focusable="false" aria-hidden="true">
     <path data-logo-lid="top" fill="currentColor" d="${lidPath(lidCurves.top)}"/>
     <path data-logo-lid="bottom" fill="currentColor" d="${lidPath(lidCurves.bottom)}"/>
   </svg>`;
@@ -83,21 +86,22 @@
   let settings = window.CreatorLogoConfig.normalizeBackground(window.CreatorProjectConfig?.config?.components?.logoBackground);
   let pointer = null, rect = null, dirtyGeometry = true, frame = 0, previousTime = 0;
   let blinkTimer = 0, blinkFrame = 0, blinkStart = null, intersects = true, pageSuspended = false, loaded = false;
+  let userPaused = false;
   const movesCamera = () => settings.motionMode === 'camera' || settings.motionMode === 'combined';
   const movesLens = () => settings.motionMode === 'lens' || settings.motionMode === 'combined';
   const restingScale = () => movesCamera() ? settings.cameraScale : 1;
   const current = { x: 0, y: 0, scale: restingScale(), lensX: 0, lensY: 0 };
 
-  const canShowArt = () => loaded && settings.enabled && settings.opacity > 0 && !reduced.matches;
+  const canShowArt = () => loaded && settings.enabled && settings.opacity > 0 && !reduced.matches && !userPaused;
   const canAnimate = () => canShowArt() && settings.motionMode !== 'off' && !document.hidden && !pageSuspended && intersects;
   const canBlink = (preview = false) => canShowArt() && (preview || settings.blinkEnabled) && !document.hidden && !pageSuspended && intersects;
   function geometry() {
     rect = art.getBoundingClientRect();
     dirtyGeometry = false;
-    camera.style.transformOrigin = '50.350877% 52.777778%'; // source (634, 650)
+    camera.style.transformOrigin = cameraOrigin; // source (634, 650)
   }
   function paint() {
-    const scale = (rect?.width || 1140) / 1140;
+    const scale = (rect?.width || viewBox.width) / viewBox.width;
     camera.style.transform = `translate3d(${(current.x * scale).toFixed(3)}px,${(current.y * scale).toFixed(3)}px,0) scale(${current.scale.toFixed(4)})`;
     lens.style.transform = `translate(${current.lensX.toFixed(3)}px,${current.lensY.toFixed(3)}px)`;
   }
@@ -134,11 +138,16 @@
     root.style.setProperty('--logo-blink-duration', `${settings.blinkDuration}ms`);
     root.setAttribute('data-blinking', '');
     const duration = settings.blinkDuration;
+    let notified = false;
     const animateBlink = time => {
       blinkFrame = 0;
       if (!canBlink(preview)) { clearBlink(); return; }
       if (blinkStart === null) blinkStart = time;
       const elapsed = Math.min(1, Math.max(0, (time - blinkStart) / duration));
+      if (!notified && elapsed >= .45) {
+        notified = true;
+        document.dispatchEvent(new CustomEvent('creator:logo-blink', { detail: { preview } }));
+      }
       const phase = elapsed < .45 ? elapsed / .45 : elapsed <= .55 ? 1 : (1 - elapsed) / .45;
       const eased = phase * phase * (3 - 2 * phase);
       const closure = eased * settings.blinkDepth;
@@ -163,8 +172,8 @@
   function target() {
     const result = { x: 0, y: 0, scale: restingScale(), lensX: 0, lensY: 0 };
     if (!pointer || !rect?.width || !rect?.height) return result;
-    let x = (pointer.x - (rect.left + rect.width * (634 - 60) / 1140)) / Math.max(1, window.innerWidth * .55);
-    let y = (pointer.y - (rect.top + rect.height * (650 - 270) / 720)) / Math.max(1, window.innerHeight * .55);
+    let x = (pointer.x - (rect.left + rect.width * (634 - viewBox.x) / viewBox.width)) / Math.max(1, window.innerWidth * .55);
+    let y = (pointer.y - (rect.top + rect.height * (650 - viewBox.y) / viewBox.height)) / Math.max(1, window.innerHeight * .55);
     const length = Math.max(1, Math.hypot(x, y)); x /= length; y /= length;
     if (movesCamera()) {
       result.x = x * settings.cameraTravel;
@@ -220,6 +229,7 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) suspend(); else resume(); });
   document.addEventListener('creator:logo-layout-change', invalidate);
   document.addEventListener('creator:logo-blink-preview', () => playBlink(true));
+  document.addEventListener('creator:home-motion-pause', event => { userPaused = Boolean(event.detail?.paused); if (userPaused) suspend(); else resume(); });
   document.addEventListener('creator:component-settings-change', event => {
     settings = window.CreatorLogoConfig.normalizeBackground(event.detail?.logoBackground);
     dirtyGeometry = true; pointer = null; stop(); clearBlink(); updateVisibility(); scheduleBlink(); wake();

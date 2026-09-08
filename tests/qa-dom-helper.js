@@ -26,6 +26,9 @@ function makePage(page = 'index.html', { draft, project = {}, extraScripts = [],
     window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
     window.HTMLDialogElement.prototype.close = function () { this.open = false; };
   }
+  if (typeof window.HTMLDialogElement?.prototype.show !== 'function') {
+    window.HTMLDialogElement.prototype.show = function () { this.open = true; };
+  }
   if (production) window.document.body.dataset.environment = 'production';
   for (const link of window.document.querySelectorAll('link[rel="stylesheet"]')) {
     const sheet = window.document.createElement('style');

@@ -10,8 +10,9 @@
   let renderedStyle;
   let filterId = 0;
   const swaps = new Map();
+  let blinkClean = false;
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-  const isStatic = () => settings.playbackMode === 'static' || (settings.playbackMode === 'system' && Boolean(reducedMotion?.matches));
+  const isStatic = () => settings.playbackMode === 'static' || ((settings.playbackMode === 'system' || settings.swapTrigger === 'blink') && Boolean(reducedMotion?.matches));
 
   function readSettings(detail) {
     const state = detail || window.CreatorQAControls?.getState?.() || window.CreatorProjectConfig?.config;
@@ -208,11 +209,13 @@
   }
   const eventPair = event => event.target.closest?.('.transcript-pair');
   viewport.addEventListener('pointerover', event => {
+    if (settings.swapTrigger === 'blink') return;
     const pair = eventPair(event);
     if (!pair || event.pointerType === 'touch' || pair.contains(event.relatedTarget)) return;
     const state = swapState(pair); state.pointer = true; reveal(pair, true);
   });
   viewport.addEventListener('pointerout', event => {
+    if (settings.swapTrigger === 'blink') return;
     const pair = eventPair(event);
     if (!pair || event.pointerType === 'touch' || pair.contains(event.relatedTarget)) return;
     const state = swapState(pair); state.pointer = false; reveal(pair, state.keyboard || state.pinned);
@@ -253,8 +256,8 @@
     }
     root.dataset.static = String(staticMode);
     const previousRepeat = viewport.childElementCount;
-    marquee.update({ vertical: true, reverse: settings.reverse, pauseOnHover: settings.pauseOnHover,
-      playbackMode: settings.playbackMode,
+    marquee.update({ vertical: true, reverse: settings.reverse, pauseOnHover: settings.swapTrigger === 'blink' ? false : settings.pauseOnHover,
+      playbackMode: staticMode ? 'static' : settings.playbackMode,
       repeat: settings.repeat, duration: settings.scrollDuration, gap: settings.gap, paused: paused || !settings.enabled });
     if (previousRepeat !== viewport.childElementCount) { resetSwaps(); renderedStyle = null; }
     if (renderedStyle !== settings.highlightStyle) styleMarks();
@@ -269,6 +272,14 @@
     readSettings({ components: event.detail });
   });
   document.addEventListener('creator:locale-change', refresh);
+  document.addEventListener('creator:logo-blink', () => {
+    if (settings.swapTrigger !== 'blink' || !settings.enabled || isStatic() || reducedMotion?.matches || document.hidden) return;
+    // One clock owns the eye and all sentence layers. No independent timer drifts.
+    blinkClean = !blinkClean;
+    const bounds = viewport.getBoundingClientRect();
+    const pairs = [...viewport.querySelectorAll('.transcript-pair')].map(pair => ({ pair, bounds: pair.getBoundingClientRect() }));
+    pairs.forEach(item => reveal(item.pair, blinkClean, item.bounds.bottom < bounds.top || item.bounds.top > bounds.bottom));
+  });
   reducedMotion?.addEventListener?.('change', refresh);
   readSettings();
 })();

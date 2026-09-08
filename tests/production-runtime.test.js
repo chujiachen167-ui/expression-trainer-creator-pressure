@@ -12,7 +12,11 @@ const project = {
 
 const production = makePage('index.html', {
   production: true,
-  draft: { theme: { bg: '#111111' }, copy: { 'launcher-fusion.document-title': '浏览器草稿' } },
+  draft: {
+    theme: { bg: '#111111' },
+    copy: { 'launcher-fusion.document-title': '浏览器草稿' },
+    fineTune: { 'launcher-fusion': { 'body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1)': { self: { y: '-80' } } } }
+  },
   project
 });
 const { window } = production;
@@ -20,6 +24,8 @@ assert(!window.document.querySelector('.qa-panel'), 'production must not mount t
 assert(!window.document.querySelector('.qa-trigger'));
 assert.equal(window.document.documentElement.style.getPropertyValue('--color-canvas'), '#f3eded');
 assert.equal(window.document.title, '线上预览');
+const owned = window.document.querySelector('style[data-qa-editor-owned]');
+assert(!owned || !owned.textContent.includes('-80px'), 'production preview must ignore local layout drafts');
 assert.equal(window.CreatorQAControls.featureEnabled('camera'), true);
 window.close();
 

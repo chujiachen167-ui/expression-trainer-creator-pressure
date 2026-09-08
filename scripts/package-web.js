@@ -51,6 +51,8 @@ const rootFiles = [
   'v2-rule-judge.js',
   'v2-review.js',
   'v2-interest-panel.js',
+  'v2-focus.js',
+  'v2-focus.css',
   'avatar-selector.js',
   'interest-curve.js',
   'contact-carousel.js',

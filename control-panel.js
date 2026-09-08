@@ -66,6 +66,7 @@
   };
   const migrateConfig = incoming => {
     const config = window.CreatorHomeFusion ? window.CreatorHomeFusion.migrate(incoming) : clone(incoming || {});
+    window.CreatorV2Focus?.migrate(config);
     if (config.components?.transcriptCover) config.components.transcriptCover = window.CreatorMarqueeConfig.migrate(config.components.transcriptCover);
     if (config.components?.logo) config.components.logo = window.CreatorLogoConfig.normalize(config.components.logo);
     if (config.components?.logoBackground) config.components.logoBackground = window.CreatorLogoConfig.normalizeBackground(config.components.logoBackground);
@@ -394,7 +395,8 @@
         </div>
         <div class="qa-page" data-qa-page="vertical-marquee" hidden>
           <section><h2>Magic UI · Vertical Marquee</h2><p class="qa-hint">起始页右上角的纵向表达流。只有句子，没有卡片底色或说明标签。这里修改会实时预览，并自动保存到浏览器。</p>
-            <label class="qa-select"><span>展示方式</span><select data-path="components.transcriptCover.displayMode"><option value="single">单句窗口</option><option value="stream">多句连续流（旧版）</option></select></label>
+            <label class="qa-select"><span>展示方式</span><select data-path="components.transcriptCover.displayMode"><option value="single">单句窗口</option><option value="stream">多句连续流</option></select></label>
+            <label class="qa-select"><span>改写触发</span><select data-path="components.transcriptCover.swapTrigger"><option value="blink">跟随大眼睛眨眼</option><option value="hover">鼠标悬停</option></select></label>
             <label class="qa-select"><span>播放模式</span><select data-path="components.transcriptCover.playbackMode"><option value="autoplay">自动循环播放</option><option value="system">跟随系统动态偏好</option><option value="static">手动阅读（滚轮 / 方向键）</option></select></label>
             <div class="qa-actions"><button type="button" data-marquee-step="-1">上一句（预览）</button><button type="button" data-marquee-step="1">下一句（预览）</button></div>
             <p class="qa-hint">单句窗口与多句流共用连续匀速滚动。下面的一组循环时长控制速度：数值越大，滚动越慢；重复数与句间距对两种展示都生效。悬停暂停并液化为改写。手动阅读可滚轮或触屏滑动，也可使用面板内的上一句、下一句。</p>
@@ -757,6 +759,7 @@
     });
     panel.querySelector('[data-qa-logo-blink-preview]').addEventListener('click', () => document.dispatchEvent(new CustomEvent('creator:logo-blink-preview')));
     window.CreatorQAControls.updateMarquee = patch => { Object.assign(state.components.transcriptCover, patch); sync(); };
+    window.CreatorQAControls.refreshCopyLibrary = () => { applyCopy(); renderCopyFields(); elementEditor?.refresh(); };
     elementEditor = window.CreatorElementEditor.mount(panel, {
       read: () => ({ styles: clone(state.fineTune[pageKey] || {}), copy: clone(state.extraCopy[pageKey] || {}) }),
       commit: (kind, config) => { state[kind === 'styles' ? 'fineTune' : 'extraCopy'][pageKey] = config; save(); refreshJson(); }

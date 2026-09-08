@@ -20,6 +20,8 @@ async function run() {
   w.eval(read('launcher-logo-motion.js'));
   await new Promise(resolve => setImmediate(resolve));
   const root = d.querySelector('[data-brand-background]');
+  let blinkEvents = 0;
+  d.addEventListener('creator:logo-blink', () => { blinkEvents += 1; });
   const camera = d.querySelector('[data-logo-camera]'), lens = d.querySelector('[data-logo-lens]');
   const count = d.querySelectorAll('[data-logo-art]').length;
   w.eval(read('launcher-logo-motion.js'));
@@ -96,6 +98,7 @@ async function run() {
   assert.equal(d.querySelector('[data-logo-outline]').style.transform, '', 'outer curvature stays fixed throughout the blink');
   advance(8);
   assert(!root.hasAttribute('data-blinking'), 'blink completes and returns to an open eye');
+  assert.equal(blinkEvents, 1, 'a complete eye blink dispatches exactly one subtitle trigger');
 
   dom.setReducedMotion(true); move(1000, 700); advance();
   d.querySelector('[data-qa-logo-blink-preview]').click();

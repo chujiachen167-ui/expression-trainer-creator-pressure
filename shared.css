@@ -1050,9 +1050,20 @@ body[data-mode="v2"] {
 
 /* Provider IDs stay developer-only; creators choose visible audience roles here. */
 .avatar-selector-open { overflow: hidden; }
+.avatar-selector-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(3, 4, 7, .76);
+  backdrop-filter: blur(8px);
+}
 .avatar-selector-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 401;
   width: min(980px, calc(100vw - 32px));
   max-height: min(760px, calc(100vh - 32px));
+  margin: auto;
   padding: 0;
   border: 1px solid var(--line-strong);
   border-radius: 20px;
@@ -1060,7 +1071,6 @@ body[data-mode="v2"] {
   color: var(--text);
   box-shadow: 0 34px 110px rgba(0, 0, 0, .62);
 }
-.avatar-selector-dialog::backdrop { background: rgba(3, 4, 7, .76); backdrop-filter: blur(8px); }
 .avatar-selector-shell { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; max-height: inherit; }
 .avatar-selector-head { display: flex; justify-content: space-between; gap: 24px; padding: 24px 26px 20px; border-bottom: 1px solid var(--line); }
 .avatar-selector-head h2 { margin: 5px 0 7px; font-size: clamp(22px, 3vw, 34px); letter-spacing: -.045em; }
@@ -1128,8 +1138,8 @@ body:not(.desktop-runtime) .v1-tools-title::after { content: '浏览器在线识
 .version-disabled .workspace, .version-disabled .launcher-shell > :not(.qa-trigger):not(.qa-panel) { opacity: 0.28; pointer-events: none; filter: grayscale(1); }
 .version-disabled::after { content: "此版本已在调控板中关闭"; position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; color: var(--text); font-size: 24px; font-weight: 800; pointer-events: none; }
 
-.qa-trigger { position: fixed; right: 18px; bottom: 18px; z-index: 60; padding: 11px 15px; border: 1px solid rgba(255, 47, 146, 0.62); border-radius: 999px; background: #17101a; color: #fff; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.38); cursor: pointer; font-weight: 800; }
-.qa-panel { position: fixed; display: flex; flex-direction: column; z-index: 61; right: 18px; bottom: 68px; width: min(390px, calc(100vw - 28px)); max-height: min(760px, calc(100vh - 96px)); overflow: hidden; border: 1px solid #494154; border-radius: 18px; background: #101117; color: #eef0f8; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56); }
+.qa-trigger { position: fixed; right: 18px; bottom: 18px; z-index: 420; padding: 11px 15px; border: 1px solid rgba(255, 47, 146, 0.62); border-radius: 999px; background: #17101a; color: #fff; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.38); cursor: pointer; font-weight: 800; }
+.qa-panel { position: fixed; display: flex; flex-direction: column; z-index: 421; right: 18px; bottom: 68px; width: min(390px, calc(100vw - 28px)); max-height: min(760px, calc(100vh - 96px)); overflow: hidden; border: 1px solid #494154; border-radius: 18px; background: #101117; color: #eef0f8; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56); }
 .qa-panel[hidden] { display: none; }
 .qa-panel-head, .qa-tabs, .qa-global-save { flex: none; }
 .qa-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; border-bottom: 1px solid #292c38; cursor: grab; user-select: none; touch-action: none; }

@@ -2,6 +2,7 @@
   const storageKey = 'expression-trainer.audience-selection.v1';
   const listeners = new Set();
   let dialog = null;
+  let backdrop = null;
   let selected = [];
   let activeTemplate = null;
   let limit = 1;
@@ -48,8 +49,17 @@
           <button class="primary-btn" type="button" data-avatar-confirm>使用这些观众</button>
         </footer>
       </form>`;
-    document.body.appendChild(dialog);
+    backdrop = document.createElement('div');
+    backdrop.className = 'avatar-selector-backdrop';
+    backdrop.hidden = true;
+    backdrop.addEventListener('click', () => dialog.close('cancel'));
+    document.body.append(backdrop, dialog);
+    dialog.addEventListener('cancel', event => event.preventDefault());
+    dialog.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { event.preventDefault(); dialog.close('cancel'); }
+    });
     dialog.addEventListener('close', () => {
+      backdrop.hidden = true;
       document.body.classList.remove('avatar-selector-open');
       opener?.focus?.();
       opener = null;
@@ -97,7 +107,9 @@
     opener = trigger;
     render();
     document.body.classList.add('avatar-selector-open');
-    dialog.showModal();
+    backdrop.hidden = false;
+    if (typeof dialog.show === 'function') dialog.show();
+    else dialog.open = true;
     dialog.querySelector('.avatar-choice')?.focus();
   }
 

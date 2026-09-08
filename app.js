@@ -252,6 +252,16 @@
       <div class="brief-provider-note"><span>数字观众</span><strong data-provider-label>${providerConfig.provider === 'live' ? '系统数字人' : '浏览器演示'}</strong><small>由系统提供，开发者接入配置不属于训练任务。</small></div>
       <div class="audience-config-actions"><button type="button" data-audience-apply>应用模板</button><button type="button" data-audience-choose>选择数字观众</button><button type="button" data-audience-preview>试听反应</button></div>
       <div class="provider-status" data-provider-status>等待应用配置</div>`;
+    if (mode === 'v2') {
+      section.querySelector('.brief-sheet-head').hidden = true;
+      section.querySelector(':scope > p').hidden = true;
+      section.querySelector('.brief-provider-note').hidden = true;
+      const chooser = section.querySelector('[data-audience-choose]');
+      chooser.className = 'v2-audience-choice';
+      chooser.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 20v-2a7 7 0 0 1 14 0v2"/></svg><span><small>数字观众类型</small><strong data-v2-audience-name>选择观众</strong></span><svg class="v2-choice-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+      section.querySelector('.audience-config-actions').before(chooser);
+      section.querySelector('[data-audience-preview]').innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m7 4 8 6-8 6Z"/></svg><span>试听反应</span>';
+    }
     if (useSheet) {
       compactBrief = document.createElement('div');
       compactBrief.className = 'compact-brief';
@@ -265,6 +275,8 @@
       section.querySelector('[data-brief-close]').addEventListener('click', closeSheet);
       section.addEventListener('click', event => { if (event.target === section) closeSheet(); });
       section._closeSheet = closeSheet;
+    } else if (mode === 'v2') {
+      leftPanel.querySelector('.panel-heading').after(section);
     } else {
       leftPanel.insertBefore(section, leftPanel.firstChild.nextSibling);
     }
@@ -275,7 +287,7 @@
     const updateSummary = () => {
       const template = window.CreatorAudienceEngine.getTemplate(templateSelect.value);
       const summary = section.querySelector('[data-audience-summary]');
-      summary.innerHTML = `<strong>${template.domain} · ${template.platform}</strong><span>${template.goal}</span>`;
+      summary.innerHTML = `<strong>${template.domain} · ${template.platform}</strong><span data-qa-static-copy data-qa-copy-added data-qa-copy-key="v2.audience.goal" data-qa-copy-label="受众模板说明">${template.goal}</span>`;
       if (compactBrief) {
         compactBrief.querySelector('.compact-brief-tag').textContent = template.domain;
         compactBrief.querySelector('[data-compact-title]').textContent = template.name.split('·').pop().trim();
@@ -310,6 +322,8 @@
 
   function renderAudienceProfiles() {
     if (mode === 'v2') {
+      const choiceName = document.querySelector('[data-v2-audience-name]');
+      if (choiceName && currentProfiles[0]) choiceName.textContent = currentProfiles[0].name;
       const slot = document.querySelector('[data-primary-audience]');
       const preview = document.querySelector('#avatarDriftWall');
       if (slot && currentProfiles[0]) {
@@ -552,6 +566,7 @@
         transcriptBox.innerHTML = finalLines.map((line, index) => `<div class="stt-line${index < finalLines.length - 1 ? ' old' : ''}">${window.CreatorExpressionAnalysis.highlight(line, v1Rules())}</div>`).join('');
         lastRenderedV1Transcript = transcript;
       }
+      window.CreatorQAControls?.refreshCopyLibrary?.();
       let interimLine = transcriptBox.querySelector('.stt-line.interim');
       if (interim) {
         if (!interimLine) {
@@ -1341,12 +1356,23 @@
     }, v2Store ? 200 : 1500);
   }
 
+  const v2PressureLabel = document.querySelector('[data-v2-pressure-label]');
+  const syncV2PressureLabel = value => {
+    if (!v2PressureLabel) return;
+    v2PressureLabel.textContent = ({ low: '低压模式', medium: '中压模式', high: '高压模式' })[value] || '压力模式';
+  };
+  syncV2PressureLabel(v2PendingPressure);
   document.querySelectorAll('.pressure-btn').forEach(button => {
+    if (mode === 'v2') button.setAttribute('aria-pressed', String(button.classList.contains('active')));
     button.addEventListener('click', () => {
       const nextPressure = button.dataset.pressure;
-      document.querySelectorAll('.pressure-btn').forEach(item => item.classList.toggle('active', item === button));
+      document.querySelectorAll('.pressure-btn').forEach(item => {
+        item.classList.toggle('active', item === button);
+        if (mode === 'v2') item.setAttribute('aria-pressed', String(item === button));
+      });
       if (mode === 'v2') {
         v2PendingPressure = nextPressure;
+        syncV2PressureLabel(nextPressure);
         if (sessionRunning) {
           addEvent('系统', '压力等级将从下一轮生效，本轮判断条件保持冻结。', true, '', { key: 'v2-pressure-next' });
           return;

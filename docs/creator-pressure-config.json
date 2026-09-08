@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "savedAt": "2026-09-06T10:21:49.793Z",
+  "savedAt": "2026-09-08T13:55:02.477Z",
   "config": {
     "flags": {
       "v1": true,
@@ -119,10 +119,10 @@
         "followTheme": true,
         "themeColor": "text",
         "color": "#8690df",
-        "opacity": 0.6,
-        "width": 80,
-        "x": 10,
-        "y": 10,
+        "opacity": 0.12,
+        "width": 100,
+        "x": 0,
+        "y": 0,
         "motionMode": "combined",
         "motionResponse": 160,
         "cameraTravel": 50,
@@ -221,17 +221,18 @@
         "enabled": true,
         "scrollDuration": 26000,
         "reverse": false,
-        "pauseOnHover": true,
+        "pauseOnHover": false,
         "paused": false,
         "playbackMode": "autoplay",
         "repeat": 4,
-        "gap": 36,
+        "gap": 30,
         "displayMode": "stream",
         "cycleMs": 3000,
+        "swapTrigger": "blink",
         "width": 100,
         "x": 0,
         "y": 0,
-        "height": 150,
+        "height": 480,
         "fadeSize": 2,
         "edgeOpacity": 0,
         "followTheme": false,
@@ -255,10 +256,18 @@
         "labelColor": "#ff2f92",
         "blur": 0.58,
         "shift": 18,
-        "lineOpacity": 0.72
+        "lineOpacity": 0.72,
+        "hoverPauseConfigured": true
       },
       "homeFusion": {
-        "version": 1
+        "version": 1,
+        "visualVersion": 5
+      },
+      "v2Stage": {
+        "audienceShare": 57.692307692307686
+      },
+      "v2Focus": {
+        "visualVersion": 3
       }
     },
     "copy": {
@@ -312,25 +321,10 @@
             "color": "#ff6600"
           }
         },
-        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(2) > canvas:nth-of-type(1)": {
-          "self": {}
-        },
         "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(2)": {
           "self": {
             "font-size": "21",
             "color": "#ffffff"
-          }
-        },
-        "[id=\"trainingLayers\"] > a:nth-of-type(1) > p:nth-of-type(1)": {
-          "self": {
-            "max-width": "1000",
-            "y": "-25"
-          }
-        },
-        "[id=\"trainingLayers\"] > a:nth-of-type(1) > h2:nth-of-type(1)": {
-          "self": {
-            "x": "0",
-            "y": "-25"
           }
         }
       },
@@ -344,26 +338,6 @@
           "self": {
             "color": "#00ff11"
           }
-        },
-        "button[data-pressure=\"medium\"]": {
-          "self": {
-            "background-color": "#8389d2"
-          }
-        },
-        "button[data-pressure=\"low\"]": {
-          "self": {
-            "background-color": "#74c4ec"
-          }
-        },
-        "body > main:nth-of-type(1) > aside:nth-of-type(1) > h2:nth-of-type(2)": {
-          "self": {
-            "color": "#ff0000"
-          }
-        },
-        "button[data-pressure=\"high\"]": {
-          "self": {
-            "background-color": "#5b4393"
-          }
         }
       },
       "v1": {
@@ -374,7 +348,8 @@
         },
         "body > main:nth-of-type(1) > aside:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > h3:nth-of-type(1)": {
           "self": {
-            "color": "#000000"
+            "color": "#000000",
+            "y": "-3"
           }
         },
         "[id=\"timer\"]": {
@@ -389,57 +364,96 @@
         },
         "body > main:nth-of-type(1) > aside:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(4)": {
           "self": {}
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > h1:nth-of-type(1)": {
+          "self": {
+            "y": "-10"
+          }
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2)": {
+          "self": {
+            "y": "-20"
+          }
+        },
+        "[id=\"v1TopicPicker\"]": {
+          "self": {
+            "y": "-25"
+          }
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2)": {
+          "self": {
+            "y": "-25"
+          }
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > details:nth-of-type(1) > summary:nth-of-type(1)": {
+          "self": {
+            "font-size": "20",
+            "y": "-50"
+          }
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > details:nth-of-type(1)": {
+          "self": {
+            "y": "-25"
+          }
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4)": {
+          "self": {}
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > details:nth-of-type(1) > summary:nth-of-type(1) > span:nth-of-type(1)": {
+          "self": {
+            "y": "50"
+          }
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > details:nth-of-type(1) > summary:nth-of-type(1) > small:nth-of-type(1)": {
+          "self": {
+            "y": "50"
+          }
+        },
+        "body > main:nth-of-type(1) > aside:nth-of-type(1) > p:nth-of-type(1)": {
+          "self": {
+            "color": "#ff1e96"
+          }
+        },
+        "body > main:nth-of-type(1) > aside:nth-of-type(2) > p:nth-of-type(1)": {
+          "self": {
+            "color": "#ff1e96"
+          }
+        },
+        "[id=\"densityMetric\"]": {
+          "self": {
+            "color": "#000000"
+          }
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > details:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1)": {
+          "self": {
+            "font-weight": "900",
+            "letter-spacing": "1",
+            "font-size": "15"
+          }
+        },
+        "body > main:nth-of-type(1) > aside:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > span:nth-of-type(1)": {
+          "self": {
+            "color": "#ff0000"
+          }
         }
       },
       "launcher-fusion": {
         "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1)": {
           "self": {
             "color": "#f03cdc",
-            "font-size": "12",
-            "y": "-80",
-            "x": "10"
+            "font-size": "12"
           }
-        },
-        "body > header:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1) > span:nth-of-type(1)": {
-          "self": {
-            "x": "20",
-            "width": "60",
-            "y": "15"
-          }
-        },
-        "body > header:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1) > span:nth-of-type(2)": {
-          "self": {
-            "y": "13"
-          }
-        },
-        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(2)": {
-          "self": {
-            "min-width": "100"
-          }
-        },
-        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(2) > canvas:nth-of-type(1)": {
-          "self": {}
-        },
-        "[id=\"productFooter\"] > div:nth-of-type(1) > div:nth-of-type(1) > h2:nth-of-type(1)": {
-          "self": {}
         },
         "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > p:nth-of-type(1)": {
           "self": {
             "font-size": "20"
           }
         },
-        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1)": {
+        "body > header:nth-of-type(1) > div:nth-of-type(1) > a:nth-of-type(1) > span:nth-of-type(2)": {
           "self": {
-            "y": "50"
+            "x": "-60",
+            "y": "-2"
           }
-        },
-        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2)": {
-          "self": {
-            "y": "-40"
-          }
-        },
-        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > aside:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > article:nth-of-type(3)": {
-          "self": {}
         }
       }
     },
@@ -452,6 +466,66 @@
           "source": "保留你的个性。练清楚你的表达。",
           "label": "显示文字",
           "value": "你从不缺乏面对镜头开口的勇气，就从现在开始！"
+        },
+        "[\"body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > p:nth-of-type(1)\",\"text\",0,\"READ / SPEAK / REPEAT\"]": {
+          "selector": "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > p:nth-of-type(1)",
+          "type": "text",
+          "slot": 0,
+          "source": "READ / SPEAK / REPEAT",
+          "label": "显示文字",
+          "value": ""
+        }
+      },
+      "v1": {
+        "[\"body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1)\",\"text\",0,\"保留原项目的字幕、词库统计和反馈，只在字幕后加入真实镜头。\"]": {
+          "selector": "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1)",
+          "type": "text",
+          "slot": 0,
+          "source": "保留原项目的字幕、词库统计和反馈，只在字幕后加入真实镜头。",
+          "label": "显示文字",
+          "value": ""
+        },
+        "[\"body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > span:nth-of-type(1)\",\"text\",0,\"原型不会假装已经识别你的视线；粉色圆点只是镜头位置提示。\"]": {
+          "selector": "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(2) > span:nth-of-type(1)",
+          "type": "text",
+          "slot": 0,
+          "source": "原型不会假装已经识别你的视线；粉色圆点只是镜头位置提示。",
+          "label": "显示文字",
+          "value": ""
+        },
+        "[\"body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > details:nth-of-type(1) > summary:nth-of-type(1) > span:nth-of-type(1)\",\"text\",0,\"设备与录制\"]": {
+          "selector": "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > details:nth-of-type(1) > summary:nth-of-type(1) > span:nth-of-type(1)",
+          "type": "text",
+          "slot": 0,
+          "source": "设备与录制",
+          "label": "显示文字",
+          "value": "设备选择与录制"
+        }
+      },
+      "v2": {
+        "[\"body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > h1:nth-of-type(1)\",\"text\",0,\"一个真正会反应的观众\"]": {
+          "selector": "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > h1:nth-of-type(1)",
+          "type": "text",
+          "slot": 0,
+          "source": "一个真正会反应的观众",
+          "label": "显示文字",
+          "value": ""
+        },
+        "[\"body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1)\",\"text\",0,\"压力来自内容追问，而不是装饰性头像。\"]": {
+          "selector": "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1)",
+          "type": "text",
+          "slot": 0,
+          "source": "压力来自内容追问，而不是装饰性头像。",
+          "label": "显示文字",
+          "value": ""
+        },
+        "[\"body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(3) > span:nth-of-type(1)\",\"text\",0,\"数字观众会按当前压力等级，在训练中提出内容相关的约束。\"]": {
+          "selector": "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(4) > div:nth-of-type(3) > span:nth-of-type(1)",
+          "type": "text",
+          "slot": 0,
+          "source": "数字观众会按当前压力等级，在训练中提出内容相关的约束。",
+          "label": "显示文字",
+          "value": ""
         }
       }
     }

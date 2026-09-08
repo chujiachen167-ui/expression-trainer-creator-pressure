@@ -24,7 +24,8 @@
 
   banner.className = 'creator-topic-picker v2-topic-picker';
   banner.id = 'v2TopicPicker';
-  room.after(banner);
+  const topicSlot = document.querySelector('[data-v2-topic-slot]');
+  if (topicSlot) topicSlot.append(banner); else room.after(banner);
   banner.replaceChildren();
   banner.innerHTML = `
     <button class="topic-toggle" id="v2TopicToggle" type="button" aria-expanded="false" aria-controls="v2TopicPanel">

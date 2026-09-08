@@ -12,8 +12,16 @@ function mount({ topic } = {}) {
 }
 
 async function submit(w) {
+  const d = w.document;
   w.document.getElementById('v2TopicForm').dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
   await tick();
+  const audienceChoice = d.querySelector('[data-audience-choose]');
+  assert(audienceChoice.querySelector('svg'), 'the quiet audience row has a consistent line icon');
+  assert(!d.querySelector('.audience-config-actions').contains(audienceChoice), 'audience selection is distinct from apply and preview actions');
+  d.querySelector('[data-pressure="high"]').click();
+  assert.equal(d.querySelector('[data-pressure="high"]').getAttribute('aria-pressed'), 'true');
+  assert.equal(d.querySelector('[data-pressure="medium"]').getAttribute('aria-pressed'), 'false');
+  assert.equal(d.querySelector('[data-v2-pressure-label]').textContent, '高压模式');
 }
 
 async function run() {
@@ -23,7 +31,10 @@ async function run() {
   const room = d.querySelector('.audience-primary-room');
   const picker = d.getElementById('v2TopicPicker');
   const toggle = d.getElementById('v2TopicToggle');
-  assert.equal(room.nextElementSibling, picker, 'V2 topic choice must sit below the audience/camera room');
+  d.querySelector('[data-qa-tab="copy"]').click();
+  assert(d.querySelector('[data-copy-key="v2.audience.goal"]'), 'audience goal is editable with a stable copy key');
+  assert.equal(d.querySelector('[data-qa-copy-key="v2.audience.goal"]').textContent, '让陌生概念被听懂并愿意关注');
+  assert.equal(picker.parentElement, d.querySelector('[data-v2-topic-slot]'), 'V2 topic choice belongs with the left-hand training setup');
   assert(!room.querySelector('#sessionPrompt'), 'V2 prompt must not overlay the audience or camera image');
   assert.equal(d.querySelectorAll('#sessionPrompt').length, 1);
   toggle.click();

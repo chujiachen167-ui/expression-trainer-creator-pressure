@@ -37,6 +37,7 @@ assert.match(app, /creator:transcript-change/, 'transcript updates should feed p
 assert.doesNotMatch(app.slice(app.indexOf('instance.onend = () => {', app.indexOf('function setupRecognition')), app.indexOf('instance.onerror = event => {', app.indexOf('function setupRecognition'))), /instance\.start\(/, 'browser STT must never auto-restart and reprompt');
 
 assert.match(selector, /createElement\('dialog'\)/, 'audience casting should use a focused native dialog');
+assert.match(selector, /dialog\.show\(\)/, 'audience dialog must stay below the QA panel');
 assert.match(selector, /aria-pressed/, 'audience role selection should expose selected state beyond color');
 assert.match(selector, /expression-trainer\.audience-selection\.v1/, 'audience role choices should persist locally');
 assert.match(app, /data-audience-choose/, 'creator setup should expose a user-facing audience selector');

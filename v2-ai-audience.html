@@ -7,6 +7,7 @@
   <script>try { const entry = JSON.parse(sessionStorage.getItem('expression-trainer.scroll-expand.entry') || 'null'); if (entry?.mode === 'v2') { document.documentElement.classList.add('scroll-expand-entry-pending'); document.documentElement.dataset.scrollExpandMode = entry.mode; document.documentElement.dataset.scrollExpandDirection = entry.direction || 'up'; } } catch (_) {}</script>
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="drift-wall.css">
+  <link rel="stylesheet" href="v2-focus.css">
   <script src="locales/zh-CN.js"></script>
   <script src="locales/en-US.js"></script>
   <script src="i18n.js"></script>
@@ -23,31 +24,21 @@
 
   <main class="workspace">
     <aside class="side-panel left">
-      <h2 class="panel-heading" data-i18n="v2.analysis">压力下表达</h2>
-      <div class="metric-list">
-        <div class="metric"><span>填充词</span><strong class="bad" id="fillerMetric">0</strong></div>
-        <div class="metric"><span>模糊词</span><strong class="warn" id="vagueMetric">0</strong></div>
-        <div class="metric"><span>重复表达</span><strong class="warn" id="repeatMetric">0</strong></div>
-        <div class="metric"><span>当前语速</span><strong id="speedMetric">--</strong></div>
-        <div class="metric"><span>表达净度</span><strong class="good" id="densityMetric">--</strong></div>
-        <div class="metric"><span>有效字数</span><strong id="wordMetric">0</strong></div>
-      </div>
+      <h2 class="panel-heading" data-i18n="v2.setup.title">训练设置</h2>
+      <div data-v2-topic-slot></div>
 
-      <h2 class="panel-heading" style="margin-top:24px">压力等级</h2>
+      <h2 class="panel-heading" data-qa-copy-added data-qa-copy-key="v2.setup.pressure">压力等级</h2>
       <div class="pressure-group">
         <button class="pressure-btn" data-pressure="low">低压</button>
         <button class="pressure-btn active" data-pressure="medium">中压</button>
         <button class="pressure-btn" data-pressure="high">高压</button>
-      </div>
-      <div class="goal-card">
-        <small>数字观众的职责</small>
-        <p>等待、质疑、要求具体和压缩表达。它不提供通用陪聊，也不模拟面试官。</p>
       </div>
     </aside>
 
     <section class="stage">
       <div class="stage-head">
         <div>
+          <div class="v2-take-kicker" aria-hidden="true"><span></span><b>CREATOR TAKE</b><em data-v2-pressure-label>中压模式</em></div>
           <h1 data-i18n="v2.title">一个真正会反应的观众</h1>
           <p data-i18n="v2.subtitle">压力来自内容追问，而不是装饰性头像。</p>
         </div>
@@ -55,12 +46,13 @@
       </div>
 
       <div class="room duo-room audience-primary-room">
-        <div class="audience-primary-stage">
+        <div class="audience-primary-stage" id="v2AudienceStage">
           <div id="avatarDriftWall" class="avatar-drift-preview" aria-label="数字观众形象预览"></div>
           <div class="audience-live-slot" data-primary-audience hidden></div>
           <div class="audience-preview-caption"><span>数字观众预览</span><strong>先选择受众模板，再进入压力训练</strong></div>
+          <section class="v2-interest-panel" data-v2-interest-panel data-qa-copy-ignore aria-label="模拟观众兴趣趋势"></section>
         </div>
-        <div class="video-tile creator-mini-tile">
+        <div class="video-tile creator-mini-tile" id="v2CreatorStage">
           <video id="cameraVideo" autoplay playsinline muted></video>
           <div class="video-off">开启摄像头<br>检查自己的镜头状态</div>
           <div class="camera-target" aria-label="镜头注视位置"></div>
@@ -69,25 +61,39 @@
         <div class="prompt-banner"><strong>训练题：</strong> <span id="sessionPrompt"></span></div>
       </div>
 
-      <div>
+      <section class="v2-transcript-desk" aria-label="实时口述场记">
+        <header class="v2-transcript-head" data-qa-copy-ignore>
+          <div><span class="v2-live-mark" aria-hidden="true"></span><strong>LIVE TRANSCRIPT</strong><b>实时口述</b></div>
+          <span>自动记录</span>
+        </header>
         <div class="transcript" id="liveTranscript"></div>
         <div class="loading-row"><span class="spinner"></span><span>正在比较自然状态与压力状态，并生成下一轮动作…</span></div>
         <div class="controls">
           <button class="primary-btn" type="button" data-session-toggle data-i18n="v2.start">开始压力口播</button>
           <span class="control-note">数字观众会按当前压力等级，在训练中提出内容相关的约束。</span>
         </div>
-      </div>
+      </section>
+      <details class="v2-session-report" data-v2-report hidden>
+        <summary data-i18n="v2.report.open">生成诊断报告</summary>
+        <div data-v2-word-review></div>
+        <div data-v2-review-host></div>
+      </details>
     </section>
 
     <aside class="side-panel right">
-      <h2 class="panel-heading" data-i18n="v2.events">观众事件</h2>
-      <section class="v2-interest-panel" data-v2-interest-panel data-qa-copy-ignore aria-label="模拟观众兴趣趋势"></section>
-      <div class="event-feed" id="eventFeed">
-        <div class="event-card"><strong>阿林</strong><div>我不是面试官。我只代表一个随时可能划走的观众。</div></div>
+      <button type="button" class="v2-feedback-toggle" aria-expanded="true" aria-controls="v2FeedbackBody" aria-label="收起实时反馈" title="收起实时反馈"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 7-5 5 5 5"/><path d="m19 7-5 5 5 5"/></svg></button>
+      <div class="v2-feedback-header">
+        <h2 class="panel-heading" data-i18n="v2.feedback.title">实时反馈</h2>
+      </div>
+      <div id="v2FeedbackBody">
+        <div data-v2-feedback-content></div>
+        <div class="event-feed diagnostic-feedback" id="eventFeed"></div>
+        <div data-v2-chart-context></div>
       </div>
     </aside>
   </main>
   <script src="creator-project-config.js"></script>
+  <script src="v2-focus.js"></script>
   <script src="vertical-marquee-config.js"></script>
   <script src="qa-element-editor.js"></script>
   <script src="brand-logo.js"></script>
@@ -101,6 +107,7 @@
   <script src="v2-session-model.js"></script>
   <script src="v2-rule-judge.js"></script>
   <script src="v2-review.js"></script>
+  <script src="expression-analysis.js"></script>
   <script src="v2-interest-panel.js"></script>
   <script src="web-stt.js"></script>
   <script src="stt-audio.js?v=0.2.1"></script>

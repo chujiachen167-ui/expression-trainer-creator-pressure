@@ -49,7 +49,7 @@
     if (!eligible(node)) return [];
     const fields = attrNames.filter(name => node.hasAttribute(name)).map(name => ({ type: 'attribute', slot: name, source: node.getAttribute(name), label: ({ placeholder: '输入占位提示', title: '悬停提示', 'aria-label': '无障碍名称', alt: '图片说明', 'data-prompt': '场景训练题' })[name] }));
     const isExample = node.closest('[data-transcript-cover]');
-    const isLive = (node.closest(live) || node.closest('#v1TopicStatus, #v1TopicError, [data-audience-summary], [data-provider-label], .compact-brief-tag')) && !node.closest('#liveTranscript .placeholder');
+    const isLive = (node.closest(live) || node.closest('#v1TopicStatus, #v1TopicError, [data-audience-summary], [data-provider-label], .compact-brief-tag')) && !node.closest('#liveTranscript .placeholder') && !node.hasAttribute('data-qa-static-copy');
     if (isLive || isExample || node.matches('input,textarea,select,video,canvas,svg')) return fields;
     node.childNodes.forEach((child, slot) => { if (child.nodeType === 3 && child.data.trim()) fields.push({ type: 'text', slot, source: child.data, label: '显示文字' }); });
     return fields;
