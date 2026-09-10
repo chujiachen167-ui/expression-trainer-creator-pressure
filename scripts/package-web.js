@@ -60,7 +60,8 @@ const rootFiles = [
   'README.md',
   'LICENSE',
   'NOTICE.md',
-  'THIRD_PARTY_NOTICES.md'
+  'THIRD_PARTY_NOTICES.md',
+  'BingSiteAuth.xml'
 ];
 
 const directories = ['assets', 'locales', 'vendor'];
