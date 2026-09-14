@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "savedAt": "2026-09-08T13:55:02.477Z",
+  "savedAt": "2026-09-14T05:04:36.680Z",
   "config": {
     "flags": {
       "v1": true,
@@ -337,6 +337,26 @@
         "[id=\"timer\"]": {
           "self": {
             "color": "#00ff11"
+          }
+        },
+        "button[data-avatar-choice=\"beginner\"] > span:nth-of-type(2) > small:nth-of-type(1)": {
+          "self": {
+            "color": "#ffffff"
+          }
+        },
+        "button[data-avatar-choice=\"fastScroller\"] > span:nth-of-type(2) > small:nth-of-type(1)": {
+          "self": {
+            "color": "#ffffff"
+          }
+        },
+        "button[data-avatar-choice=\"informedViewer\"] > span:nth-of-type(2) > small:nth-of-type(1)": {
+          "self": {
+            "color": "#ffffff"
+          }
+        },
+        "body > main:nth-of-type(1) > aside:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(1) > section:nth-of-type(1)": {
+          "self": {
+            "background-color": "#ebcade"
           }
         }
       },
