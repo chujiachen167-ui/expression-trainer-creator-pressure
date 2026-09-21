@@ -162,7 +162,7 @@ V1 / V2 / V3 共用诊断底座，不是三个产品。
 
 1. Founder 继续体验 V2：选题、观众选择+调控板、收起箭头、曲线定位原句、同题比较、导出 JSON。
 2. **网站端验收 extraCopy**：本机代码已修，推送后等 Pages 重建。无痕打开 `read-yourself.com` 看页脚和首页右侧说明。Whisper 开关仍默认关。
-3. 阶段 2：用现有判断事件驱动一个观众形象的倾听 / 疑惑 / 兴趣回升，先做本地免费原型。
+3. 阶段 2 数字人 **B+C 并行**：V2 观众窗已用自有二维表情演四态（`v2-audience-expression.js` / `v2-audience-stage.js`），LiveTalking 连上后盖住表情。Cubism Core 未进仓库。租卡步骤见 `docs/avatar/livetalking.md`；表情说明见 `docs/avatar/live2d.md`。
 4. Mac 字幕验收仍可并行，用 `docs/stt/web-stt-cloudflare.md` 和真实设备记录，不要和 V2 规则开发绑死。
 
 未接到明确工单时，先问 Founder 下一件要改的界面，不要自行扩展数字人或改首页品牌。
