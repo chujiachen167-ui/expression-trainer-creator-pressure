@@ -56,7 +56,7 @@ window.CreatorLocaleCatalogs['zh-CN'] = {
   'v2.events': '观众事件',
   'v2.start': '开始压力口播',
   'v2.curve.title': '模拟观众兴趣趋势',
-  'v2.curve.bound': '模拟兴趣 0–100 · 不代表真实观看率',
+  'v2.curve.bound': '按所选平台公开创作者教育对齐的文案训练模拟 · 不是后台完播率或推荐分',
   'v2.curve.records': '查看时间与数值',
   'v2.curve.value': '模拟兴趣（0–100）',
   'v2.setup.title': '训练设置',

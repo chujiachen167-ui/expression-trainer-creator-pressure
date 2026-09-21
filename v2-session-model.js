@@ -7,7 +7,7 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.CreatorV2Session = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, () => {
-  const JUDGE_VERSION = 'rules-v1.0.0';
+  const JUDGE_VERSION = 'rules-v1.2.0';
   const JUDGE_KIND = 'rules';
   const SCORE_MIN = 12;
   const SCORE_MAX = 92;
@@ -44,6 +44,7 @@
       templateId: input.templateId || null,
       audienceId: input.audienceId || 'fastScroller',
       audienceName: input.audienceName || '',
+      platform: String(input.platform || '').slice(0, 80),
       pressure: ['low', 'medium', 'high'].includes(input.pressure) ? input.pressure : 'medium',
       recognitionLanguage: input.recognitionLanguage || 'zh-CN',
       uiLocale: input.uiLocale || 'zh-CN',
@@ -59,7 +60,8 @@
       && a.audienceId === b.audienceId
       && a.pressure === b.pressure
       && a.judgeVersion === b.judgeVersion
-      && a.recognitionLanguage === b.recognitionLanguage;
+      && a.recognitionLanguage === b.recognitionLanguage
+      && String(a.platform || '') === String(b.platform || '');
   }
 
   function recordingSeek(sessionMs, recording = null, practiceStartedAt = 0) {
@@ -321,7 +323,7 @@
         active.score = active.frozen.judge.initialScore;
         active.hasScore = true;
         appendPoint(active, {
-          t: segment.startMs != null ? segment.startMs : 0,
+          t: 0,
           kind: 'value',
           score: active.score,
           eventId: null
@@ -381,10 +383,9 @@
           appendPoint(active, { t, kind: 'value', score: active.score, eventId: record.eventId });
         }
       });
-      if (!events.length && active.hasScore) {
-        const t = segment.startMs != null ? segment.startMs : times.arrivedMs;
-        appendPoint(active, { t, kind: 'value', score: active.score, eventId: null });
-      }
+      // A missing judgment is missing evidence, not another measurement. Repeating
+      // the same score for every transcript chunk produced a persuasive-looking
+      // flat line, so the curve now records only the baseline and evidence events.
       emit();
       return { ignored: false, segment: clone(segment), events: clone(active.events.slice(-events.length)) };
     }

@@ -11,6 +11,10 @@ const fs = require('fs');
 const { initASR, feedAudio, stopRecognition, getASRStatus } = require('./lib/asr');
 const { loadLexicon, analyzeText } = require('./lib/lexicon');
 const { sendFeedback, sendReport, sendOptimizedScript, testConnection } = require('./lib/ai-feedback');
+const { validateModelFolder, readValidatedAsset } = require('./live2d-local-validator');
+const live2dFolderCache = new Map();
+const live2dSmokeTest = process.argv.includes('--live2d-smoke-test');
+const useLocalLive2DSample = !app.isPackaged && (process.argv.includes('--use-local-live2d-sample') || live2dSmokeTest);
 
 app.setName('Expression Trainer · Creator Pressure');
 
@@ -88,7 +92,8 @@ const commonWindowOptions = {
 function createMainWindow() {
   mainWindow = new BrowserWindow({ ...commonWindowOptions, width: 1440, height: 920, minWidth: 1024, minHeight: 700 });
   const smokeTest = process.argv.includes('--smoke-test');
-  mainWindow.loadFile(path.join(__dirname, smokeTest ? 'v1-camera-baseline.html' : 'index.html'));
+  const startPage = smokeTest ? 'v1-camera-baseline.html' : (process.argv.includes('--open-v2') || live2dSmokeTest) ? 'v2-ai-audience.html' : 'index.html';
+  mainWindow.loadFile(path.join(__dirname, startPage));
   if (smokeTest) {
     mainWindow.webContents.once('did-finish-load', async () => {
       try {
@@ -106,6 +111,45 @@ function createMainWindow() {
         app.exit(0);
       } catch (error) {
         process.stderr.write(`ELECTRON_SMOKE_FAILED ${error.stack || error.message}\n`);
+        app.exit(1);
+      }
+    });
+  }
+  if (live2dSmokeTest) {
+    mainWindow.webContents.once('did-finish-load', async () => {
+      try {
+        const renderer = await mainWindow.webContents.executeJavaScript(`(async () => {
+          const waitFor = async (check, timeout = 15000) => {
+            const deadline = Date.now() + timeout;
+            while (Date.now() < deadline) {
+              const value = check();
+              if (value) return value;
+              await new Promise(resolve => setTimeout(resolve, 80));
+            }
+            return null;
+          };
+          const imported = await waitFor(() => window.CreatorLocalAvatarImport?.selected?.());
+          document.querySelector('[data-audience-apply]')?.click();
+          const stage = await waitFor(() => {
+            const node = document.querySelector('[data-v2-audience-stage]');
+            return node?.dataset.presentation === 'adapter' && node?.dataset.adapterStatus === 'ready' ? node : null;
+          });
+          return {
+            imported: Boolean(imported),
+            model: imported?.name || '',
+            presentation: stage?.dataset.presentation || document.querySelector('[data-v2-audience-stage]')?.dataset.presentation || '',
+            adapterStatus: stage?.dataset.adapterStatus || document.querySelector('[data-v2-audience-stage]')?.dataset.adapterStatus || '',
+            canvas: Boolean(stage?.querySelector('canvas')),
+            silentB: !document.documentElement.innerHTML.includes('试听反应')
+          };
+        })()`);
+        if (!renderer.imported || renderer.presentation !== 'adapter' || renderer.adapterStatus !== 'ready' || !renderer.canvas || !renderer.silentB) {
+          throw new Error(`V2 Live2D smoke assertion failed: ${JSON.stringify(renderer)}`);
+        }
+        process.stdout.write(`V2_LIVE2D_SMOKE_OK ${JSON.stringify(renderer)}\n`);
+        app.exit(0);
+      } catch (error) {
+        process.stderr.write(`V2_LIVE2D_SMOKE_FAILED ${error.stack || error.message}\n`);
         app.exit(1);
       }
     });
@@ -283,4 +327,44 @@ ipcMain.handle('save-project-backup', (_event, content) => {
     fs.writeFileSync(targetPath, content, 'utf8');
     return { success: true, path: targetPath };
   } catch (error) { return { success: false, error: error.message }; }
+});
+
+ipcMain.handle('pick-local-live2d-avatar', async event => {
+  const owner = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+  const result = await dialog.showOpenDialog(owner, {
+    title: '选择本地 Live2D 模型文件夹',
+    properties: ['openDirectory'],
+    buttonLabel: '登记此文件夹'
+  });
+  if (result.canceled || !result.filePaths?.[0]) return { success: false, canceled: true };
+  try {
+    const record = validateModelFolder(result.filePaths[0]);
+    live2dFolderCache.set(record.id, record);
+    const { folderPath: _privateFolderPath, ...publicRecord } = record;
+    return { success: true, record: publicRecord };
+  } catch (error) {
+    return { success: false, error: error.message || '本地模型文件夹验证失败。' };
+  }
+});
+ipcMain.handle('get-local-live2d-dev-sample', () => {
+  if (!useLocalLive2DSample) return { success: false, unavailable: true };
+  try {
+    const samplePath = path.join(__dirname, 'local-runtime', 'Resources', 'Hiyori');
+    const record = validateModelFolder(samplePath);
+    live2dFolderCache.set(record.id, record);
+    const { folderPath: _privateFolderPath, ...publicRecord } = record;
+    return { success: true, record: { ...publicRecord, name: 'Hiyori · 官方本机验证样例' } };
+  } catch (error) {
+    return { success: false, error: error.message || '本机 Hiyori 验证样例不可用。' };
+  }
+});
+ipcMain.handle('read-local-live2d-asset', async (_event, recordId, relativePath) => {
+  try {
+    const record = live2dFolderCache.get(String(recordId || ''));
+    if (!record) throw new Error('本次启动尚未授权读取该模型文件夹，请重新导入。');
+    const asset = readValidatedAsset(record.folderPath, relativePath, { record });
+    return { success: true, mime: asset.mime, bytes: asset.bytes };
+  } catch (error) {
+    return { success: false, error: error.message || '本地模型文件读取失败。' };
+  }
 });

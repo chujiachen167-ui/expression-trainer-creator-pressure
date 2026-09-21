@@ -22,6 +22,9 @@ contextBridge.exposeInMainWorld('api', {
   saveRecording: (bytes, filename, mimeType) => ipcRenderer.invoke('save-recording', bytes, filename, mimeType),
   saveProjectConfig: content => ipcRenderer.invoke('save-project-config', content),
   saveProjectBackup: content => ipcRenderer.invoke('save-project-backup', content),
+  pickLocalLive2DAvatar: () => ipcRenderer.invoke('pick-local-live2d-avatar'),
+  getLocalLive2DDevSample: () => ipcRenderer.invoke('get-local-live2d-dev-sample'),
+  readLocalLive2DAsset: (recordId, relativePath) => ipcRenderer.invoke('read-local-live2d-asset', recordId, relativePath),
   onSettingsUpdated: callback => {
     const listener = () => callback();
     ipcRenderer.on('settings-updated', listener);

@@ -6,7 +6,7 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.CreatorV2RuleJudge = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, () => {
-  const VERSION = 'rules-v1.0.0';
+  const VERSION = 'rules-v1.2.0';
   const KIND = 'rules';
   const latinCharacter = /[A-Za-z0-9']/;
 
@@ -28,7 +28,9 @@
     notEvidence: ['因为', '所以'],
     tradeoff: ['但是', '代价', '风险', '不适合', '限制', '前提', '边界'],
     claim: ['一定', '所有人', '绝对', '保证', '最好', '必须'],
-    relevance: ['适合', '你', '观众', '用户', '人群'],
+    relevance: ['适合', '你', '观众', '用户', '人群', '新手', '宝妈', '打工人'],
+    hook: ['停一下', '先别划', '你有没有', '你知道吗', '为什么', '千万别', '真相是', '揭秘', '避雷', '踩坑', '亲测', '很多人不知道', '测完才发现'],
+    search: ['教程', '测评', '避雷', '平价', '真实', '亲测', '分享', '清单', '对比', '好物'],
     grammarRepeat: ['对对对', '是是是', '对对', '就是就是']
   };
 
@@ -44,9 +46,35 @@
     notEvidence: ['because', 'so'],
     tradeoff: ['but', 'tradeoff', 'trade-off', 'risk', 'not for', 'limit', 'unless'],
     claim: ['always', 'never', 'everyone', 'guarantee', 'must', 'best'],
-    relevance: ['you', 'your', 'if you', 'people who', 'audience'],
+    relevance: ['you', 'your', 'if you', 'people who', 'audience', 'beginner', 'if you\'re'],
+    hook: ['stop scrolling', 'wait', 'did you know', 'nobody tells you', 'the truth is', "here's the thing", 'why you', 'most people', 'this is why', 'wait for it'],
+    search: ['tutorial', 'review', 'vs', 'compared', 'honest', 'tried', 'checklist', 'beginner'],
     grammarRepeat: []
   };
+
+  const PLATFORM_PROFILES = [
+    { key: 'douyin', labels: ['抖音', 'tiktok', 'douyin'], family: 'short', openingWindowMs: 3000, cooldownMs: 5000 },
+    { key: 'kuaishou', labels: ['快手', 'kuaishou'], family: 'short', openingWindowMs: 3000, cooldownMs: 5000 },
+    { key: 'instagram', labels: ['instagram', 'reels', 'ins'], family: 'short', openingWindowMs: 3000, cooldownMs: 5000 },
+    { key: 'xiaohongshu', labels: ['小红书', 'rednote', 'xiaohongshu'], family: 'search', openingWindowMs: 5000, cooldownMs: 7000 },
+    { key: 'weixin', labels: ['视频号', 'weixin', 'wechat'], family: 'short', openingWindowMs: 4000, cooldownMs: 6000 },
+    { key: 'bilibili', labels: ['b站', 'bilibili', '哔哩'], family: 'long', openingWindowMs: 12000, cooldownMs: 10000 },
+    { key: 'youtube', labels: ['youtube', 'yt'], family: 'long', openingWindowMs: 15000, cooldownMs: 10000 }
+  ];
+  const GENERIC_PLATFORM = { key: 'generic', labels: [], family: 'generic', openingWindowMs: 8000, cooldownMs: 12000 };
+
+  function resolvePlatforms(label) {
+    const raw = String(label || '');
+    if (!raw.trim()) return [GENERIC_PLATFORM];
+    const lower = raw.toLowerCase();
+    const hits = PLATFORM_PROFILES.filter(profile => profile.labels.some(item => lower.includes(item.toLowerCase())));
+    return hits.length ? hits : [GENERIC_PLATFORM];
+  }
+
+  function primaryPlatform(label) {
+    const all = resolvePlatforms(label);
+    return all.find(item => item.family === 'short') || all.find(item => item.family === 'search') || all[0];
+  }
 
   function isLatinTerm(word) {
     return /[A-Za-z]/.test(word);
@@ -105,7 +133,11 @@
   }
 
   function hasValueOpening(text) {
-    return findMatches(text, zh.value).length > 0 || findMatches(text, en.value).length > 0;
+    return findMatches(text, zh.value).length > 0
+      || findMatches(text, en.value).length > 0
+      || findMatches(text, zh.hook).length > 0
+      || findMatches(text, en.hook).length > 0
+      || /[?？]/.test(String(text || ''));
   }
 
   function copyFor(locale) {
@@ -129,6 +161,12 @@
       openingOk: enUS
         ? 'The opening passage already states a usable point. Keep going with one concrete detail.'
         : '开场片段已经给出可继续看的点。下一句补一个具体细节即可。',
+      densityOk: enUS
+        ? 'This passage adds a concrete new detail instead of repeating the setup.'
+        : '这段补充了具体的新信息，没有继续重复铺垫。',
+      relevanceOk: enUS
+        ? 'The speaker now names who this is for or when it matters.'
+        : '这段已经点明适用对象或使用情境，观众知道内容与谁有关。',
       narrativeOk: enUS
         ? 'A narrative opening is allowed. After the hook, land one concrete stake so a fast scroller still has a reason to stay.'
         : '允许叙事或悬念开头。钩子之后请落下一个具体利害，快速浏览者才有停留理由。',
@@ -141,12 +179,24 @@
       example: enUS
         ? 'The claim is still general. Add one example you can retell, not just the word “for example”.'
         : '主张还停留在概括。请补一个能复述的例子，而不是只出现“比如”。',
+      exampleOk: enUS
+        ? 'A concrete example makes the idea easier for a beginner to follow.'
+        : '这段补上了具体例子，零基础观众更容易跟上。',
       evidence: enUS
         ? 'A strong claim is missing a checkable basis. “Because” or a number alone does not prove the content.'
         : '这里有较强主张，但缺少可核对依据。“因为”或数字本身不能证明内容质量。',
+      evidenceOk: enUS
+        ? 'The speaker now supplies a checkable test, comparison, study, or data point.'
+        : '这段补上了可核对的测试、对比、研究或数据依据。',
       tradeoff: enUS
         ? 'A skeptic still only heard the upside. Who is it not for, and what is the cost or limit?'
         : '怀疑型观众目前只听到好处。它不适合谁，代价或限制是什么？',
+      tradeoffOk: enUS
+        ? 'The speaker now states a cost, limitation, prerequisite, or who this is not for.'
+        : '这段主动说明了代价、限制、前提或不适用对象。',
+      specificityOk: enUS
+        ? 'The broad claim is now anchored to a number or a checkable result.'
+        : '这段已经把宽泛主张落到数字或可核对结果上。',
       density: enUS
         ? 'The latest passage repeats setup more than it adds information. Cut the runway and add one new fact.'
         : '这段主要在重复铺垫，新信息很少。请删掉跑道，补一条新事实。',
@@ -160,11 +210,17 @@
         ? 'Low-confidence keyword hint. Recheck the original sentence before changing your delivery.'
         : '这是低把握的关键词提示，请对照原句复核，不作为强扣分。',
       relative: enUS
-        ? 'Relative simulated interest, not a real watch-time or retention probability.'
-        : '这是相对模拟兴趣，不是真实观看率或留存概率。',
+        ? 'Relative simulated interest aligned to public creator-education heuristics for the selected platforms. Not YouTube/TikTok/Douyin backend retention or recommendation score.'
+        : '这是按所选平台公开创作者教育对齐的相对模拟兴趣，不是抖音/快手/小红书/YouTube/B站后台完播率或推荐分。',
       judgeLabel: enUS
-        ? 'Rule judge (not a semantic model)'
-        : '规则判断器（不是语义模型）'
+        ? 'Rule judge (copy-level heuristics, not a semantic model or platform API)'
+        : '规则判断器（文案层启发式，不是语义模型，也不是平台接口）',
+      hookOk: enUS
+        ? 'The opening uses a public short-video hook pattern (question, curiosity gap, or stop-scroll cue). This trains the first-seconds stay, not a predicted view count.'
+        : '开场用了公开短视频钩子写法（提问、好奇缺口或停划提示）。这是在练前几秒停留，不是预测播放量。',
+      searchOk: enUS
+        ? 'This passage names a searchable, concrete topic a discovery-feed viewer can match. It is not a ranking guarantee.'
+        : '这段点出了发现页观众可以对上的具体检索主题。这不是排名保证。'
     };
   }
 
@@ -223,7 +279,9 @@
       hasValue: hasValueOpening(text),
       claim: looksLikeClaim(text),
       repeatedSetup,
-      relevanceHits: [...findMatches(text, zh.relevance), ...findMatches(text, en.relevance)]
+      relevanceHits: [...findMatches(text, zh.relevance), ...findMatches(text, en.relevance)],
+      hookHits: [...findMatches(text, zh.hook), ...findMatches(text, en.hook)],
+      searchHits: [...findMatches(text, zh.search), ...findMatches(text, en.search)]
     };
   }
 
@@ -240,8 +298,19 @@
     const copy = copyFor(locale);
     const frozen = round?.frozen || {};
     const judgeConfig = frozen.judge || {};
-    const cooldownMs = Number(judgeConfig.cooldownMs) || 12000;
-    const openingWindowMs = Number(judgeConfig.openingWindowMs) || 8000;
+    const platform = primaryPlatform(frozen.platform);
+    const configuredCooldown = Number(judgeConfig.cooldownMs);
+    const configuredOpening = Number(judgeConfig.openingWindowMs);
+    const cooldownMs = platform.family === 'generic'
+      ? (Number.isFinite(configuredCooldown) ? configuredCooldown : 12000)
+      : (platform.family === 'long'
+        ? Math.max(Number.isFinite(configuredCooldown) ? configuredCooldown : 12000, platform.cooldownMs)
+        : Math.min(Number.isFinite(configuredCooldown) ? configuredCooldown : 12000, platform.cooldownMs));
+    const openingWindowMs = platform.family === 'generic'
+      ? (Number.isFinite(configuredOpening) ? configuredOpening : 8000)
+      : (platform.family === 'long'
+        ? Math.max(Number.isFinite(configuredOpening) ? configuredOpening : 8000, platform.openingWindowMs)
+        : Math.min(Number.isFinite(configuredOpening) ? configuredOpening : 8000, platform.openingWindowMs));
     const audienceId = frozen.audienceId || 'fastScroller';
     const audienceName = frozen.audienceName || audienceId;
     const priorities = audiencePriorities[audienceId] || audiencePriorities.fastScroller;
@@ -287,12 +356,14 @@
           timePrecision: precision === 'none' ? 'estimated' : precision
         }));
       } else if (signals.hasValue && audienceId === 'fastScroller') {
+        const hookHit = signals.hookHits[0];
+        const valueHit = findMatches(text, zh.value)[0] || findMatches(text, en.value)[0];
         candidates.push(makeEvent('opening', {
           confidence: 'high',
           scoreDelta: judgeConfig.supportDelta || 4,
-          explanation: copy.openingOk,
-          suggestion: copy.openingOk,
-          evidence: evidenceFrom((findMatches(text, zh.value)[0] || findMatches(text, en.value)[0]), 'opening-has-value'),
+          explanation: hookHit ? copy.hookOk : copy.openingOk,
+          suggestion: hookHit ? copy.hookOk : copy.openingOk,
+          evidence: evidenceFrom(hookHit || valueHit, hookHit ? 'opening-hook' : 'opening-has-value'),
           timePrecision: precision
         }));
       }
@@ -318,6 +389,16 @@
       }));
     }
 
+    if (audienceId === 'skeptic' && !signals.vagueHits.length && (signals.hasDigit || signals.evidenceHits.length)) {
+      candidates.push(makeEvent('specificity-support', {
+        confidence: signals.evidenceHits.length ? 'high' : 'low',
+        scoreDelta: judgeConfig.supportDelta || 4,
+        explanation: copy.specificityOk,
+        suggestion: copy.specificityOk,
+        evidence: evidenceFrom(signals.evidenceHits[0] || { term: text.match(/\d+(?:\.\d+)?/)?.[0] || '', excerpt: text.slice(0, 48) }, 'specific-result')
+      }));
+    }
+
     if (signals.jargonHits.length && (audienceId === 'beginner' || priorities.includes('jargon'))) {
       const hit = signals.jargonHits[0];
       candidates.push(makeEvent('jargon', {
@@ -339,6 +420,16 @@
       }));
     }
 
+    if (audienceId === 'beginner' && signals.exampleHits.length) {
+      candidates.push(makeEvent('example-support', {
+        confidence: 'high',
+        scoreDelta: judgeConfig.supportDelta || 4,
+        explanation: copy.exampleOk,
+        suggestion: copy.exampleOk,
+        evidence: evidenceFrom(signals.exampleHits[0], 'concrete-example')
+      }));
+    }
+
     if (audienceId === 'skeptic' && signals.claim && !signals.evidenceHits.length) {
       candidates.push(makeEvent('evidence', {
         confidence: 'high',
@@ -353,6 +444,16 @@
       }));
     }
 
+    if (audienceId === 'skeptic' && signals.evidenceHits.length) {
+      candidates.push(makeEvent('evidence-support', {
+        confidence: 'high',
+        scoreDelta: judgeConfig.supportDelta || 4,
+        explanation: copy.evidenceOk,
+        suggestion: copy.evidenceOk,
+        evidence: evidenceFrom(signals.evidenceHits[0], 'checkable-basis-present')
+      }));
+    }
+
     if (audienceId === 'skeptic' && signals.units >= 16 && signals.claim && !signals.tradeoffHits.length && priorities.includes('tradeoff')) {
       candidates.push(makeEvent('tradeoff', {
         confidence: 'low',
@@ -363,6 +464,16 @@
       }));
     }
 
+    if (audienceId === 'skeptic' && signals.tradeoffHits.length) {
+      candidates.push(makeEvent('tradeoff-support', {
+        confidence: 'high',
+        scoreDelta: judgeConfig.supportDelta || 4,
+        explanation: copy.tradeoffOk,
+        suggestion: copy.tradeoffOk,
+        evidence: evidenceFrom(signals.tradeoffHits[0], 'tradeoff-present')
+      }));
+    }
+
     if (audienceId === 'fastScroller' && signals.units >= 8 && !signals.relevanceHits.length && (round.events || []).length >= 1) {
       candidates.push(makeEvent('relevance', {
         confidence: 'low',
@@ -370,6 +481,36 @@
         explanation: copy.relevance,
         suggestion: copy.relevance,
         evidence: { excerpt: text.slice(0, 48), match: '', reason: 'no-audience-address' }
+      }));
+    }
+
+    if ((platform.key === 'xiaohongshu' || platform.family === 'search') && signals.searchHits.length && !signals.isOpening) {
+      candidates.push(makeEvent('search-support', {
+        confidence: 'high',
+        scoreDelta: judgeConfig.supportDelta || 4,
+        explanation: copy.searchOk,
+        suggestion: copy.searchOk,
+        evidence: evidenceFrom(signals.searchHits[0], 'searchable-topic')
+      }));
+    }
+
+    if (audienceId === 'fastScroller' && !signals.isOpening && signals.relevanceHits.length) {
+      candidates.push(makeEvent('relevance-support', {
+        confidence: 'high',
+        scoreDelta: judgeConfig.supportDelta || 4,
+        explanation: copy.relevanceOk,
+        suggestion: copy.relevanceOk,
+        evidence: evidenceFrom(signals.relevanceHits[0], 'audience-relevance-present')
+      }));
+    }
+
+    if (audienceId === 'fastScroller' && !signals.isOpening && !signals.repeatedSetup && (signals.hasDigit || signals.exampleHits.length || signals.evidenceHits.length)) {
+      candidates.push(makeEvent('density-support', {
+        confidence: 'high',
+        scoreDelta: judgeConfig.supportDelta || 4,
+        explanation: copy.densityOk,
+        suggestion: copy.densityOk,
+        evidence: evidenceFrom(signals.exampleHits[0] || signals.evidenceHits[0] || { term: text.match(/\d+(?:\.\d+)?/)?.[0] || '', excerpt: text.slice(0, 48) }, 'new-concrete-detail')
       }));
     }
 
@@ -399,14 +540,22 @@
     void signals.hasDigit;
 
     const ranked = [];
+    const baseType = type => String(type || '').replace(/-support$/, '');
     priorities.forEach(key => {
       const mapped = key === 'density' ? 'repeat-padding' : key;
-      const found = candidates.find(item => item.type === mapped || item.type === key);
+      const found = candidates.find(item => item.type === mapped || baseType(item.type) === key || (key === 'density' && item.type === 'density-support'));
       if (found) ranked.push(found);
     });
     candidates.forEach(item => {
       if (!ranked.includes(item)) ranked.push(item);
     });
+    if (platform.family === 'search') {
+      const searchEvent = candidates.find(item => item.type === 'search-support');
+      if (searchEvent) {
+        ranked.splice(ranked.indexOf(searchEvent), 1);
+        ranked.unshift(searchEvent);
+      }
+    }
 
     const chosen = ranked.find(item => !inCooldown(previousEvents, item.type, segment, cooldownMs));
     if (!chosen) {
@@ -418,7 +567,9 @@
         version: VERSION,
         kind: KIND,
         label: copy.judgeLabel,
-        disclaimer: copy.relative
+        disclaimer: copy.relative,
+        platform: platform.key,
+        platformFamily: platform.family
       };
     }
 
@@ -439,7 +590,9 @@
       version: VERSION,
       kind: KIND,
       label: copy.judgeLabel,
-      disclaimer: copy.relative
+      disclaimer: copy.relative,
+      platform: platform.key,
+      platformFamily: platform.family
     };
   }
 
@@ -451,12 +604,13 @@
       scale: { min: 12, max: 92, initial: 50 },
       notes: [
         'Deterministic for a frozen input, config, and version.',
-        'Scores are relative simulated interest, never a retention probability.',
-        'Keyword hits are local evidence, not proof of quality, personality, or popularity.',
+        'Scores are relative simulated interest aligned to public creator-education heuristics, never a retention probability or platform ranking.',
+        'Keyword hits are local copy evidence, not proof of quality, personality, popularity, or traffic.',
+        'Platform labels only change heuristic weights. This file does not call Douyin, Kuaishou, Xiaohongshu, YouTube, Instagram, or Bilibili APIs.',
         'Future model judges must keep the same event fields and must not pretend this rules file already understands meaning.'
       ]
     };
   }
 
-  return { VERSION, KIND, audiencePriorities, findMatches, judge, describe, create: () => ({ version: VERSION, kind: KIND, describe, judge }) };
+  return { VERSION, KIND, audiencePriorities, PLATFORM_PROFILES, primaryPlatform, findMatches, judge, describe, create: () => ({ version: VERSION, kind: KIND, describe, judge }) };
 });

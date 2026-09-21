@@ -21,6 +21,10 @@ try {
   assert.equal(fs.existsSync(path.join(outDir, 'locales/zh-CN.js')), true);
   assert.equal(fs.existsSync(path.join(outDir, 'v2-session-model.js')), true);
   assert.equal(fs.existsSync(path.join(outDir, 'v2-interest-panel.js')), true);
+  assert.equal(fs.existsSync(path.join(outDir, 'avatar-runtime.js')), true);
+  assert.equal(fs.existsSync(path.join(outDir, 'v2-audience-expression.js')), true);
+  assert.equal(fs.existsSync(path.join(outDir, 'v2-audience-stage.js')), true);
+  assert.equal(fs.existsSync(path.join(outDir, 'live2d-local-runtime.js')), true);
   assert.equal(fs.existsSync(path.join(outDir, 'dev/v2-replay.html')), false);
   assert.equal(fs.existsSync(path.join(outDir, '_headers')), true);
   const headers = fs.readFileSync(path.join(outDir, '_headers'), 'utf8');

@@ -130,7 +130,7 @@ window.CreatorLocaleCatalogs['en-US'] = {
   'v2.events': 'Audience events',
   'v2.start': 'Start pressure practice',
   'v2.curve.title': 'Simulated audience interest trend',
-  'v2.curve.bound': 'Simulated interest 0–100 · Not real retention',
+  'v2.curve.bound': 'Copy-level training simulation aligned to public creator education · not backend retention or ranking',
   'v2.curve.records': 'View times and values',
   'v2.curve.value': 'Simulated interest (0–100)',
   'v2.setup.title': 'Training setup',

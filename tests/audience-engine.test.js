@@ -50,5 +50,7 @@ assert.doesNotMatch(quietReaction.text, /undefined/);
 const provider = avatar.create({ provider: 'mock' });
 assert.ok(provider, 'Mock provider should be constructible without a backend');
 assert.equal(avatar.loadConfig().provider, 'mock');
+assert.equal(typeof avatar.probe, 'function');
+assert.match(avatar.describeError('https-page-cannot-reach-http-livetalking'), /https/);
 
 console.log('Audience engine contract tests passed.');

@@ -15,6 +15,7 @@ const curve = read('interest-curve.js');
 assert.match(launcher, /data-transcript-cover/, 'launcher should expose the dynamic transcript cover');
 assert.match(launcher, /launcher-transcript\.js/, 'launcher should load the transcript-cover behavior');
 assert.match(controls, /data-qa-tab="vertical-marquee"/, 'Magic UI Marquee should have its own named QA page');
+assert.match(controls, /data-qa-tab="bloub-audience"/, 'bloub SVG audience should have its own named QA page');
 assert.match(controls, /components\.transcriptCover\.scrollDuration/, 'transcript stream timing should be adjustable');
 assert.match(controls, /components\.transcriptCover\.rawColor/, 'transcript stream colors should be adjustable');
 assert.match(controls, /\[data-qa-copy-ignore\]/, 'decorative and runtime copy should not destabilize saved founder copy keys');

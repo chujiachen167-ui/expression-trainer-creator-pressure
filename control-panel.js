@@ -50,6 +50,9 @@
         initialScore: 50, scaleMin: 12, scaleMax: 92, cooldownMs: 12000, openingWindowMs: 8000,
         lowConfidenceDelta: -2, highConfidenceDelta: -8, supportDelta: 4
       },
+      bloubAudience: {
+        size: 58, x: 0, y: -8, ink: '#16151a', paper: '#f4efe8', card: false, showLabel: true, labelOpacity: 0.92, holdMs: 1600
+      },
       transcriptCover: window.CreatorMarqueeConfig.defaults
     },
     copy: {}, fineTune: {}, extraCopy: {}
@@ -71,6 +74,9 @@
     if (config.components?.logo) config.components.logo = window.CreatorLogoConfig.normalize(config.components.logo);
     if (config.components?.logoBackground) config.components.logoBackground = window.CreatorLogoConfig.normalizeBackground(config.components.logoBackground);
     if (config.components?.productShell && window.CreatorProductShell) config.components.productShell = window.CreatorProductShell.normalize(config.components.productShell);
+    if (config.components?.bloubAudience && window.CreatorBloubAudienceRuntime?.normalize) {
+      config.components.bloubAudience = window.CreatorBloubAudienceRuntime.normalize(config.components.bloubAudience);
+    }
     return config;
   };
   let projectEnvelope = window.CreatorProjectConfig && typeof window.CreatorProjectConfig === 'object'
@@ -240,6 +246,13 @@
       root.style.setProperty('--v2-curve-font', `${state.components.v2Interest.fontSize}px`);
       root.style.setProperty('--v2-curve-height', `${state.components.v2Interest.chartHeight}px`);
     }
+    if (state.components.bloubAudience) {
+      const bloub = state.components.bloubAudience;
+      root.style.setProperty('--v2-bloub-size', `${bloub.size}%`);
+      root.style.setProperty('--v2-bloub-x', `${bloub.x}px`);
+      root.style.setProperty('--v2-bloub-y', `${bloub.y}px`);
+      root.style.setProperty('--v2-bloub-label-opacity', bloub.showLabel === false ? '0' : String(bloub.labelOpacity));
+    }
   }
 
   function applyFeatures() {
@@ -351,6 +364,7 @@
         <button type="button" class="qa-tab" data-qa-tab="text-effects" role="tab" aria-selected="false">文字动效</button>
         <button type="button" class="qa-tab" data-qa-tab="logo" role="tab" aria-selected="false">Logo</button>
         <button type="button" class="qa-tab" data-qa-tab="v2-interest" role="tab" aria-selected="false">V2 曲线复盘</button>
+        <button type="button" class="qa-tab" data-qa-tab="bloub-audience" role="tab" aria-selected="false">V2 二维观众</button>
       </div>
       <div class="qa-scroll">
         <div class="qa-page" data-qa-page="palette" hidden>
@@ -376,7 +390,7 @@
           </section>
         </div>
         <div class="qa-page" data-qa-page="components" hidden>
-          <section><h2>React Bits · Drift Wall</h2><p class="qa-hint">只管理数字观众默认预览使用的 Drift Wall 参数；它是一个独立的背景组件。</p>
+          <section><h2>React Bits · Drift Wall</h2><p class="qa-hint">管理多观众呈现模式的窗口漂移参数。Drift Wall 是承载不同观众形象的窗口容器，不定义观众身份、判断逻辑或形象类型。</p>
             ${numberField('列数', 'components.driftWall.columns', 2, 8)}${numberField('卡片宽度', 'components.driftWall.tileWidth', 100, 360, 4)}${numberField('卡片高度', 'components.driftWall.tileHeight', 80, 260, 4)}${numberField('间距', 'components.driftWall.gap', 4, 40)}${numberField('圆角', 'components.driftWall.radius', 0, 32)}
             ${numberField('倾斜', 'components.driftWall.tilt', -35, 35)}${numberField('转向', 'components.driftWall.turn', -35, 35)}${numberField('滚转', 'components.driftWall.roll', -15, 15)}${numberField('透视', 'components.driftWall.perspective', 600, 2000, 20)}${numberField('纵深', 'components.driftWall.depth', 0, 300, 5)}
             ${numberField('速度', 'components.driftWall.speed', 0, 100)}<label class="qa-select"><span>方向</span><select data-path="components.driftWall.direction"><option value="up">向上</option><option value="down">向下</option></select></label>${numberField('速度差异', 'components.driftWall.variance', 0, 1, 0.05)}${numberField('视差', 'components.driftWall.parallax', 0, 1, 0.05)}${numberField('悬浮抬升', 'components.driftWall.lift', 0, 140, 2)}${numberField('边缘淡出', 'components.driftWall.fade', 0, 1, 0.05)}${numberField('暗度', 'components.driftWall.dim', 0.1, 1, 0.05)}
@@ -503,6 +517,19 @@
           <section><h2>V2 规则判断参数（下一轮生效）</h2><p class="qa-hint">这些值写入下一轮配置快照和比较条件，不会改写已经完成的复盘。分数是相对模拟指标，不是留存概率。</p>
             ${numberField('初始相对兴趣', 'components.v2Judge.initialScore', 12, 80)}${numberField('下限', 'components.v2Judge.scaleMin', 0, 40)}${numberField('上限', 'components.v2Judge.scaleMax', 60, 100)}
             ${numberField('同类信号冷却（毫秒）', 'components.v2Judge.cooldownMs', 4000, 30000, 500)}${numberField('开场窗口（毫秒）', 'components.v2Judge.openingWindowMs', 3000, 15000, 500)}
+          </section>
+        </div>
+        <div class="qa-page" data-qa-page="bloub-audience" hidden>
+          <section><h2>V2 二维观众 · bloub</h2><p class="qa-hint">只作用于 V2 默认二维观众。这是本机接入的开源 SVG 形变核心，不改变受众身份、判断规则或分数。尺寸、位置和表情预览会立刻反映在舞台上，不必开始训练。</p>
+            ${numberField('舞台占比', 'components.bloubAudience.size', 36, 86)}${numberField('水平偏移', 'components.bloubAudience.x', -80, 80)}${numberField('垂直偏移', 'components.bloubAudience.y', -80, 80)}
+            ${numberField('训练表情停留（毫秒）', 'components.bloubAudience.holdMs', 400, 8000, 100)}
+            <div class="qa-colors">${colorField('形体颜色', 'components.bloubAudience.ink')}${colorField('眼睛颜色', 'components.bloubAudience.paper')}</div>
+            <div class="qa-switches qa-component-switches">${toggleField('浅色底卡', 'components.bloubAudience.card')}${toggleField('显示状态标签', 'components.bloubAudience.showLabel')}</div>
+            ${numberField('标签透明度', 'components.bloubAudience.labelOpacity', 0, 1, 0.02)}
+          </section>
+          <section><h2>实时预览表情</h2><p class="qa-hint">点选后舞台立刻切换并保持，直到你点下一个，或正式判断事件到来。先应用受众模板才能看见舞台。</p>
+            <div class="qa-expression-board" data-bloub-preview></div>
+            <p class="qa-hint" data-bloub-preview-status></p>
           </section>
         </div>
       </div>
@@ -654,12 +681,26 @@
       });
       panel.querySelector('[data-copy-document-title]').value = state.copy[titleKey] ?? document.documentElement.dataset.qaTitleDefault;
     };
+    const renderBloubPreview = () => {
+      const host = panel.querySelector('[data-bloub-preview]');
+      const status = panel.querySelector('[data-bloub-preview-status]');
+      if (!host) return;
+      const catalog = window.CreatorBloubAudienceRuntime?.previewCatalog?.();
+      if (!catalog) {
+        host.replaceChildren();
+        if (status) status.textContent = '二维观众模块尚未加载。请打开 V2 页后再预览。';
+        return;
+      }
+      host.innerHTML = catalog.map(group => `<div class="qa-expression-group"><span>${group.title}</span><div class="qa-expression-grid">${group.items.map(item => `<button type="button" class="qa-expression-btn" data-bloub-preview-state="${item.id}">${item.label}</button>`).join('')}</div></div>`).join('');
+      if (status) status.textContent = '';
+    };
     const showPage = name => {
       panel.querySelectorAll('[data-qa-page]').forEach(page => { const active = page.dataset.qaPage === name; page.hidden = !active; page.classList.toggle('active', active); });
       panel.querySelectorAll('[data-qa-tab]').forEach(tab => { const active = tab.dataset.qaTab === name; tab.classList.toggle('active', active); tab.setAttribute('aria-selected', String(active)); });
       panel.querySelector('.qa-scroll').scrollTop = 0;
       if (name === 'copy') renderCopyFields();
       if (name === 'ui' || name === 'copy') { elementEditor?.refresh(); elementEditor?.rescan(); }
+      if (name === 'bloub-audience') renderBloubPreview();
     };
     const refreshAvatarProvider = () => {
       const provider = window.CreatorAvatarProvider;
@@ -673,9 +714,17 @@
       const provider = window.CreatorAvatarProvider;
       const status = panel.querySelector('[data-qa-provider-status]');
       if (!provider) { status.textContent = '数字人模块尚未加载'; return; }
-      provider.saveConfig({ provider: panel.querySelector('#qaAvatarProvider').value, serverUrl: panel.querySelector('#qaAvatarServer').value.trim() || provider.defaults.serverUrl, avatarId: panel.querySelector('#qaAvatarId').value.trim() });
-      status.textContent = '已保存。下一次应用模板时会重新连接数字人。';
+      const next = { provider: panel.querySelector('#qaAvatarProvider').value, serverUrl: panel.querySelector('#qaAvatarServer').value.trim() || provider.defaults.serverUrl, avatarId: panel.querySelector('#qaAvatarId').value.trim() };
+      provider.saveConfig(next);
+      status.textContent = next.provider === 'live' ? '已保存。正在检测 LiveTalking…' : '已保存。当前使用浏览器演示。';
       document.dispatchEvent(new CustomEvent('creator:avatar-config-change'));
+      if (next.provider === 'live' && typeof provider.probe === 'function') {
+        provider.probe(next).then(result => {
+          status.textContent = result.ok
+            ? `LiveTalking 可访问 ${result.url}。应用模板或选择观众后连接画面。`
+            : provider.describeError(result.error);
+        }).catch(error => { status.textContent = `检测失败：${error.message}`; });
+      }
     };
 
     window.addEventListener('creator:avatar-provider-ready', refreshAvatarProvider);
@@ -692,6 +741,15 @@
       sync();
     });
     panel.querySelectorAll('[data-qa-tab]').forEach(tab => tab.addEventListener('click', () => showPage(tab.dataset.qaTab)));
+    panel.addEventListener('click', event => {
+      const button = event.target.closest('[data-bloub-preview-state]');
+      if (!button) return;
+      const state = button.dataset.bloubPreviewState;
+      const shown = window.CreatorAudienceStage?.preview?.(state);
+      const status = panel.querySelector('[data-bloub-preview-status]');
+      panel.querySelectorAll('[data-bloub-preview-state]').forEach(node => node.setAttribute('aria-pressed', String(node === button)));
+      if (status) status.textContent = shown ? `舞台已切换到「${button.textContent}」，保持到下一次点选或正式判断。` : '还没有观众舞台。先在 V2 应用受众模板，再预览表情。';
+    });
     trigger.addEventListener('click', () => { panel.hidden = !panel.hidden; trigger.setAttribute('aria-expanded', String(!panel.hidden)); });
     panel.querySelector('.qa-close').addEventListener('click', () => trigger.click());
     panel.addEventListener('input', event => {

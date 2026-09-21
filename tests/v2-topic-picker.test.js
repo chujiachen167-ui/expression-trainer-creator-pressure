@@ -18,6 +18,7 @@ async function submit(w) {
   const audienceChoice = d.querySelector('[data-audience-choose]');
   assert(audienceChoice.querySelector('svg'), 'the quiet audience row has a consistent line icon');
   assert(!d.querySelector('.audience-config-actions').contains(audienceChoice), 'audience selection is distinct from apply and preview actions');
+  assert(!d.querySelector('.audience-config').contains(d.querySelector('.v2-live2d-settings')), 'Live2D appearance must be independent from the audience reaction type chooser');
   d.querySelector('[data-pressure="high"]').click();
   assert.equal(d.querySelector('[data-pressure="high"]').getAttribute('aria-pressed'), 'true');
   assert.equal(d.querySelector('[data-pressure="medium"]').getAttribute('aria-pressed'), 'false');

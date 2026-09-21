@@ -24,7 +24,7 @@ async function run() {
   assert(d.querySelector('[data-qa-logo-group="background"]').contains(d.querySelector('[data-path="components.logoBackground.width"]')));
   assert.equal(mark.nextElementSibling.id, 'launcherTitle');
   assert.equal(d.querySelector('[data-qa-copy-key="launcher.h2.4"]').textContent, '我的镜头练习');
-  assert.equal(d.querySelectorAll('[data-qa-tab]').length, 9);
+  assert.equal(d.querySelectorAll('[data-qa-tab]').length, 10);
   d.querySelector('.qa-trigger').click();
   for (const name of ['logo', 'components', 'copy', 'text-effects', 'v2-interest', 'logo']) {
     d.querySelector(`[data-qa-tab="${name}"]`).click();

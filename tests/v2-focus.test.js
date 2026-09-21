@@ -34,7 +34,7 @@ button.click(); assert.equal(button.getAttribute('aria-expanded'), 'true');
 assert.equal(d.querySelector('[data-v2-lines]').children.length, 0, 'no fabricated curve before speech');
 const round = { status: 'complete', hasScore: true, score: 50, points: [{ kind: 'value', t: 0, score: 100 }, { kind: 'value', t: 15000, score: 50 }], events: [], segments: [{ status: 'final', text: '其实就是有很多东西。其实就是有很多东西。' }] };
 d.dispatchEvent(new w.CustomEvent('creator:v2-session-change', { detail: { active: round } }));
-assert.equal(d.querySelector('.v2-interest-line').getAttribute('d'), 'M26.0 8.0 L191.0 41.0');
+assert.equal(d.querySelector('.v2-interest-line').getAttribute('d'), 'M26.0 8.0 H191.0 V41.0', 'evidence events render as discrete steps, not invented gradual movement');
 assert(d.querySelector('[data-v2-lines] path[fill="url(#v2InterestFill)"]'), 'valid data receives a readable area signal');
 assert.equal(d.querySelector('[data-v2-interest-panel] .v2-chart-data'), null, 'data details do not cover the stage');
 assert(d.querySelector('[data-v2-chart-context] .v2-chart-data'));

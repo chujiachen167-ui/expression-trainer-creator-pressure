@@ -23,7 +23,7 @@
     <header class="v2-interest-head">
       <div>
         <h3 data-i18n="v2.curve.compactTitle">${tr('v2.curve.compactTitle', '模拟兴趣')}</h3>
-        <p class="v2-interest-bound" data-i18n="v2.curve.bound">${tr('v2.curve.bound', '训练推断，不是真实观看率、心理测量或平台流量预测。规则判断器，不是语义模型。')}</p>
+        <p class="v2-interest-bound" data-i18n="v2.curve.bound">${tr('v2.curve.bound', '按所选平台公开创作者教育对齐的文案训练模拟，不是抖音/快手/小红书/YouTube/B站后台完播率或推荐分。')}</p>
       </div>
       <strong data-v2-score>--</strong>
     </header>
@@ -119,7 +119,10 @@
     if (!values.length) return;
     let d = '';
     values.forEach((point, index) => {
-      d += `${index ? 'L' : 'M'}${xOf(point.t).toFixed(1)} ${yOf(point.score).toFixed(1)} `;
+      const x = xOf(point.t).toFixed(1);
+      const y = yOf(point.score).toFixed(1);
+      if (!index) d = `M${x} ${y}`;
+      else d += ` H${x} V${y}`;
     });
     const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     area.setAttribute('d', `${d.trim()} L${xOf(values[values.length - 1].t).toFixed(1)} ${bottom} L${xOf(values[0].t).toFixed(1)} ${bottom} Z`);
@@ -199,11 +202,12 @@
     const timeLabel = Session.formatClock(event.startMs, event.timePrecision);
     const rec = playback()?.getRecording?.();
     const mapped = rec && round ? Session.recordingSeek(event.startMs, rec, round.practiceStartedAt) : { seekable: false };
+    const distinctSuggestion = event.suggestion && event.suggestion !== event.explanation ? event.suggestion : '';
     item.innerHTML = `
       <strong>${event.audienceName || event.audienceId}</strong>
       <span class="v2-event-time">${timeLabel || tr('v2.curve.noTime', '无精确时间')}</span>
       <p>${event.explanation}</p>
-      <p class="v2-event-suggest">${event.suggestion}</p>
+      ${distinctSuggestion ? `<p class="v2-event-suggest">${distinctSuggestion}</p>` : ''}
       ${!options.compact && event.evidence?.excerpt ? `<blockquote>${event.evidence.excerpt}</blockquote>` : ''}
       ${options.compact ? '' : mapped.seekable ? `<span class="v2-seek-ok">${tr('v2.curve.seek', '可跳转录像')}</span>` : `<span class="v2-seek-fallback">${tr('v2.curve.transcriptOnly', '无录像，定位逐字稿')}</span>`}
     `;
@@ -237,7 +241,8 @@
     } else if (!round.hasScore) {
       liveNode.textContent = tr('v2.curve.insufficient', '信息不足 / 暂无明确变化。');
     } else {
-      liveNode.textContent = `${tr('v2.curve.relative', '相对模拟兴趣')} ${round.score} · ${tr('v2.curve.notPercent', '不是留存概率')}`;
+      const platform = round.frozen?.platform ? ` · ${round.frozen.platform}` : '';
+      liveNode.textContent = `${tr('v2.curve.relative', '相对模拟兴趣')} ${round.score} · ${tr('v2.curve.notPercent', '不是留存概率')}${platform}`;
     }
     const major = [...(round.events || [])].reverse().find(event => event.confidence !== 'insufficient');
     if (round.status === 'running' || round.status === 'waiting-final') {

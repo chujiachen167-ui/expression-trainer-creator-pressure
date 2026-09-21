@@ -1,0 +1,8 @@
+/Core/
+/Resources/
+/Framework/
+/CubismWebFramework/
+/live2dcubismcore*.js
+/live2dcubismcore*.wasm
+/live2d-framework-bridge*.js*
+/bridge-harness.html

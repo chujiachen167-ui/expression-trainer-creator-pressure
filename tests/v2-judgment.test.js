@@ -18,6 +18,7 @@ function start(s, extra = {}) {
     topic: extra.topic || '讲清手机和相机差异',
     audienceId: extra.audienceId || 'fastScroller',
     audienceName: extra.audienceName || '快划观众',
+    platform: extra.platform || '',
     pressure: extra.pressure || 'medium',
     recognitionLanguage: extra.recognitionLanguage || 'zh-CN',
     uiLocale: extra.uiLocale || 'zh-CN',
@@ -114,8 +115,7 @@ finalIngest(timed, '第二句隔了更久。', {
 const points = timed.getActiveRound().points.filter(item => item.kind === 'value');
 assert.equal(timed.getActiveRound().segments[0].startMs, 1000);
 assert.equal(timed.getActiveRound().segments[1].startMs, 9000);
-assert.ok(points.some(item => item.t === 1000));
-assert.ok(points.some(item => item.t === 9000));
+assert.deepEqual(points.map(item => item.t), [0], 'segments without new evidence must not manufacture repeated flat measurements');
 assert.notEqual(timed.getActiveRound().segments[0].startMs, 4000, 'network arrival must not become speech time');
 
 const stale = store();
@@ -208,6 +208,60 @@ finalIngest(skeptic, '这个方案一定能保证所有人最好的结果，因�
 });
 assert.ok(skeptic.getActiveRound().events.some(event => event.type === 'evidence'));
 assert.notEqual(beginner.getActiveRound().events[0]?.type, skeptic.getActiveRound().events[0]?.type);
+
+const skepticRecovery = store();
+start(skepticRecovery, { audienceId: 'skeptic', audienceName: '怀疑型观众' });
+finalIngest(skepticRecovery, '这个方案一定能保证所有人得到最好的结果。', {
+  resultId: 'skr-1', audioStartedAt: clock, audioEndedAt: clock + 2000
+});
+const scoreAfterUnsupportedClaim = skepticRecovery.getActiveRound().score;
+finalIngest(skepticRecovery, '我们的对比测试覆盖了120名用户，结果提升了18%。', {
+  resultId: 'skr-2', audioStartedAt: clock + 15000, audioEndedAt: clock + 18000
+});
+const scoreAfterEvidence = skepticRecovery.getActiveRound().score;
+finalIngest(skepticRecovery, '但是前提是连续使用两周，不适合只练一次的人。', {
+  resultId: 'skr-3', audioStartedAt: clock + 30000, audioEndedAt: clock + 33000
+});
+const recoveryRound = skepticRecovery.getActiveRound();
+assert.ok(scoreAfterUnsupportedClaim < 50, 'unsupported strong claim should lower skeptical-audience interest');
+assert.ok(scoreAfterEvidence > scoreAfterUnsupportedClaim, 'checkable evidence should recover skeptical-audience interest');
+assert.ok(recoveryRound.score > scoreAfterEvidence, 'a stated limitation should provide another supported recovery');
+assert.ok(recoveryRound.events.some(event => event.type === 'evidence-support' && event.scoreDelta > 0));
+assert.ok(recoveryRound.events.some(event => event.type === 'tradeoff-support' && event.scoreDelta > 0));
+assert.ok(recoveryRound.points.some((point, index, values) => index > 0 && point.score > values[index - 1].score), 'curve must contain an evidence-backed rise');
+
+const hookRound = store();
+start(hookRound, { audienceId: 'fastScroller', audienceName: '快划观众', platform: '抖音 / 小红书' });
+finalIngest(hookRound, '你知道吗，很多人拍夜景都会糊。', {
+  resultId: 'hook-1',
+  audioStartedAt: clock,
+  audioEndedAt: clock + 1800
+});
+const hookEvent = hookRound.getActiveRound().events[0];
+assert.equal(hookEvent.type, 'opening');
+assert.ok(hookEvent.scoreDelta > 0, 'a public short-video hook should raise simulated interest');
+assert.match(hookEvent.explanation, /钩子/);
+assert.match(hookRound.getActiveRound().frozen.platform, /抖音/);
+
+const englishHook = store();
+start(englishHook, { audienceId: 'fastScroller', audienceName: 'Fast scroller', platform: 'YouTube / Instagram', uiLocale: 'en-US' });
+finalIngest(englishHook, "Here's the thing: most people ruin night shots.", {
+  resultId: 'hook-en',
+  audioStartedAt: clock,
+  audioEndedAt: clock + 1600
+});
+assert.ok(englishHook.getActiveRound().events[0].scoreDelta > 0, 'English hook phrases must count for mixed-language sessions');
+
+const xhs = store();
+start(xhs, { audienceId: 'fastScroller', audienceName: '快划观众', platform: '小红书' });
+finalIngest(xhs, '先说结论：这支平价防晒值得买。', {
+  resultId: 'xhs-1', audioStartedAt: clock, audioEndedAt: clock + 1500
+});
+finalIngest(xhs, '我亲测了这支防晒测评，适合通勤。', {
+  resultId: 'xhs-2', audioStartedAt: clock + 6000, audioEndedAt: clock + 9000
+});
+assert.ok(xhs.getActiveRound().events.some(event => event.type === 'search-support'), 'Xiaohongshu searchable copy should surface as a support event');
+assert.match(JSON.stringify(Judge.describe()), /does not call Douyin/);
 
 const sameA = store();
 start(sameA, { topic: '同一题', audienceId: 'fastScroller' });

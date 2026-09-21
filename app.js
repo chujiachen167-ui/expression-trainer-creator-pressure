@@ -250,7 +250,7 @@
       <label class="brief-field"><span>受众模板</span><select data-audience-template>${window.CreatorAudienceEngine.templates.map(template => `<option value="${template.id}">${template.name}</option>`).join('')}</select></label>
       <div class="brief-summary" data-audience-summary></div>
       <div class="brief-provider-note"><span>数字观众</span><strong data-provider-label>${providerConfig.provider === 'live' ? '系统数字人' : '浏览器演示'}</strong><small>由系统提供，开发者接入配置不属于训练任务。</small></div>
-      <div class="audience-config-actions"><button type="button" data-audience-apply>应用模板</button><button type="button" data-audience-choose>选择数字观众</button><button type="button" data-audience-preview>试听反应</button></div>
+      <div class="audience-config-actions"><button type="button" data-audience-apply>应用模板</button><button type="button" data-audience-choose>选择数字观众</button><button type="button" data-audience-preview>预览反应</button></div>
       <div class="provider-status" data-provider-status>等待应用配置</div>`;
     if (mode === 'v2') {
       section.querySelector('.brief-sheet-head').hidden = true;
@@ -258,9 +258,9 @@
       section.querySelector('.brief-provider-note').hidden = true;
       const chooser = section.querySelector('[data-audience-choose]');
       chooser.className = 'v2-audience-choice';
-      chooser.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 20v-2a7 7 0 0 1 14 0v2"/></svg><span><small>数字观众类型</small><strong data-v2-audience-name>选择观众</strong></span><svg class="v2-choice-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+      chooser.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 20v-2a7 7 0 0 1 14 0v2"/></svg><span><small>受众反应类型</small><strong data-v2-audience-name>选择受众模板</strong></span><svg class="v2-choice-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
       section.querySelector('.audience-config-actions').before(chooser);
-      section.querySelector('[data-audience-preview]').innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m7 4 8 6-8 6Z"/></svg><span>试听反应</span>';
+      section.querySelector('[data-audience-preview]').innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m7 4 8 6-8 6Z"/></svg><span>预览反应</span>';
     }
     if (useSheet) {
       compactBrief = document.createElement('div');
@@ -328,6 +328,8 @@
       const preview = document.querySelector('#avatarDriftWall');
       if (slot && currentProfiles[0]) {
         slot.innerHTML = audienceCard(currentProfiles[0]);
+        window.CreatorAudienceStage?.mount(slot.querySelector('.audience-tile'));
+        document.dispatchEvent(new CustomEvent('creator:local-avatar-stage-ready'));
         slot.hidden = false;
         if (preview) preview.hidden = true;
         document.querySelector('.audience-preview-caption')?.setAttribute('hidden', '');
@@ -366,9 +368,13 @@
     const tiles = [...document.querySelectorAll('.audience-tile')];
     try {
       const result = await avatarProvider.connect(tiles);
-      status.textContent = config.provider === 'live'
-        ? `LiveTalking 已连接 ${result.connected}/${tiles.length} 个窗口；${result.fallback} 个使用浏览器降级。`
-        : `已启用浏览器演示，共 ${tiles.length} 个受众角色。`;
+      if (config.provider === 'live' && result.connected) {
+        status.textContent = `LiveTalking 已连接 ${result.connected}/${tiles.length} 个窗口${result.fallback ? `；${result.fallback} 个使用浏览器降级` : ''}。`;
+      } else if (config.provider === 'live') {
+        status.textContent = window.CreatorAvatarProvider.describeError(result.error) || `LiveTalking 未接通，已降级为浏览器演示（${tiles.length} 个窗口）。`;
+      } else {
+        status.textContent = `已启用浏览器演示，共 ${tiles.length} 个受众角色。`;
+      }
     } catch (error) {
       status.textContent = `连接失败：${error.message}。已保留静态受众界面。`;
     }
@@ -1014,7 +1020,7 @@
     return card;
   }
 
-  function reactAudience(text, profileId) {
+  function reactAudience(text, profileId, event) {
     const tiles = [...document.querySelectorAll('.audience-tile')];
     if (!tiles.length) return;
     tiles.forEach(tile => tile.classList.remove('attention'));
@@ -1022,7 +1028,9 @@
     tile.classList.add('attention');
     const reaction = tile.querySelector('.audience-reaction');
     if (reaction) reaction.textContent = text;
-    setTimeout(() => tile.classList.remove('attention'), 4500);
+    window.CreatorAudienceStage?.applyEvent(tile, event);
+    const hold = Number(window.CreatorBloubAudienceRuntime?.currentSettings?.().holdMs);
+    setTimeout(() => tile.classList.remove('attention'), Number.isFinite(hold) ? Math.max(400, hold) : 1600);
   }
 
   function fireAudienceReaction(preview = false) {
@@ -1043,7 +1051,8 @@
       const event = scratch.events?.[0];
       const text = event?.suggestion || '当前没有足够依据生成追问。试听不会写入本轮训练记录。';
       addEvent(profile.name, text, false, '试听 · 未写入训练会话');
-      if (audienceSetup) audienceSetup.querySelector('[data-provider-status]').textContent = `已试听：${profile.name}。演示数据未写入真实会话。`;
+      reactAudience(text, profile.id, event);
+      if (audienceSetup) audienceSetup.querySelector('[data-provider-status]').textContent = `已预览：${profile.name}。只改变表情，不播放语音，也不写入真实会话。`;
       return;
     }
     if (v2Store && !preview) {
@@ -1055,9 +1064,13 @@
       if (Date.now() - v2LastAvatarAt < cooldown) return;
       v2Store.markEventUsed(unused.eventId);
       v2LastAvatarAt = Date.now();
-      addEvent(unused.audienceName || unused.audienceId, unused.suggestion, false, unused.explanation);
-      reactAudience(unused.suggestion, unused.audienceId);
-      avatarProvider?.speak(0, unused.suggestion).catch(error => addEvent('数字形象', `播报失败：${error.message}`, true));
+      addEvent(
+        unused.audienceName || unused.audienceId,
+        unused.suggestion,
+        false,
+        unused.explanation && unused.explanation !== unused.suggestion ? unused.explanation : ''
+      );
+      reactAudience(unused.suggestion, unused.audienceId, unused);
       return;
     }
     const profileIndex = eventIndex % currentProfiles.length;
@@ -1069,8 +1082,7 @@
     });
     addEvent(reaction.who, reaction.text, false, `${reaction.reason}｜${currentTemplate.name}`);
     reactAudience(reaction.text, reaction.profileId);
-    avatarProvider?.speak(profileIndex, reaction.text).catch(error => addEvent('数字形象', `播报失败：${error.message}`, true));
-    if (preview && audienceSetup) audienceSetup.querySelector('[data-provider-status]').textContent = `已试听：${reaction.who}根据当前表达信号产生反应。`;
+    if (preview && audienceSetup) audienceSetup.querySelector('[data-provider-status]').textContent = `已预览：${reaction.who}根据当前表达信号产生表情反应。`;
     eventIndex += 1;
   }
 
@@ -1132,6 +1144,7 @@
         templateId: currentTemplate?.id || null,
         audienceId: audience?.id,
         audienceName: audience?.name,
+        platform: currentTemplate?.platform || '',
         pressure,
         recognitionLanguage: mode === 'v1' ? v1Language().sttLang : 'zh-CN',
         uiLocale: window.CreatorI18n?.getLocale?.() || 'zh-CN',
@@ -1170,7 +1183,7 @@
 
   function populateReportPanel() {
     if (!reportPanel) return;
-    const analysis = mode === 'v1' ? window.CreatorExpressionAnalysis?.analyze(transcript, v1Rules()) : null;
+    const analysis = window.CreatorExpressionAnalysis?.analyze(transcript, v1Rules());
     const filler = document.getElementById('fillerMetric')?.textContent || '0';
     const density = document.getElementById('densityMetric')?.textContent || '--';
     const words = document.getElementById('wordMetric')?.textContent || String(analysis?.totalChars || 0);
@@ -1257,6 +1270,13 @@
     try {
       let script = '';
       if (window.api?.getOptimizedScript) {
+        const runtime = await refreshDesktopRuntime();
+        if (!runtime?.llmConfigured) {
+          status.textContent = '请先完成「大模型配置」。台词优化需要已配置的模型，当前不会编造一份优化稿。';
+          output.value = '';
+          copyButton.hidden = true;
+          return;
+        }
         const result = await window.api.getOptimizedScript({ fullText: source });
         if (!result?.success) throw new Error(result?.error || '桌面台词优化失败');
         script = result.script;
@@ -1266,6 +1286,10 @@
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ text: source })
         });
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error('当前页面没有台词优化服务。请使用已部署的网站，或在桌面端配置大模型。');
+        }
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.message || `台词优化失败（${response.status}）`);
         script = result.script;
@@ -1283,7 +1307,7 @@
   }
 
   function showTranscriptActions() {
-    if (mode !== 'v1' || !transcript.trim()) return;
+    if (!transcript.trim()) return;
     document.querySelectorAll('[data-copy-transcript], [data-clear-transcript], [data-show-report], [data-show-script]').forEach(button => { button.hidden = false; });
   }
 
@@ -1351,7 +1375,7 @@
       }
       if (reportPanel) {
         populateReportPanel();
-        if (mode === 'v1') showTranscriptActions(); else openReport();
+        showTranscriptActions();
       }
     }, v2Store ? 200 : 1500);
   }

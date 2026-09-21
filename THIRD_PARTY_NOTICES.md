@@ -6,6 +6,14 @@ compliance record, not legal advice.
 
 ## Shipped or adapted code
 
+### jeremy-prt/bloub SVG core
+
+- Source: https://github.com/jeremy-prt/bloub
+- Fixed source commit: `b4bb3c1b5f93c7b87a2e8d620f667c4093d97749`
+- License: MIT; copyright Copyright (c) 2026 Jérémy Perret. The full notice is retained at `vendor/bloub/LICENSE`.
+- Use: the framework-free `src/bot` SVG morphing engine is vendored as `vendor/bloub/read-yourself-bloub-core.js` and adapted through `bloub-audience-runtime.js`.
+- Boundary: only the measured SVG code is shipped; the upstream Vue/Vite demo shell is not. The MIT license covers code, not x.ai/Grok design or trademarks. Read Yourself uses its own product name and four event-state semantics.
+
 ### Expression Trainer
 
 - Source: https://github.com/fxy2311-youyou/expression-trainer

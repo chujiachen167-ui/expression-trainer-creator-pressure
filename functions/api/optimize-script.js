@@ -35,6 +35,13 @@ function shouldRetry(error) {
   ) || status === 0;
 }
 
+function scriptFromModelOutput(result) {
+  const raw = typeof result === 'string'
+    ? result
+    : result?.response ?? result?.text ?? result?.output ?? result?.result ?? result?.choices?.[0]?.message?.content ?? '';
+  return String(raw || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+}
+
 function messagesFor(text) {
   return [
     {
@@ -81,9 +88,10 @@ export async function onRequestPost(context) {
       const result = await context.env.AI.run('@cf/qwen/qwen3-30b-a3b-fp8', {
         messages: messagesFor(text),
         max_tokens: 2400,
-        temperature: 0.3
+        temperature: 0.3,
+        chat_template_kwargs: { enable_thinking: false }
       });
-      const script = String(result?.response || result?.text || '').trim();
+      const script = scriptFromModelOutput(result);
       if (!script) throw new Error('优化服务返回了空内容');
       return json({ script });
     } catch (error) {

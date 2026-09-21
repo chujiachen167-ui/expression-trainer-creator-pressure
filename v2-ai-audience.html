@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="drift-wall.css">
   <link rel="stylesheet" href="v2-focus.css">
+  <link rel="stylesheet" href="live2d-local-import.css">
   <script src="locales/zh-CN.js"></script>
   <script src="locales/en-US.js"></script>
   <script src="i18n.js"></script>
@@ -25,6 +26,11 @@
   <main class="workspace">
     <aside class="side-panel left">
       <h2 class="panel-heading" data-i18n="v2.setup.title">训练设置</h2>
+      <section class="v2-live2d-settings" aria-labelledby="v2Live2DHeading">
+        <h2 class="panel-heading" id="v2Live2DHeading">数字观众形象</h2>
+        <div data-local-avatar-anchor></div>
+      </section>
+
       <div data-v2-topic-slot></div>
 
       <h2 class="panel-heading" data-qa-copy-added data-qa-copy-key="v2.setup.pressure">压力等级</h2>
@@ -70,7 +76,12 @@
         <div class="loading-row"><span class="spinner"></span><span>正在比较自然状态与压力状态，并生成下一轮动作…</span></div>
         <div class="controls">
           <button class="primary-btn" type="button" data-session-toggle data-i18n="v2.start">开始压力口播</button>
-          <span class="control-note">数字观众会按当前压力等级，在训练中提出内容相关的约束。</span>
+          <button class="ghost-btn" type="button" data-paste-open>粘贴逐字稿</button>
+          <button class="ghost-btn" type="button" data-copy-transcript hidden>复制原文</button>
+          <button class="ghost-btn" type="button" data-clear-transcript hidden>清空</button>
+          <button class="ghost-btn" type="button" data-show-report hidden>完整诊断</button>
+          <button class="ghost-btn" type="button" data-show-script hidden>优化台词稿</button>
+          <span class="control-note">数字观众只通过表情和文字反馈，不播放语音，也不会打断你的表达。</span>
         </div>
       </section>
       <details class="v2-session-report" data-v2-report hidden>
@@ -92,6 +103,37 @@
       </div>
     </aside>
   </main>
+  <section class="report-panel v1-report" id="sessionReport" hidden aria-labelledby="reportTitle">
+    <div class="report-backdrop" data-report-close></div>
+    <div class="report-dialog">
+      <div class="report-head"><div><span class="section-kicker">EXPRESSION REPORT</span><h2 id="reportTitle">本轮表达诊断</h2></div><button type="button" data-report-close aria-label="关闭复盘">×</button></div>
+      <p class="report-lead">V2 复用与 V1 相同的诊断核心；数字观众只改变训练反馈方式，不降低报告能力。</p>
+      <div class="report-metrics">
+        <div><small>表达密度</small><strong id="reportDensity">--</strong><span>综合问题词与重复表达</span></div>
+        <div><small>笼统词</small><strong id="reportVague">0</strong><span>需要改成具体信息</span></div>
+        <div><small>填充词</small><strong id="reportFiller">0</strong><span>建议用停顿替代</span></div>
+        <div><small>犹豫词</small><strong id="reportHedge">0</strong><span>建议直接陈述判断</span></div>
+      </div>
+      <div class="report-focus"><span>下一轮优先动作</span><strong id="reportFocus">先完整说完一轮</strong><p id="reportReason">系统会根据出现最多的问题选择一个动作，而不是给出宽松的泛化鼓励。</p></div>
+      <pre class="core-ai-report" data-core-report hidden></pre>
+      <section class="optimized-script" data-optimized-script hidden aria-labelledby="optimizedScriptTitle">
+        <div class="optimized-script-head"><div><span>OPTIMIZED SCRIPT</span><h3 id="optimizedScriptTitle">优化台词稿</h3></div><button type="button" class="ghost-btn" data-copy-script hidden>复制优化稿</button></div>
+        <p>保留原意和个人语气，删去无效重复；缺少的事实只会标记，不会替你编造。</p>
+        <p class="optimized-script-status" data-script-status role="status" aria-live="polite"></p>
+        <textarea class="optimized-script-output" data-script-output readonly aria-label="生成的优化台词稿"></textarea>
+      </section>
+      <div class="report-actions"><button type="button" class="ghost-btn" data-report-close>返回逐字稿</button><button type="button" class="ghost-btn" data-generate-script>生成优化台词稿</button><button type="button" class="primary-btn" data-report-retry>立即同题重练</button></div>
+    </div>
+  </section>
+  <section class="report-panel" id="pasteTranscriptPanel" hidden aria-labelledby="pasteTitle">
+    <div class="report-backdrop" data-paste-close></div>
+    <div class="report-dialog paste-dialog">
+      <div class="report-head"><div><span class="section-kicker">TRANSCRIPT ANALYSIS</span><h2 id="pasteTitle">粘贴逐字稿</h2></div><button type="button" data-paste-close aria-label="关闭逐字稿分析">×</button></div>
+      <p class="report-lead">不录音也可以使用完整诊断和优化台词；文字只在当前页面中处理。</p>
+      <textarea class="paste-transcript-input" id="pasteTranscriptInput" placeholder="把需要诊断或优化的逐字稿粘贴到这里……"></textarea>
+      <div class="report-actions"><button type="button" class="ghost-btn" data-paste-close>取消</button><button type="button" class="primary-btn" data-paste-analyze>开始分析</button></div>
+    </div>
+  </section>
   <script src="creator-project-config.js"></script>
   <script src="v2-focus.js"></script>
   <script src="vertical-marquee-config.js"></script>
@@ -102,9 +144,17 @@
   <script src="launcher-scroll-expand.js"></script>
   <script src="drift-wall.js"></script>
   <script src="audience-templates.js"></script>
+  <script src="avatar-runtime.js"></script>
   <script src="avatar-provider.js"></script>
   <script src="avatar-selector.js"></script>
+  <script src="live2d-local-validator.js"></script>
+  <script src="live2d-local-runtime.js"></script>
+  <script src="live2d-local-import.js"></script>
+  <script src="vendor/bloub/read-yourself-bloub-core.js"></script>
+  <script src="bloub-audience-runtime.js"></script>
   <script src="v2-session-model.js"></script>
+  <script src="v2-audience-expression.js"></script>
+  <script src="v2-audience-stage.js"></script>
   <script src="v2-rule-judge.js"></script>
   <script src="v2-review.js"></script>
   <script src="expression-analysis.js"></script>
