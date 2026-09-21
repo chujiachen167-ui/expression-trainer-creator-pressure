@@ -4,6 +4,16 @@ npm-debug.log*
 settings.json
 custom-prompt.json
 dist/
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+.DS_Store
+
+# Agent scratch, form-fill scripts, and Electron profile caches stay local.
+.codex_tmp/
+
+# School application packets and filled forms stay on disk for the founder.
+docs/school-materials/
 
 # Pretrained model weights are local runtime assets with separate licensing.
 models/sherpa-onnx-streaming-paraformer-bilingual-zh-en/
@@ -12,3 +22,14 @@ models/*.tar.bz2
 # Consent-sensitive benchmark recordings and generated reports stay local.
 benchmarks/stt/corpus/
 benchmarks/stt/results/
+
+# Live2D Cubism Core, official Framework, shaders, and sample models stay off git
+# and off the website package. Track only local-runtime/README.md and .gitignore.
+local-runtime/live2dcubismcore*.js
+local-runtime/live2dcubismcore*.wasm
+local-runtime/live2d-framework-bridge*.js*
+local-runtime/CubismWebFramework/
+local-runtime/bridge-harness.html
+local-runtime/Core/
+local-runtime/Framework/
+local-runtime/Resources/
