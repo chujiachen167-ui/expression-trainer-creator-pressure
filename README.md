@@ -6,7 +6,10 @@
 
 [打开网站](https://read-yourself.com)　·　摄像头和麦克风默认都在你这台设备上，不自动上传。
 
-![Read Yourself 起始页](docs/screenshots/read-yourself-launcher.jpg)
+<img width="2465" height="2354" alt="屏幕截图_22-9-2026_131821_read-yourself com" src="https://github.com/user-attachments/assets/912ca405-fa52-4a92-8820-9cf51fee620d" />
+<img width="2466" height="1261" alt="屏幕截图_22-9-2026_131929_read-yourself com" src="https://github.com/user-attachments/assets/7ebaba5a-406f-4d7c-84f0-86d4090a77b9" />
+<img width="2468" height="1402" alt="屏幕截图_22-9-2026_13180_read-yourself com" src="https://github.com/user-attachments/assets/f575cefa-13a4-4daf-925d-c24e55521782" />
+
 
 仓库技术名是 Expression Trainer · Creator Pressure。项目继承 [fxy2311-youyou/expression-trainer](https://github.com/fxy2311-youyou/expression-trainer)。
 
