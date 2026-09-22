@@ -1,7 +1,14 @@
 MIT License
 
 Copyright (c) 2026 Sisi
-Copyright (c) 2026 chujiachen167-ui, Creator Pressure modifications
+Copyright (c) 2026 chujiachen167-ui ( Ceator Pressure modifications)
+
+This project is a modified version of [ExpressionTrainer](https://github.com/fxy2311-youyou/expression-trainer) by [@fxy2311-youyou](https://github.com/fxy2311-youyou).
+
+- Original project: released July 2026, licensed under the MIT License
+- Modifications: started August 2026 and ongoing
+
+The original copyright notice is preserved in the LICENSE file of this repository.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
