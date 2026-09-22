@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "savedAt": "2026-09-14T05:04:36.680Z",
+  "savedAt": "2026-09-22T03:52:12.735Z",
   "config": {
     "flags": {
       "v1": true,
@@ -15,7 +15,7 @@
     },
     "theme": {
       "bg": "#f3eded",
-      "panel": "#8ce1e1",
+      "panel": "#cacade",
       "panelRaised": "#151823",
       "control": "#0c0e13",
       "border": "#252938",
@@ -217,6 +217,30 @@
         "highConfidenceDelta": -8,
         "supportDelta": 4
       },
+      "bloubAudience": {
+        "size": 50,
+        "x": 0,
+        "y": -8,
+        "ink": "#ff7a7a",
+        "paper": "#000000",
+        "card": false,
+        "showLabel": true,
+        "labelOpacity": 0.92,
+        "labelX": 160,
+        "labelY": 0,
+        "holdMs": 1600
+      },
+      "live2dAudience": {
+        "size": 58,
+        "x": 0,
+        "y": -8,
+        "canvasScale": 1,
+        "showLabel": true,
+        "labelOpacity": 0.92,
+        "labelX": 0,
+        "labelY": 0,
+        "holdMs": 1600
+      },
       "transcriptCover": {
         "enabled": true,
         "scrollDuration": 26000,
@@ -236,11 +260,11 @@
         "fadeSize": 2,
         "edgeOpacity": 0,
         "followTheme": false,
-        "rawColor": "#6270da",
-        "cleanColor": "#e27cfe",
+        "rawColor": "#000000",
+        "cleanColor": "#000000",
         "issueColor": "#ff2f92",
         "highlightColor": "#4dff00",
-        "emphasisColor": "#8690df",
+        "emphasisColor": "#b4418c",
         "highlightStyle": "random",
         "randomMarksVersion": 1,
         "highlightOpacity": 0.4,
@@ -326,6 +350,21 @@
             "font-size": "21",
             "color": "#ffffff"
           }
+        },
+        "body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(2) > canvas:nth-of-type(1)": {
+          "self": {}
+        },
+        "[id=\"trainingLayers\"] > a:nth-of-type(1) > p:nth-of-type(1)": {
+          "self": {
+            "max-width": "1000",
+            "y": "-25"
+          }
+        },
+        "[id=\"trainingLayers\"] > a:nth-of-type(1) > h2:nth-of-type(1)": {
+          "self": {
+            "x": "0",
+            "y": "-25"
+          }
         }
       },
       "v2": {
@@ -357,6 +396,18 @@
         "body > main:nth-of-type(1) > aside:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(1) > section:nth-of-type(1)": {
           "self": {
             "background-color": "#ebcade"
+          }
+        },
+        "div[data-profile-id=\"fastScroller\"] > div:nth-of-type(1) > div:nth-of-type(1) > small:nth-of-type(1)": {
+          "self": {
+            "y": "-50",
+            "x": "150",
+            "font-size": "20"
+          }
+        },
+        "div[data-profile-id=\"beginner\"] > div:nth-of-type(1) > div:nth-of-type(1) > small:nth-of-type(1)": {
+          "self": {
+            "y": "-60"
           }
         }
       },

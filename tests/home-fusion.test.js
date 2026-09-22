@@ -22,7 +22,7 @@ async function run() {
   assert.equal(state.components.logoBackground.motionMode, 'combined');
   assert.equal(state.components.logoBackground.blinkDuration, 300);
   assert.equal(state.fineTune.launcher.preserved, true);
-  assert.equal(state.fineTune.launcher['[id="trainingLayers"] > a:nth-of-type(1) > h2:nth-of-type(1)'].self.y, undefined, 'old homepage box offsets must not fight the current layout');
+  assert.equal(state.fineTune.launcher['[id="trainingLayers"] > a:nth-of-type(1) > h2:nth-of-type(1)'].self.y, '-25', 'founder-saved card offsets stay; stale draft keys still merge onto the project file');
   assert.equal(state.fineTune.launcher['[id="trainingLayers"] > a:nth-of-type(1) > h2:nth-of-type(1)'].self.color, '#ff6600');
   assert.equal(state.fineTune['launcher-fusion']['body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1)'].self.y, undefined);
   assert.equal(state.fineTune['launcher-fusion']['body > main:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1)'].self['font-size'], '20');
