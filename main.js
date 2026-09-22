@@ -346,17 +346,42 @@ ipcMain.handle('pick-local-live2d-avatar', async event => {
     return { success: false, error: error.message || '本地模型文件夹验证失败。' };
   }
 });
-ipcMain.handle('get-local-live2d-dev-sample', () => {
-  if (!useLocalLive2DSample) return { success: false, unavailable: true };
-  try {
-    const samplePath = path.join(__dirname, 'local-runtime', 'Resources', 'Hiyori');
-    const record = validateModelFolder(samplePath);
-    live2dFolderCache.set(record.id, record);
-    const { folderPath: _privateFolderPath, ...publicRecord } = record;
-    return { success: true, record: { ...publicRecord, name: 'Hiyori · 官方本机验证样例' } };
-  } catch (error) {
-    return { success: false, error: error.message || '本机 Hiyori 验证样例不可用。' };
+function listBundledLive2DSamples() {
+  if (!useLocalLive2DSample) return { success: false, unavailable: true, records: [] };
+  const root = path.join(__dirname, 'local-runtime', 'Resources');
+  if (!fs.existsSync(root)) return { success: false, error: '本机 Resources 目录不存在。', records: [] };
+  const records = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    try {
+      const record = validateModelFolder(path.join(root, entry.name));
+      live2dFolderCache.set(record.id, record);
+      const { folderPath: _privateFolderPath, ...publicRecord } = record;
+      records.push({ ...publicRecord, bundle: true });
+    } catch (_) { /* skip non-model folders and invalid packages */ }
   }
+  records.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'en'));
+  return { success: records.length > 0, records };
+}
+ipcMain.handle('get-local-live2d-dev-samples', () => listBundledLive2DSamples());
+ipcMain.handle('get-local-live2d-dev-sample', () => {
+  const listed = listBundledLive2DSamples();
+  const record = listed.records?.find(item => item.name === 'Hiyori') || listed.records?.[0] || null;
+  return record ? { success: true, record } : { success: false, unavailable: listed.unavailable === true, error: listed.error };
+});
+ipcMain.handle('get-local-live2d-session-info', (_event, recordId) => {
+  const record = live2dFolderCache.get(String(recordId || ''));
+  if (!record) return { success: false, authorized: false };
+  return {
+    success: true,
+    authorized: true,
+    name: record.name,
+    modelFile: record.modelFile,
+    folderPath: record.folderPath,
+    source: record.source,
+    fileCount: record.fileCount,
+    totalBytes: record.totalBytes
+  };
 });
 ipcMain.handle('read-local-live2d-asset', async (_event, recordId, relativePath) => {
   try {

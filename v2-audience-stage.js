@@ -6,8 +6,12 @@
   const expression = () => window.CreatorAudienceExpression;
   const DEFAULT_HOLD_MS = 1600;
 
-  function holdMs() {
-    const configured = Number(window.CreatorBloubAudienceRuntime?.currentSettings?.().holdMs);
+  function holdMs(stage) {
+    const live = stage?.dataset.presentation === 'adapter';
+    const qa = window.CreatorQAControls?.getState?.()?.components;
+    const configured = live
+      ? Number(qa?.live2dAudience?.holdMs)
+      : Number(window.CreatorBloubAudienceRuntime?.currentSettings?.().holdMs ?? qa?.bloubAudience?.holdMs);
     return Number.isFinite(configured) ? Math.max(400, Math.min(8000, configured)) : DEFAULT_HOLD_MS;
   }
 
@@ -33,10 +37,16 @@
     stage.className = 'v2-audience-stage';
     stage.dataset.v2AudienceStage = '';
     stage.dataset.expression = 'listen';
-    stage.innerHTML = `${faceMarkup()}<div class="v2-audience-bloub-host" data-v2-audience-bloub aria-hidden="true"></div><small class="v2-audience-expression-label" data-v2-expression-label></small>`;
+    stage.innerHTML = `${faceMarkup()}<div class="v2-audience-bloub-host" data-v2-audience-bloub aria-hidden="true"></div>`;
     const glyph = tile.querySelector('.avatar');
     if (glyph) glyph.replaceWith(stage);
     else tile.prepend(stage);
+    if (!tile.querySelector('[data-v2-expression-label]')) {
+      const label = document.createElement('small');
+      label.className = 'v2-audience-expression-label';
+      label.dataset.v2ExpressionLabel = '';
+      tile.append(label);
+    }
     setupBloub(stage);
     setExpression(stage, 'listen');
     return stage;
@@ -72,7 +82,7 @@
     const api = expression();
     const next = knownState(state) ? state : 'listen';
     stage.dataset.expression = next;
-    const label = stage.querySelector('[data-v2-expression-label]');
+    const label = (stage.closest('.audience-tile') || stage).querySelector('[data-v2-expression-label]');
     const previewItem = window.CreatorBloubAudienceRuntime?.previewCatalog?.().flatMap(group => group.items).find(item => item.id === next);
     if (label) {
       const named = api?.STATES?.includes(next) ? api.label(next, window.CreatorI18n?.getLocale?.()) : previewItem?.label;
@@ -100,7 +110,7 @@
     }
     clearTimeout(stage._expressionTimer);
     stage._previewLocked = options.preview === true;
-    const hold = options.preview === true ? 0 : holdMs();
+    const hold = options.preview === true ? 0 : holdMs(stage);
     if (!stage._previewLocked && next !== 'listen' && hold > 0) {
       stage._expressionTimer = setTimeout(() => setExpression(stage, 'listen'), hold);
     }
@@ -160,5 +170,5 @@
     };
   }
 
-  window.CreatorAudienceStage = { mount, setExpression, applyEvent, preview, attachAdapter, detachAdapter, restoreFallback, createLocalAdapter };
+  window.CreatorAudienceStage = { mount, setExpression, applyEvent, preview, attachAdapter, detachAdapter, restoreFallback, createLocalAdapter, holdMs };
 })();

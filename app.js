@@ -331,9 +331,19 @@
         window.CreatorAudienceStage?.mount(slot.querySelector('.audience-tile'));
         document.dispatchEvent(new CustomEvent('creator:local-avatar-stage-ready'));
         slot.hidden = false;
-        if (preview) preview.hidden = true;
-        document.querySelector('.audience-preview-caption')?.setAttribute('hidden', '');
+        if (preview) {
+          preview.hidden = true;
+          preview.classList.remove('is-chooser');
+        }
         window.CreatorDriftWall?.destroy?.();
+        const caption = document.querySelector('.audience-preview-caption');
+        caption?.removeAttribute('hidden');
+        const switcher = document.querySelector('[data-audience-avatar-switch]');
+        if (switcher) switcher.hidden = false;
+        const status = caption?.querySelector('strong');
+        if (status) status.textContent = window.CreatorLocalAvatarImport?.selected?.()
+          ? `当前形象：Live2D · ${window.CreatorLocalAvatarImport.selected().name}`
+          : '当前形象：默认表情 bloub';
       }
     } else if (mode === 'v3') {
       const stack = document.querySelector('.audience-stack');
@@ -1029,7 +1039,8 @@
     const reaction = tile.querySelector('.audience-reaction');
     if (reaction) reaction.textContent = text;
     window.CreatorAudienceStage?.applyEvent(tile, event);
-    const hold = Number(window.CreatorBloubAudienceRuntime?.currentSettings?.().holdMs);
+    const stage = tile.querySelector('[data-v2-audience-stage]');
+    const hold = window.CreatorAudienceStage?.holdMs?.(stage);
     setTimeout(() => tile.classList.remove('attention'), Number.isFinite(hold) ? Math.max(400, hold) : 1600);
   }
 

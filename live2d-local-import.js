@@ -5,6 +5,9 @@
   const validator = window.CreatorLocalLive2DValidator;
   const STORAGE_KEY = 'expression-trainer.local-avatar.v1';
   const SELECTED_KEY = 'expression-trainer.local-avatar.selected.v1';
+  const DEV_SAMPLE_PATH = 'local-runtime/Resources';
+  const MAX_RECORDS = 32;
+  const HIDDEN_KEY = 'expression-trainer.local-avatar.hidden.v1';
   const DB_NAME = 'expression-trainer.local-avatar.v1';
   const DB_STORE = 'folders';
   let dbPromise;
@@ -29,7 +32,7 @@
           return safeRecord;
         });
       if (value.some(item => item && Object.hasOwn(item, 'folderPath'))) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(-12)));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(-MAX_RECORDS)));
       }
       return records;
     } catch (_) { return []; }
@@ -40,18 +43,73 @@
       const { folderPath: _absolutePath, ...safeRecord } = item;
       return safeRecord;
     });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(safeRecords.slice(-12)));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(safeRecords.slice(-MAX_RECORDS)));
   }
 
-  function upsert(record) {
+  function register(record) {
     const records = readRecords().filter(item => item.id !== record.id);
     records.push({ ...record, source: 'local-folder' });
     writeRecords(records);
+    renderAll();
+    return record;
+  }
+
+  function upsert(record) {
+    register(record);
+    writeHidden(readHidden().filter(id => id !== record.id));
     localStorage.setItem(SELECTED_KEY, record.id);
     return record;
   }
 
   function selectedId() { return localStorage.getItem(SELECTED_KEY) || ''; }
+
+  function readHidden() {
+    try {
+      const value = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]');
+      return Array.isArray(value) ? value.filter(id => typeof id === 'string') : [];
+    } catch (_) { return []; }
+  }
+
+  function writeHidden(ids) {
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...new Set(ids)]));
+  }
+
+  function visibleRecords() {
+    const hidden = new Set(readHidden());
+    return readRecords().filter(record => !hidden.has(record.id));
+  }
+
+  function renderAll() {
+    document.querySelectorAll('.local-avatar-import').forEach(renderRecords);
+  }
+
+  async function forgetHandle(id) {
+    const db = await openDb();
+    if (!db || !id) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).delete(id);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = tx.onabort = () => resolve(false);
+      } catch (_) { resolve(false); }
+    });
+  }
+
+  function removeFromList(id) {
+    const recordId = String(id || '');
+    if (!recordId) return false;
+    const record = readRecords().find(item => item.id === recordId);
+    if (!record) return false;
+    if (record.bundle) writeHidden([...readHidden(), recordId]);
+    else {
+      writeRecords(readRecords().filter(item => item.id !== recordId));
+      forgetHandle(recordId);
+    }
+    if (selectedId() === recordId) clearSelection();
+    else renderAll();
+    return true;
+  }
 
   function openDb() {
     if (dbPromise) return dbPromise;
@@ -193,14 +251,41 @@
   }
 
   function select(id) {
-    if (!readRecords().some(record => record.id === id)) return false;
+    if (!visibleRecords().some(record => record.id === id)) return false;
     localStorage.setItem(SELECTED_KEY, id);
     applySelectedAdapter();
+    renderAll();
     document.dispatchEvent(new CustomEvent('creator:local-avatar-selection-change', { detail: { id } }));
     return true;
   }
 
-  function selected() { return readRecords().find(record => record.id === selectedId()) || null; }
+  function clearSelection() {
+    localStorage.removeItem(SELECTED_KEY);
+    applySelectedAdapter();
+    renderAll();
+    document.dispatchEvent(new CustomEvent('creator:local-avatar-selection-change', { detail: { id: '' } }));
+    return true;
+  }
+
+  function selected() { return visibleRecords().find(record => record.id === selectedId()) || null; }
+
+  async function describeSession(recordId) {
+    const id = String(recordId || selectedId() || '');
+    if (typeof window.api?.getLocalLive2DSessionInfo === 'function' && id) {
+      const result = await window.api.getLocalLive2DSessionInfo(id);
+      if (result?.success && result.folderPath) {
+        return { folderPath: result.folderPath, modelFile: result.modelFile, name: result.name, source: result.source || 'session' };
+      }
+    }
+    const record = readRecords().find(item => item.id === id) || selected();
+    if (record?.bundle || record?.name === 'Hiyori') {
+      return { sampleHint: `本机样例目录：项目内 ${DEV_SAMPLE_PATH}/${record.name || ''}（仅 npm run dev:live2d 授权）`, modelFile: record.modelFile, name: record.name, source: 'dev-sample' };
+    }
+    if (record) {
+      return { sampleHint: '绝对路径只保存在本次 Electron 会话或浏览器目录授权中，页面 localStorage 不含文件夹路径。', modelFile: record.modelFile, name: record.name, source: record.source };
+    }
+    return { sampleHint: `尚未选择模型。本机样例在 ${DEV_SAMPLE_PATH}。` };
+  }
 
   function adapterStatusMessage(record, status) {
     if (status === 'ready') return `${record.name} 已在本机绘制。形象只改变外观，不改变判断。`;
@@ -236,17 +321,23 @@
 
   function renderRecords(host) {
     const local = isLocalEnvironment();
-    const records = local ? readRecords() : [];
+    const records = local ? visibleRecords() : [];
     const current = selectedId();
     const currentRecord = records.find(record => record.id === current) || null;
-    const currentName = host.querySelector('[data-local-avatar-current-name]');
     const currentKind = host.querySelector('[data-local-avatar-current-kind]');
-    if (currentName) currentName.textContent = currentRecord?.name || '兼容表情形象';
+    const toggle = host.querySelector('[data-local-avatar-toggle]');
+    if (toggle) toggle.textContent = currentRecord?.name || '默认表情 bloub';
     if (currentKind) currentKind.textContent = currentRecord ? 'Live2D · 本机读取' : '它不是 Live2D · 已保留表情反馈';
-    host.querySelector('[data-local-avatar-list]').innerHTML = records.length
-      ? records.map(record => `<label class="local-avatar-row"><input type="radio" name="local-avatar" value="${record.id}" ${record.id === current ? 'checked' : ''}><span><strong>${escapeHtml(record.name)}</strong><small>${escapeHtml(record.modelFile)} · ${Math.round(record.totalBytes / 1024 / 1024 * 10) / 10} MB</small></span></label>`).join('')
-      : '';
-    host.querySelectorAll('input[name="local-avatar"]').forEach(input => input.addEventListener('change', () => select(input.value)));
+    const list = host.querySelector('[data-local-avatar-list]');
+    if (!list) return;
+    const row = (id, name, removable) => `<li class="local-avatar-row${id === current ? ' is-selected' : ''}"><button type="button" class="local-avatar-pick" data-local-avatar-pick="${escapeHtml(id)}">${escapeHtml(name)}</button>${removable ? `<button type="button" class="local-avatar-remove" data-local-avatar-remove="${escapeHtml(id)}" aria-label="从列表移除 ${escapeHtml(name)}">删除</button>` : ''}</li>`;
+    const bundled = records.filter(record => record.bundle);
+    const imported = records.filter(record => !record.bundle);
+    list.innerHTML = [
+      row('', '默认表情 bloub', false),
+      bundled.length ? `<li class="local-avatar-group" aria-hidden="true">本机 Resources</li>${bundled.map(record => row(record.id, record.name, true)).join('')}` : '',
+      imported.length ? `<li class="local-avatar-group" aria-hidden="true">已导入</li>${imported.map(record => row(record.id, record.name, true)).join('')}` : ''
+    ].join('');
   }
 
   function escapeHtml(value) { return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
@@ -258,9 +349,34 @@
     const panel = document.createElement('section');
     panel.className = 'local-avatar-import';
     panel.dataset.availability = local ? 'available' : 'local-app-required';
-    panel.innerHTML = `<div class="local-avatar-import-head"><h4>本地 Live2D</h4><p>${local ? '只在本机使用、只登记在本机；选择含 .model3.json 的文件夹，文件不会上传。' : '网页版本不读取模型或 Cubism Core，请使用 GitHub 本机版。'}</p></div><div class="local-avatar-current" aria-label="当前数字观众形象"><span>当前形象</span><strong data-local-avatar-current-name>兼容表情形象</strong><small data-local-avatar-current-kind>它不是 Live2D · 已保留表情反馈</small></div><button type="button" class="ghost-btn local-avatar-import-button" data-local-avatar-import ${local ? '' : 'disabled aria-disabled="true"'}>${local ? '选择本地模型文件夹' : '仅 GitHub 本机版可导入'}</button><div data-local-avatar-list></div><div class="local-avatar-status" data-local-avatar-status role="status" aria-live="polite">${local ? '支持 Electron 或 localhost 浏览器。' : '本机启动：npm run dev:live2d'}</div>`;
+    panel.innerHTML = `<div class="local-avatar-import-head"><h4>本地 Live2D</h4><p>${local ? '只在本机使用、只登记在本机。点「当前形象」展开列表选择或删除；导入的文件夹会出现在同一份列表。文件不会上传。' : '网页版本不读取模型或 Cubism Core，请使用 GitHub 本机版。'}</p></div><div class="local-avatar-current"><span>当前形象</span><button type="button" class="local-avatar-toggle" data-local-avatar-toggle ${local ? '' : 'disabled'} aria-expanded="false">默认表情 bloub</button><small data-local-avatar-current-kind>它不是 Live2D · 已保留表情反馈</small><ul class="local-avatar-menu" data-local-avatar-list hidden></ul></div><button type="button" class="ghost-btn local-avatar-import-button" data-local-avatar-import ${local ? '' : 'disabled aria-disabled="true"'}>${local ? '选择本地模型文件夹' : '仅 GitHub 本机版可导入'}</button><div class="local-avatar-status" data-local-avatar-status role="status" aria-live="polite">${local ? '支持 Electron 或 localhost 浏览器。' : '本机启动：npm run dev:live2d'}</div>`;
     host.append(panel);
     renderRecords(panel);
+    const toggle = panel.querySelector('[data-local-avatar-toggle]');
+    const menu = panel.querySelector('[data-local-avatar-list]');
+    const setOpen = open => {
+      menu.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+      panel.classList.toggle('is-open', open);
+    };
+    toggle.addEventListener('click', () => { if (!toggle.disabled) setOpen(menu.hidden); });
+    menu.addEventListener('click', event => {
+      const remove = event.target.closest('[data-local-avatar-remove]');
+      if (remove) {
+        event.preventDefault();
+        removeFromList(remove.dataset.localAvatarRemove);
+        return;
+      }
+      const pick = event.target.closest('[data-local-avatar-pick]');
+      if (!pick) return;
+      const id = pick.dataset.localAvatarPick;
+      if (!id) clearSelection();
+      else select(id);
+      setOpen(false);
+    });
+    document.addEventListener('click', event => {
+      if (!panel.contains(event.target)) setOpen(false);
+    });
     panel.querySelector('[data-local-avatar-import]').addEventListener('click', async event => {
       const button = event.currentTarget;
       const status = panel.querySelector('[data-local-avatar-status]');
@@ -269,7 +385,7 @@
       try {
         const record = await choose();
         if (record) {
-          renderRecords(panel);
+          renderAll();
           await applySelectedAdapter();
           const stage = document.querySelector('[data-v2-audience-stage]');
           status.textContent = adapterStatusMessage(record, stage?._audienceAdapter?.status || stage?.dataset.adapterStatus);
@@ -279,21 +395,34 @@
     });
   }
 
-  async function selectAuthorizedDevSample() {
-    if (devSampleRequested || typeof window.api?.getLocalLive2DDevSample !== 'function') return;
+  async function loadBundledSamples() {
+    const api = window.api?.getLocalLive2DDevSamples || window.api?.getLocalLive2DDevSample;
+    if (devSampleRequested || typeof api !== 'function') return;
     devSampleRequested = true;
     try {
-      const result = await window.api.getLocalLive2DDevSample();
-      if (!result?.success || !result.record) return;
-      const record = upsert(result.record);
-      document.querySelectorAll('.local-avatar-import').forEach(renderRecords);
-      await applySelectedAdapter();
+      const result = await api();
+      const records = Array.isArray(result?.records) ? result.records : (result?.record ? [result.record] : []);
+      if (!result?.success || !records.length) return;
+      records.forEach(record => register({ ...record, bundle: true }));
+      renderAll();
+      const current = selected();
+      if (current) await applySelectedAdapter();
       const stage = document.querySelector('[data-v2-audience-stage]');
-      const statusMessage = adapterStatusMessage(record, stage?._audienceAdapter?.status || stage?.dataset.adapterStatus || 'loading');
+      const statusMessage = current
+        ? adapterStatusMessage(current, stage?._audienceAdapter?.status || stage?.dataset.adapterStatus || 'loading')
+        : `已载入 ${records.length} 个本机 Resources 模型，点「当前形象」选择。`;
       document.querySelectorAll('[data-local-avatar-status]').forEach(status => {
         status.textContent = statusMessage;
       });
     } catch (_) { /* An optional development sample never blocks normal import. */ }
+  }
+
+  async function selectAuthorizedDevSample() {
+    await loadBundledSamples();
+    const records = readRecords();
+    const preferred = records.find(record => record.name === 'Hiyori') || records.find(record => record.bundle) || records[0];
+    if (preferred && !selectedId()) return;
+    return preferred || null;
   }
 
   function scan() {
@@ -302,7 +431,7 @@
     else if (isLocalEnvironment()) document.querySelectorAll('.audience-config').forEach(mount);
     if (isLocalEnvironment()) {
       applySelectedAdapter();
-      selectAuthorizedDevSample();
+      loadBundledSamples();
     }
   }
 
@@ -312,5 +441,5 @@
   else scan();
   document.addEventListener('creator:local-avatar-stage-ready', applySelectedAdapter);
 
-  window.CreatorLocalAvatarImport = { STORAGE_KEY, SELECTED_KEY, isLocalEnvironment, readRecords, selected, choose, importFromHandle, select, readFile, mount, scan, applySelectedAdapter, selectAuthorizedDevSample };
+  window.CreatorLocalAvatarImport = { STORAGE_KEY, SELECTED_KEY, HIDDEN_KEY, DEV_SAMPLE_PATH, isLocalEnvironment, readRecords, visibleRecords, selected, choose, importFromHandle, register, upsert, select, clearSelection, removeFromList, readFile, mount, scan, applySelectedAdapter, loadBundledSamples, selectAuthorizedDevSample, describeSession, adapterStatusMessage };
 })();

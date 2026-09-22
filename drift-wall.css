@@ -48,6 +48,7 @@
 }
 
 .rb-drift-tile {
+  position: relative;
   flex: 0 0 var(--dw-tile-height);
   width: var(--dw-tile-width);
   height: var(--dw-tile-height);
@@ -57,9 +58,25 @@
   border-radius: var(--dw-radius);
   background: #14111b;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-  cursor: default;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
   transform: translateZ(0);
   transition: transform 250ms cubic-bezier(.2,.8,.2,1), border-color 250ms ease, filter 250ms ease;
+}
+.rb-drift-tile.is-selected { border-color: rgba(255, 47, 146, 0.9); box-shadow: 0 0 0 1px rgba(255, 47, 146, 0.45), 0 12px 30px rgba(0, 0, 0, 0.3); }
+.rb-drift-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 9px 7px;
+  background: linear-gradient(transparent, rgba(8, 10, 16, 0.92));
+  color: #f4f1f5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: left;
 }
 
 .rb-drift-tile:hover {
@@ -69,15 +86,60 @@
   filter: brightness(1.1);
 }
 
-.rb-drift-tile img {
+.rb-drift-face {
+  display: block;
   width: 100%;
   height: 100%;
-  display: block;
-  object-fit: cover;
   pointer-events: none;
+  position: relative;
+}
+.rb-drift-face-bloub {
+  background:
+    radial-gradient(circle at 50% 54%, #2a2730 0 42%, transparent 43%),
+    linear-gradient(180deg, #1a181f, #121118);
+}
+.rb-drift-face-bloub i {
+  position: absolute;
+  top: 46%;
+  width: 14%;
+  height: 18%;
+  border-radius: 50%;
+  background: #f4efe8;
+}
+.rb-drift-face-bloub i:first-child { left: 32%; }
+.rb-drift-face-bloub i:last-child { right: 32%; }
+.rb-drift-face-live2d {
+  background: linear-gradient(180deg, #2b3144, #161821);
+}
+.rb-drift-face-live2d i {
+  position: absolute;
+  background: #d8d3c8;
+}
+.rb-drift-face-live2d i:nth-child(1) {
+  left: 38%;
+  top: 18%;
+  width: 24%;
+  height: 28%;
+  border-radius: 46% 46% 38% 38%;
+}
+.rb-drift-face-live2d i:nth-child(2) {
+  left: 32%;
+  top: 42%;
+  width: 36%;
+  height: 38%;
+  border-radius: 28% 28% 18% 18%;
+  background: #8ea0c8;
+}
+.rb-drift-face-live2d i:nth-child(3) {
+  left: 44%;
+  top: 28%;
+  width: 12%;
+  height: 8%;
+  border-radius: 40%;
+  background: #3a3340;
 }
 
-.rb-drift-wall.is-grayscale img { filter: grayscale(1); }
+.rb-drift-wall.is-grayscale .rb-drift-face { filter: grayscale(1); }
 
 @media (prefers-reduced-motion: reduce) {
   .rb-drift-wall,

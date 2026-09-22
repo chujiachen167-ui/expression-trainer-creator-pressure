@@ -134,6 +134,7 @@ body[data-mode="v2"] .v2-session-report h4 { font-size:16px; color:var(--v2-ink)
 .v2-audience-stage[data-presentation="bloub"] .v2-audience-face { visibility:hidden; position:absolute; width:1px; height:1px; overflow:hidden; }
 .v2-audience-bloub { display:block; width:100%; height:100%; overflow:visible; }
 body[data-mode="v2"] .audience-live-slot > .audience-tile {
+  position:relative;
   display:grid;
   align-items:stretch;
   justify-items:stretch;
@@ -153,15 +154,38 @@ body[data-mode="v2"] .audience-copy {
 }
 body[data-mode="v2"] .audience-primary-stage .v2-audience-stage {
   width:min(var(--v2-bloub-size,58%),100%);
-  min-width:168px;
-  max-width:440px;
+  min-width:120px;
+  max-width:100%;
   align-self:center;
   justify-self:center;
-  transform:translate(var(--v2-bloub-x,0px), var(--v2-bloub-y,0px));
+  transform:none;
   gap:6px;
 }
+body[data-mode="v2"] .audience-primary-stage .v2-audience-stage[data-presentation="bloub"] .v2-audience-bloub-host,
+body[data-mode="v2"] .audience-primary-stage .v2-audience-stage[data-presentation="bloub"] .v2-audience-face {
+  transform:translate(var(--v2-bloub-x,0px), var(--v2-bloub-y,0px));
+}
 body[data-mode="v2"] .audience-primary-stage .v2-audience-bloub-host { max-height:none; }
-body[data-mode="v2"] .v2-audience-expression-label { opacity:var(--v2-bloub-label-opacity, .92); }
+body[data-mode="v2"] .audience-primary-stage .v2-audience-pixel { max-height:none; transform-origin:center center; }
+body[data-mode="v2"] .audience-primary-stage .v2-audience-stage[data-presentation="adapter"] {
+  width:min(var(--v2-live2d-size,58%),100%);
+}
+body[data-mode="v2"] .audience-primary-stage .v2-audience-stage[data-presentation="adapter"] .v2-audience-pixel {
+  transform:translate(var(--v2-live2d-x,0px), var(--v2-live2d-y,0px)) scale(var(--v2-live2d-scale,1));
+}
+body[data-mode="v2"] .audience-live-slot .v2-audience-expression-label {
+  position:absolute;
+  top:16px;
+  right:18px;
+  z-index:6;
+  margin:0;
+  transform:none;
+  pointer-events:none;
+  opacity:var(--v2-bloub-label-opacity, .92);
+}
+body[data-mode="v2"] .audience-live-slot:has([data-presentation="adapter"]) .v2-audience-expression-label {
+  opacity:var(--v2-live2d-label-opacity, .92);
+}
 body[data-mode="v2"] .audience-primary-stage .audience-name { margin-top:6px; color:#fff; }
 body[data-mode="v2"] .audience-primary-stage .audience-role,
 body[data-mode="v2"] .audience-primary-stage .audience-reaction { color:#ffffffd6; }

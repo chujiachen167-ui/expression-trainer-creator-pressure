@@ -23,8 +23,9 @@ assert.doesNotMatch(app, /data-local-avatar-anchor/, 'Live2D import must not be 
 assert.match(localImport, /\[data-local-avatar-anchor\]/, 'the importer must mount at the explicit audience-image location');
 assert.match(localImport, /它不是 Live2D/, 'the SVG fallback must not masquerade as Live2D');
 assert.match(main, /--use-local-live2d-sample/, 'local official-sample authorization must require an explicit development flag');
-assert.match(main, /Resources', 'Hiyori'/, 'the authorized development sample must resolve inside ignored local runtime assets');
-assert.match(preload, /getLocalLive2DDevSample/, 'the renderer must receive only the validated public sample record');
+assert.match(main, /local-runtime', 'Resources'/, 'bundled samples must resolve inside ignored local runtime assets');
+assert.match(main, /readdirSync\(root/, 'every Resources subdirectory should be offered as a local sample');
+assert.match(preload, /getLocalLive2DDevSamples/, 'the renderer must receive only validated public sample records');
 assert.equal(pkg.scripts['dev:live2d'], 'electron . --use-local-live2d-sample --open-v2');
 assert(fs.existsSync(path.join(__dirname, '../docs/research/2026-09-10-v2-remediation-open-source-review.md')));
 

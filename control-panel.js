@@ -51,7 +51,10 @@
         lowConfidenceDelta: -2, highConfidenceDelta: -8, supportDelta: 4
       },
       bloubAudience: {
-        size: 58, x: 0, y: -8, ink: '#16151a', paper: '#f4efe8', card: false, showLabel: true, labelOpacity: 0.92, holdMs: 1600
+        size: 58, x: 0, y: -8, ink: '#16151a', paper: '#f4efe8', card: false, showLabel: true, labelOpacity: 0.92, labelX: 0, labelY: 0, holdMs: 1600
+      },
+      live2dAudience: {
+        size: 58, x: 0, y: -8, canvasScale: 1, showLabel: true, labelOpacity: 0.92, labelX: 0, labelY: 0, holdMs: 1600
       },
       transcriptCover: window.CreatorMarqueeConfig.defaults
     },
@@ -59,6 +62,21 @@
   };
 
   const clone = value => JSON.parse(JSON.stringify(value));
+  const clampLive2d = (value, min, max, fallback) => {
+    const next = Number(value);
+    return Number.isFinite(next) ? Math.min(max, Math.max(min, next)) : fallback;
+  };
+  const normalizeLive2dAudience = value => ({
+    size: clampLive2d(value?.size, 20, 100, 58),
+    x: clampLive2d(value?.x, -280, 280, 0),
+    y: clampLive2d(value?.y, -280, 280, -8),
+    canvasScale: clampLive2d(value?.canvasScale, 0.4, 3, 1),
+    showLabel: value?.showLabel !== false,
+    labelOpacity: clampLive2d(value?.labelOpacity, 0, 1, 0.92),
+    labelX: clampLive2d(value?.labelX, -160, 160, 0),
+    labelY: clampLive2d(value?.labelY, -160, 160, 0),
+    holdMs: clampLive2d(value?.holdMs, 400, 8000, 1600)
+  });
   const merge = (base, incoming) => {
     const result = clone(base);
     Object.entries(incoming || {}).forEach(([key, value]) => {
@@ -77,6 +95,7 @@
     if (config.components?.bloubAudience && window.CreatorBloubAudienceRuntime?.normalize) {
       config.components.bloubAudience = window.CreatorBloubAudienceRuntime.normalize(config.components.bloubAudience);
     }
+    if (config.components) config.components.live2dAudience = normalizeLive2dAudience(config.components.live2dAudience);
     return config;
   };
   let projectEnvelope = window.CreatorProjectConfig && typeof window.CreatorProjectConfig === 'object'
@@ -120,6 +139,7 @@
     if (path.startsWith('components.logo.')) state.components.logo = window.CreatorLogoConfig.normalize(state.components.logo);
     if (path.startsWith('components.logoBackground.')) state.components.logoBackground = window.CreatorLogoConfig.normalizeBackground(state.components.logoBackground);
     if (path.startsWith('components.productShell.') && window.CreatorProductShell) state.components.productShell = window.CreatorProductShell.normalize(state.components.productShell);
+    if (path.startsWith('components.live2dAudience.')) state.components.live2dAudience = normalizeLive2dAudience(state.components.live2dAudience);
     if (path.startsWith('theme.') && path !== 'theme.palette') state.theme.palette = 'custom';
     if (path === 'components.transcriptCover.pauseOnHover') state.components.transcriptCover.hoverPauseConfigured = true;
     if (path === 'components.transcriptCover.highlightStyle') state.components.transcriptCover.randomMarksVersion = 1;
@@ -252,6 +272,20 @@
       root.style.setProperty('--v2-bloub-x', `${bloub.x}px`);
       root.style.setProperty('--v2-bloub-y', `${bloub.y}px`);
       root.style.setProperty('--v2-bloub-label-opacity', bloub.showLabel === false ? '0' : String(bloub.labelOpacity));
+      root.style.setProperty('--v2-bloub-label-x', `${bloub.labelX || 0}px`);
+      root.style.setProperty('--v2-bloub-label-y', `${bloub.labelY || 0}px`);
+      root.style.setProperty('--v2-bloub-hold-ms', String(bloub.holdMs || 1600));
+    }
+    if (state.components.live2dAudience) {
+      const live2d = state.components.live2dAudience;
+      root.style.setProperty('--v2-live2d-size', `${live2d.size}%`);
+      root.style.setProperty('--v2-live2d-x', `${live2d.x}px`);
+      root.style.setProperty('--v2-live2d-y', `${live2d.y}px`);
+      root.style.setProperty('--v2-live2d-scale', String(live2d.canvasScale));
+      root.style.setProperty('--v2-live2d-label-opacity', live2d.showLabel === false ? '0' : String(live2d.labelOpacity));
+      root.style.setProperty('--v2-live2d-label-x', `${live2d.labelX || 0}px`);
+      root.style.setProperty('--v2-live2d-label-y', `${live2d.labelY || 0}px`);
+      root.style.setProperty('--v2-live2d-hold-ms', String(live2d.holdMs || 1600));
     }
   }
 
@@ -332,7 +366,11 @@
     elementEditor?.refresh();
   }
 
-  const numberField = (label, path, min, max, step = 1) => `<label class="qa-field"><span>${label}</span><input type="range" data-path="${path}" min="${min}" max="${max}" step="${step}"><output data-output="${path}"></output></label>`;
+  const numberField = (label, path, min, max, step = 1, unit = '') => `<label class="qa-field"><span>${label}</span><input type="range" data-path="${path}" min="${min}" max="${max}" step="${step}"><output data-output="${path}" data-output-unit="${unit}"></output></label>`;
+  const formatFieldOutput = (output, value) => {
+    const unit = output.dataset.outputUnit || '';
+    output.value = unit ? `${value} ${unit}` : value;
+  };
   const colorField = (label, path) => `<label class="qa-color"><span>${label}</span><input type="color" data-path="${path}"></label>`;
   const toggleField = (label, path) => `<label class="qa-switch qa-component-switch"><span>${label}</span><input type="checkbox" data-path="${path}"><i></i></label>`;
 
@@ -343,7 +381,7 @@
       if (input.dataset.path === 'components.logo.color' && state.components.logo.followTheme) value = state.theme[state.components.logo.themeColor];
       if (input.dataset.path === 'components.logoBackground.color' && state.components.logoBackground.followTheme) value = state.theme[state.components.logoBackground.themeColor];
       if (input.type === 'checkbox') input.checked = Boolean(value); else input.value = value;
-      const output = panel.querySelector(`[data-output="${input.dataset.path}"]`); if (output) output.value = value;
+      panel.querySelectorAll(`[data-output="${input.dataset.path}"]`).forEach(output => formatFieldOutput(output, value));
     });
     panel.querySelectorAll('[data-flag]').forEach(input => { input.checked = featureEnabled(input.dataset.flag); });
   }
@@ -365,6 +403,7 @@
         <button type="button" class="qa-tab" data-qa-tab="logo" role="tab" aria-selected="false">Logo</button>
         <button type="button" class="qa-tab" data-qa-tab="v2-interest" role="tab" aria-selected="false">V2 曲线复盘</button>
         <button type="button" class="qa-tab" data-qa-tab="bloub-audience" role="tab" aria-selected="false">V2 二维观众</button>
+        <button type="button" class="qa-tab" data-qa-tab="live2d-audience" role="tab" aria-selected="false">V2 Live2D</button>
       </div>
       <div class="qa-scroll">
         <div class="qa-page" data-qa-page="palette" hidden>
@@ -521,8 +560,8 @@
         </div>
         <div class="qa-page" data-qa-page="bloub-audience" hidden>
           <section><h2>V2 二维观众 · bloub</h2><p class="qa-hint">只作用于 V2 默认二维观众。这是本机接入的开源 SVG 形变核心，不改变受众身份、判断规则或分数。尺寸、位置和表情预览会立刻反映在舞台上，不必开始训练。</p>
-            ${numberField('舞台占比', 'components.bloubAudience.size', 36, 86)}${numberField('水平偏移', 'components.bloubAudience.x', -80, 80)}${numberField('垂直偏移', 'components.bloubAudience.y', -80, 80)}
-            ${numberField('训练表情停留（毫秒）', 'components.bloubAudience.holdMs', 400, 8000, 100)}
+            ${numberField('形象占舞台宽度', 'components.bloubAudience.size', 20, 100, 1, '%')}${numberField('水平偏移', 'components.bloubAudience.x', -280, 280, 1, 'px')}${numberField('垂直偏移', 'components.bloubAudience.y', -280, 280, 1, 'px')}
+            ${numberField('训练表情停留', 'components.bloubAudience.holdMs', 400, 8000, 100, 'ms')}
             <div class="qa-colors">${colorField('形体颜色', 'components.bloubAudience.ink')}${colorField('眼睛颜色', 'components.bloubAudience.paper')}</div>
             <div class="qa-switches qa-component-switches">${toggleField('浅色底卡', 'components.bloubAudience.card')}${toggleField('显示状态标签', 'components.bloubAudience.showLabel')}</div>
             ${numberField('标签透明度', 'components.bloubAudience.labelOpacity', 0, 1, 0.02)}
@@ -530,6 +569,25 @@
           <section><h2>实时预览表情</h2><p class="qa-hint">点选后舞台立刻切换并保持，直到你点下一个，或正式判断事件到来。先应用受众模板才能看见舞台。</p>
             <div class="qa-expression-board" data-bloub-preview></div>
             <p class="qa-hint" data-bloub-preview-status></p>
+          </section>
+        </div>
+        <div class="qa-page" data-qa-page="live2d-audience" hidden>
+          <section><h2>V2 Live2D 观众</h2><p class="qa-hint">这里只调已选中的本机 Cubism 形象大小、位置和训练四态预览。选择或导入模型请用左侧边栏，避免两个开关互相抢。不改变判断、兴趣分或 TTS。</p>
+            ${numberField('形象占舞台宽度', 'components.live2dAudience.size', 20, 100, 1, '%')}${numberField('水平偏移', 'components.live2dAudience.x', -280, 280, 1, 'px')}${numberField('垂直偏移', 'components.live2dAudience.y', -280, 280, 1, 'px')}
+            ${numberField('模型缩放', 'components.live2dAudience.canvasScale', 0.4, 3, 0.05, '×')}
+            ${numberField('训练表情停留', 'components.live2dAudience.holdMs', 400, 8000, 100, 'ms')}
+            <div class="qa-switches qa-component-switches">${toggleField('显示状态标签', 'components.live2dAudience.showLabel')}</div>
+            ${numberField('标签透明度', 'components.live2dAudience.labelOpacity', 0, 1, 0.02)}
+            <p class="qa-hint">这些滑条只改 Live2D。状态标签固定在观众窗口右上角，不跟人物偏移走。二维观众在「V2 二维观众」页单独调。</p>
+          </section>
+          <section><h2>训练状态预览</h2><p class="qa-hint">终端里「146 个情绪词」是口播诊断词库，用来分析用词，不是 Live2D 表情目录。Hiyori 和当前训练只接 listen / confused / interest / drop 四态。点选后舞台立刻切换并保持，直到你点下一个或正式判断到来。</p>
+            <div class="qa-expression-grid" data-live2d-preview>
+              <button type="button" class="qa-expression-btn" data-live2d-preview-state="listen">在听</button>
+              <button type="button" class="qa-expression-btn" data-live2d-preview-state="confused">没跟上</button>
+              <button type="button" class="qa-expression-btn" data-live2d-preview-state="interest">兴趣回升</button>
+              <button type="button" class="qa-expression-btn" data-live2d-preview-state="drop">注意力下降</button>
+            </div>
+            <p class="qa-hint" data-live2d-preview-status></p>
           </section>
         </div>
       </div>
@@ -742,6 +800,15 @@
     });
     panel.querySelectorAll('[data-qa-tab]').forEach(tab => tab.addEventListener('click', () => showPage(tab.dataset.qaTab)));
     panel.addEventListener('click', event => {
+      const live2dButton = event.target.closest('[data-live2d-preview-state]');
+      if (live2dButton) {
+        const next = live2dButton.dataset.live2dPreviewState;
+        const shown = window.CreatorAudienceStage?.preview?.(next);
+        const status = panel.querySelector('[data-live2d-preview-status]');
+        panel.querySelectorAll('[data-live2d-preview-state]').forEach(node => node.setAttribute('aria-pressed', String(node === live2dButton)));
+        if (status) status.textContent = shown ? `舞台已切换到「${live2dButton.textContent}」，保持到下一次点选或正式判断。` : '还没有观众舞台。先在 V2 应用受众模板，再预览。';
+        return;
+      }
       const button = event.target.closest('[data-bloub-preview-state]');
       if (!button) return;
       const state = button.dataset.bloubPreviewState;
@@ -750,6 +817,7 @@
       panel.querySelectorAll('[data-bloub-preview-state]').forEach(node => node.setAttribute('aria-pressed', String(node === button)));
       if (status) status.textContent = shown ? `舞台已切换到「${button.textContent}」，保持到下一次点选或正式判断。` : '还没有观众舞台。先在 V2 应用受众模板，再预览表情。';
     });
+
     trigger.addEventListener('click', () => { panel.hidden = !panel.hidden; trigger.setAttribute('aria-expanded', String(!panel.hidden)); });
     panel.querySelector('.qa-close').addEventListener('click', () => trigger.click());
     panel.addEventListener('input', event => {

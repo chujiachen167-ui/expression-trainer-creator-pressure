@@ -25,6 +25,8 @@
     card: false,
     showLabel: true,
     labelOpacity: 0.92,
+    labelX: 0,
+    labelY: 0,
     holdMs: 1600
   };
 
@@ -35,14 +37,16 @@
 
   function normalize(incoming) {
     const value = { ...defaults, ...(incoming && typeof incoming === 'object' ? incoming : {}) };
-    value.size = clamp(value.size, 36, 86, defaults.size);
-    value.x = clamp(value.x, -80, 80, defaults.x);
-    value.y = clamp(value.y, -80, 80, defaults.y);
+    value.size = clamp(value.size, 20, 100, defaults.size);
+    value.x = clamp(value.x, -280, 280, defaults.x);
+    value.y = clamp(value.y, -280, 280, defaults.y);
     value.ink = String(value.ink || defaults.ink);
     value.paper = String(value.paper || defaults.paper);
     value.card = value.card === true;
     value.showLabel = value.showLabel !== false;
     value.labelOpacity = clamp(value.labelOpacity, 0, 1, defaults.labelOpacity);
+    value.labelX = clamp(value.labelX, -160, 160, defaults.labelX);
+    value.labelY = clamp(value.labelY, -160, 160, defaults.labelY);
     value.holdMs = clamp(value.holdMs, 400, 8000, defaults.holdMs);
     return value;
   }
@@ -72,6 +76,9 @@
     root.style.setProperty('--v2-bloub-x', `${cfg.x}px`);
     root.style.setProperty('--v2-bloub-y', `${cfg.y}px`);
     root.style.setProperty('--v2-bloub-label-opacity', cfg.showLabel ? String(cfg.labelOpacity) : '0');
+    root.style.setProperty('--v2-bloub-label-x', `${cfg.labelX || 0}px`);
+    root.style.setProperty('--v2-bloub-label-y', `${cfg.labelY || 0}px`);
+    root.style.setProperty('--v2-bloub-hold-ms', String(cfg.holdMs));
     document.querySelectorAll('[data-v2-audience-stage]').forEach(stage => {
       stage._bloubAvatar?.configure?.(cfg);
     });

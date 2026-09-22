@@ -150,13 +150,7 @@ text: https://github.com/DavidHDev/react-bits/blob/main/LICENSE.md
   Treat redistribution and commercial use of the derived lexicon as requiring provenance
   review before production release.
 
-### Picsum Photos preview images
 
-- Source: https://picsum.photos/
-- Use: images are loaded remotely at runtime in the Drift Wall development preview and are
-  not stored in this repository.
-- Production rule: replace them with owned or explicitly licensed avatar assets before a
-  public commercial release; image rights remain subject to their original sources.
 
 ## Design references only — no source code incorporated
 

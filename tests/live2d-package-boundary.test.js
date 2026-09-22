@@ -27,6 +27,8 @@ try {
   assert.doesNotMatch(runtime, /[A-Za-z]:\\Users\\|[A-Za-z]:\\Vibe /);
   assert.match(mainSource, /live2dFolderCache\.set\(record\.id, record\)/, 'main process should grant access by opaque record id');
   assert.match(mainSource, /folderPath: _privateFolderPath/, 'absolute folder path must be stripped before the record reaches the page');
+  assert.match(mainSource, /get-local-live2d-session-info/, 'session path inspection must still go through the opaque record cache');
+  assert.match(mainSource, /get-local-live2d-dev-samples/, 'bundled Resources models must be listed through the same cache');
   assert.doesNotMatch(mainSource, /live2dFolderCache\.get\(root\) \|\| validateModelFolder/, 'renderer must not authorize an arbitrary path by requesting it');
   assert.equal(fs.existsSync(path.join(outDir, 'models')), false, 'model binaries must stay out of the web package');
   assert.equal(fs.existsSync(path.join(outDir, 'local-runtime')), false, 'Cubism Core directory must stay out of the web package');

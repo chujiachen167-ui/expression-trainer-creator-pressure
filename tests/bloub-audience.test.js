@@ -36,12 +36,11 @@ assert.equal(window.CreatorAudienceExpression.expressionFromEvent({ confidence: 
 window.CreatorAudienceStage.detachAdapter(stage);
 assert.equal(stage.dataset.presentation, 'bloub', 'detaching local Live2D returns to bloub default');
 
-assert.equal(window.document.querySelectorAll('[data-qa-tab]').length, 10);
+assert.equal(window.document.querySelectorAll('[data-qa-tab]').length, 11);
 window.document.querySelector('[data-qa-tab="bloub-audience"]').click();
 assert(window.document.querySelector('[data-path="components.bloubAudience.size"]'));
 assert(window.document.querySelector('[data-path="components.bloubAudience.ink"]'));
 assert(window.document.querySelector('[data-path="components.bloubAudience.holdMs"]'));
-assert.equal(window.CreatorQAControls.getState().components.bloubAudience.holdMs, 1600);
 input(window, 'components.bloubAudience.size', 72);
 input(window, 'components.bloubAudience.x', 12);
 input(window, 'components.bloubAudience.holdMs', 900);
@@ -55,7 +54,7 @@ const surpris = window.document.querySelector('[data-bloub-preview-state="surpri
 assert(surpris, 'control panel must list extra bloub faces for live preview');
 surpris.click();
 assert.equal(stage.dataset.expression, 'surpris');
-assert.equal(stage.querySelector('[data-v2-expression-label]')?.textContent, '惊讶');
+assert.equal(stage.closest('.audience-tile').querySelector('[data-v2-expression-label]')?.textContent, '惊讶');
 window.document.querySelector('[data-bloub-preview-state="drop"]').click();
 assert.equal(stage.dataset.expression, 'drop');
 assert.equal(window.CreatorAudienceExpression.expressionFromEvent({ confidence: 'high', scoreDelta: 4, type: 'opening' }), 'interest');

@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('api', {
   saveProjectBackup: content => ipcRenderer.invoke('save-project-backup', content),
   pickLocalLive2DAvatar: () => ipcRenderer.invoke('pick-local-live2d-avatar'),
   getLocalLive2DDevSample: () => ipcRenderer.invoke('get-local-live2d-dev-sample'),
+  getLocalLive2DDevSamples: () => ipcRenderer.invoke('get-local-live2d-dev-samples'),
+  getLocalLive2DSessionInfo: recordId => ipcRenderer.invoke('get-local-live2d-session-info', recordId),
   readLocalLive2DAsset: (recordId, relativePath) => ipcRenderer.invoke('read-local-live2d-asset', recordId, relativePath),
   onSettingsUpdated: callback => {
     const listener = () => callback();
